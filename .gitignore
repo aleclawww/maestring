@@ -48,3 +48,5 @@ supabase/.temp/
 coverage/
 playwright-report/
 test-results/
+
+.vercel
