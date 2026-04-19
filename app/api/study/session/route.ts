@@ -1,0 +1,145 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ensureConceptStatesExist } from "@/lib/question-engine/selector";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
+
+const CreateSessionSchema = z.object({
+  mode: z.enum(["discovery", "review", "intensive", "maintenance", "exploration"]).default("review"),
+  domainId: z.string().uuid().optional(),
+  targetQuestions: z.number().int().min(5).max(30).default(10),
+});
+
+// GET — fetch active session (if any)
+export async function GET() {
+  const user = await requireAuthenticatedUser();
+  const supabase = createAdminClient();
+
+  const { data: session, error } = await supabase
+    .from("study_sessions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    logger.error({ error, userId: user.id }, "Failed to fetch active session");
+    return NextResponse.json({ error: "Failed to fetch session" }, { status: 500 });
+  }
+
+  return NextResponse.json({ data: session });
+}
+
+// POST — create new session
+export async function POST(req: NextRequest) {
+  const user = await requireAuthenticatedUser();
+  const supabase = createAdminClient();
+
+  const body = await req.json().catch(() => ({}));
+  const parsed = CreateSessionSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request", details: parsed.error.format() }, { status: 400 });
+  }
+
+  const { mode, domainId, targetQuestions } = parsed.data;
+
+  // Abandon any existing active session
+  await supabase
+    .from("study_sessions")
+    .update({ status: "abandoned" })
+    .eq("user_id", user.id)
+    .eq("status", "active");
+
+  // Ensure concept states exist for the user
+  await ensureConceptStatesExist(user.id);
+
+  const { data: session, error } = await supabase
+    .from("study_sessions")
+    .insert({
+      user_id: user.id,
+      mode,
+      domain_id: domainId ?? null,
+      target_questions: targetQuestions,
+      status: "active",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    logger.error({ error, userId: user.id }, "Failed to create study session");
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+  }
+
+  logger.info({ sessionId: session.id, userId: user.id, mode }, "Study session created");
+  return NextResponse.json({ data: session }, { status: 201 });
+}
+
+// PATCH — complete a session
+export async function PATCH(req: NextRequest) {
+  const user = await requireAuthenticatedUser();
+  const supabase = createAdminClient();
+
+  const body = await req.json().catch(() => ({}));
+  const sessionId = body.sessionId as string | undefined;
+
+  if (!sessionId) {
+    return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+  }
+
+  // Calculate stats
+  const { data: attempts } = await supabase
+    .from("question_attempts")
+    .select("is_correct, time_taken_ms")
+    .eq("session_id", sessionId)
+    .eq("user_id", user.id);
+
+  const total = attempts?.length ?? 0;
+  const correct = attempts?.filter((a) => a.is_correct).length ?? 0;
+  const avgTime = total > 0
+    ? Math.round(attempts!.reduce((sum, a) => sum + (a.time_taken_ms ?? 0), 0) / total)
+    : 0;
+
+  const { error } = await supabase
+    .from("study_sessions")
+    .update({
+      status: "completed",
+      ended_at: new Date().toISOString(),
+      questions_answered: total,
+      correct_answers: correct,
+      total_time_seconds: Math.round((avgTime * total) / 1000),
+    })
+    .eq("id", sessionId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    logger.error({ error, sessionId }, "Failed to complete session");
+    return NextResponse.json({ error: "Failed to complete session" }, { status: 500 });
+  }
+
+  return NextResponse.json({ data: { success: true, stats: { total, correct, avgTime } } });
+}
+
+// DELETE — abandon session
+export async function DELETE(req: NextRequest) {
+  const user = await requireAuthenticatedUser();
+  const supabase = createAdminClient();
+
+  // Accept sessionId from body or query for fetch DELETE compatibility
+  const body = await req.json().catch(() => ({}));
+  const sessionId =
+    (body.sessionId as string | undefined) ?? req.nextUrl.searchParams.get("sessionId");
+  if (!sessionId) {
+    return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+  }
+
+  await supabase
+    .from("study_sessions")
+    .update({ status: "abandoned" })
+    .eq("id", sessionId)
+    .eq("user_id", user.id);
+
+  return NextResponse.json({ data: { success: true } });
+}

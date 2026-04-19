@@ -1,0 +1,58 @@
+'use client'
+
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+
+interface ProfileSettingsProps {
+  userId: string
+  email: string
+  fullName: string
+  avatarUrl: string
+}
+
+export function ProfileSettings({ userId, email, fullName, avatarUrl }: ProfileSettingsProps) {
+  const [name, setName] = useState(fullName)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const supabase = createClient()
+
+  async function handleSave() {
+    setSaving(true)
+    await supabase.from('profiles').update({ full_name: name }).eq('id', userId)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+        Perfil
+      </h2>
+      <div className="space-y-4">
+        <Input
+          label="Email"
+          value={email}
+          disabled
+          helperText="El email no se puede cambiar."
+        />
+        <Input
+          label="Nombre completo"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Tu nombre"
+        />
+        <Button
+          onClick={handleSave}
+          loading={saving}
+          loadingText="Guardando..."
+          disabled={name === fullName}
+        >
+          {saved ? '✓ Guardado' : 'Guardar cambios'}
+        </Button>
+      </div>
+    </section>
+  )
+}
