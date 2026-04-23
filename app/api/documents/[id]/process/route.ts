@@ -10,11 +10,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const supabase = createAdminClient();
-  const { data: doc } = await supabase
+  const { data: doc, error: docErr } = await supabase
     .from("user_documents")
     .select("id, user_id, storage_path, processing_status")
     .eq("id", params.id)
     .single();
+
+  if (docErr) {
+    // Distinguish "doc genuinely doesn't exist" (404 below) from "we
+    // couldn't read the row" (RLS regression, DB hiccup). Silent 404
+    // here made triggerProcessing() look like a dead letter: the caller
+    // retries and keeps getting 404 with no log trace. Log + 500 so the
+    // ingestion retry loop sees a real error.
+    logger.error(
+      { err: docErr, docId: params.id },
+      "Failed to fetch user_documents row for processing — retry will keep failing until root cause is fixed"
+    );
+    return NextResponse.json({ error: "Failed to load document" }, { status: 500 });
+  }
 
   if (!doc) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
