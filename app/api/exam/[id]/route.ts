@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const user = await requireAuthenticatedUser();
@@ -16,11 +17,24 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { data: items } = await supabase
+  // Silent-swallow previously: a failed items select rendered as an empty
+  // exam. An in-progress test looks the same as a fully missing test — the
+  // user can't continue and support can't reproduce "my exam disappeared".
+  // Fail loud (500) so the client can surface a real error instead of
+  // rendering a ghost exam.
+  const { data: items, error: itemsErr } = await supabase
     .from("exam_session_items")
     .select("position, user_answer_index, flagged, answered_at, is_correct, question_id, questions(id, question_text, options, difficulty, correct_index, explanation, concept_id, concepts(id, slug, name, domain_id, knowledge_domains(id, slug, name)))")
     .eq("session_id", params.id)
     .order("position", { ascending: true });
+
+  if (itemsErr) {
+    logger.error(
+      { err: itemsErr, sessionId: params.id, userId: user.id },
+      "Failed to load exam_session_items — returning 500 instead of empty exam"
+    );
+    return NextResponse.json({ error: "Failed to load exam items" }, { status: 500 });
+  }
 
   const isSubmitted = session.status !== "in_progress";
 
