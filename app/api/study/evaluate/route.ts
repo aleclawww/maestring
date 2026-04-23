@@ -142,15 +142,39 @@ export async function POST(req: NextRequest) {
     const next = scheduleReview(conceptState as never, rating);
     const updates = next.nextState as Record<string, unknown>;
     nextReviewDate = (updates["next_review_date"] as string) ?? null;
-    await supabase
+    // FSRS schedule advance. A silent failure here is the worst kind of
+    // silent swallow: the question_attempts row is already inserted, so a
+    // client retry hits the duplicate path at L108 and does NOT re-run
+    // this update. That means `user_concept_states.next_review_date` is
+    // frozen in yesterday's window while the attempts table keeps growing
+    // — every subsequent due-queue build will keep surfacing the same
+    // concept because its schedule never moved. Log loudly so we can
+    // correlate "user stuck on concept X" to a concrete update error.
+    // Don't throw/return 500: the retry-into-duplicate-path wouldn't fix
+    // this anyway, and we'd push the client into a failure state the
+    // server can't recover from. Loud log + graceful continue is correct.
+    const { error: fsrsUpdateErr } = await supabase
       .from("user_concept_states")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update({ ...updates, last_rating: rating, updated_at: new Date().toISOString() } as any)
       .eq("user_id", user.id)
       .eq("concept_id", conceptId);
+    if (fsrsUpdateErr) {
+      logger.error(
+        { err: fsrsUpdateErr, userId: user.id, conceptId, sessionId, rating },
+        "FSRS schedule update failed — user_concept_states frozen, concept will keep resurfacing in due queue"
+      );
+    }
   }
 
-  await supabase
+  // Bump session counters. Same severity as the FSRS update: the attempt
+  // is already recorded, so a retry goes to the duplicate path and does
+  // NOT re-bump. A silent failure here leaves the session header stuck
+  // behind the attempts count — the user sees wrong progress in the UI
+  // and any "session complete at N questions" trigger may never fire.
+  // Log so operators can correlate a stuck-progress ticket to a concrete
+  // update error.
+  const { error: sessionCountErr } = await supabase
     .from("study_sessions")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .update({
@@ -158,6 +182,12 @@ export async function POST(req: NextRequest) {
       correct_answers: (session.correct_answers ?? 0) + (effectiveCorrect ? 1 : 0),
     } as any)
     .eq("id", sessionId);
+  if (sessionCountErr) {
+    logger.error(
+      { err: sessionCountErr, userId: user.id, sessionId, conceptId },
+      "study_sessions counter update failed — questions_answered/correct_answers will drift from question_attempts"
+    );
+  }
 
   logger.info({ userId: user.id, conceptId, isCorrect: evaluation.isCorrect, rating }, "Answer evaluated");
 

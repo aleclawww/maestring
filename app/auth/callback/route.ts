@@ -36,11 +36,22 @@ export async function GET(request: NextRequest) {
 
     if (!error && data.user) {
       // Fetch onboarding + welcome-email state in one round trip.
-      const { data: profile } = await supabase
+      const { data: profile, error: profileErr } = await supabase
         .from('profiles')
         .select('onboarding_completed, welcome_email_sent_at, full_name, exam_date')
         .eq('id', data.user.id)
         .single()
+
+      if (profileErr) {
+        // Without profile state we can't decide the onboarding redirect
+        // or send the welcome email. Log so a "first-login email never
+        // arrived" support ticket has a correlating row. Don't fail the
+        // login — the user still lands somewhere valid (safeNext).
+        logger.warn(
+          { err: profileErr, userId: data.user.id },
+          'Failed to load profile after OAuth code exchange — onboarding redirect and welcome email will be skipped'
+        )
+      }
 
       // Fire welcome email exactly once. The UPDATE uses `is('welcome_email_sent_at', null)`
       // so two concurrent callbacks won't both send — whichever wins the write sends.
@@ -68,11 +79,23 @@ export async function GET(request: NextRequest) {
               tags: [{ name: 'type', value: 'welcome' }],
             })
           } catch (err) {
-            // Roll back the claim so the next login retries.
-            await supabase
+            // Roll back the claim so the next login retries. If the
+            // rollback itself fails we're in a trap: the claim stays at
+            // now() and the user will never receive a welcome email on
+            // any subsequent login (the `is('welcome_email_sent_at', null)`
+            // guard at L52 will keep rejecting the claim). Log loudly —
+            // without this log the "I never got a welcome email" ticket
+            // looks impossible to reproduce from the outside.
+            const { error: rollbackErr } = await supabase
               .from('profiles')
               .update({ welcome_email_sent_at: null })
               .eq('id', data.user.id)
+            if (rollbackErr) {
+              logger.error(
+                { err: rollbackErr, origErr: err, userId: data.user.id },
+                'Failed to roll back welcome_email_sent_at after send failure — user is stuck and will never receive the welcome email'
+              )
+            }
             captureApiException(err, { route: '/auth/callback', userId: data.user.id })
             logger.error({ err, userId: data.user.id }, 'Welcome email send failed')
           }
