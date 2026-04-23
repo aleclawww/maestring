@@ -101,13 +101,23 @@ export async function POST(req: NextRequest) {
   }
 
   // Mirror onboarding flag into auth user_metadata so middleware doesn't need a
-  // DB roundtrip on every request.
-  await supabase.auth.admin.updateUserById(user.id, {
+  // DB roundtrip on every request. If this write fails we MUST surface it —
+  // otherwise the profile row is updated but middleware still sees
+  // `onboarding_completed !== true` in the JWT metadata and redirects the user
+  // back to /onboarding on every request. Silent swallow = infinite redirect
+  // loop. Returning 500 lets the client retry; the whole endpoint is
+  // idempotent (profile update + metadata mirror) so retry is safe.
+  const { error: metaErr } = await supabase.auth.admin.updateUserById(user.id, {
     user_metadata: {
       ...(user.user_metadata ?? {}),
       onboarding_completed: true,
     },
   })
+
+  if (metaErr) {
+    logger.error({ err: metaErr, userId: user.id }, 'Failed to mirror onboarding_completed to auth user_metadata')
+    return NextResponse.json({ error: 'Failed to finalize onboarding' }, { status: 500 })
+  }
 
   logger.info({ userId: user.id, background, pace: fingerprint.study_pace }, 'Onboarding calibrated')
 
