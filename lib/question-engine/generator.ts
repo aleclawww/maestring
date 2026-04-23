@@ -255,7 +255,27 @@ export async function elaborateAnswer(
     const parsed = EvaluationResultSchema.safeParse(raw)
     if (parsed.success) return parsed.data
     return local
-  } catch {
+  } catch (err) {
+    // Graceful degrade to the local (deterministic) evaluation is intentional —
+    // the user already has a valid answer from evaluateAnswerLocal and the
+    // LLM elaboration is optional. But silent fall-through hides Anthropic
+    // outages, rate-limit exhaustion, and JSON schema drift from operators,
+    // so we log and record the failed usage row for dashboards/alerts.
+    const error = err instanceof Error ? err : new Error(String(err))
+    logger.warn(
+      { userId: userId ?? null, error: error.message, errorName: error.name },
+      'elaborateAnswer failed — falling back to local evaluation',
+    )
+    recordLlmUsage({
+      userId: userId ?? null,
+      route: 'question-engine.elaborate',
+      model: MODEL,
+      inputTokens: 0,
+      outputTokens: 0,
+      latencyMs: Date.now() - t0,
+      success: false,
+      errorCode: error.name || 'unknown_error',
+    })
     return local
   }
 }

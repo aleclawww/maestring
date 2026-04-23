@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
     question.options as string[],
     question.correct_index,
     parsed.data.selectedIndex,
-    question.explanation
+    question.explanation,
+    user.id
   );
 
   return NextResponse.json({ data: result }, { headers: rateLimitHeaders(rl) });
