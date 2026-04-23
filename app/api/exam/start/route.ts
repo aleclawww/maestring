@@ -20,20 +20,46 @@ export async function POST() {
     return NextResponse.json({ error: "Failed to start exam" }, { status: 500 });
   }
 
-  const { data: session } = await supabase
+  const { data: session, error: sessionErr } = await supabase
     .from("exam_sessions")
     .select("id, deadline_at, started_at, total_questions, status")
     .eq("id", sessionId as string)
     .single();
 
+  if (sessionErr || !session) {
+    logger.error({ err: sessionErr, sessionId }, "Failed to read newly-created exam session");
+    return NextResponse.json({ error: "Failed to start exam" }, { status: 500 });
+  }
+
   // If the pool was too thin and we created a session with 0 items, roll it back.
-  const { count } = await supabase
+  const { count, error: countErr } = await supabase
     .from("exam_session_items")
     .select("id", { count: "exact", head: true })
     .eq("session_id", sessionId as string);
 
+  if (countErr) {
+    logger.error({ err: countErr, sessionId }, "Failed to count exam session items");
+    return NextResponse.json({ error: "Failed to start exam" }, { status: 500 });
+  }
+
   if (!count || count === 0) {
-    await supabase.from("exam_sessions").delete().eq("id", sessionId as string);
+    // Roll back the empty session. If the delete itself fails we MUST surface
+    // it — otherwise we leave an orphan `exam_sessions` row with zero items
+    // that the user sees in history as a broken exam. Previously this was
+    // `await ...delete()` with no error check.
+    const { error: rollbackErr } = await supabase
+      .from("exam_sessions")
+      .delete()
+      .eq("id", sessionId as string);
+    if (rollbackErr) {
+      logger.error(
+        { err: rollbackErr, sessionId, userId: user.id },
+        "Failed to roll back empty exam session — orphan row left in exam_sessions"
+      );
+      // Still return 409 so the user's UI shows the correct "not enough
+      // questions" message; the orphan is a bookkeeping problem we can see
+      // in logs and clean up via cron if it recurs.
+    }
     return NextResponse.json(
       { error: "insufficient_question_pool", message: "No hay suficientes preguntas en el pool para un simulacro completo. Estudia más temas primero." },
       { status: 409 }
