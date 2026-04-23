@@ -16,6 +16,10 @@ Stack: Next.js 14 (App Router) · TypeScript strict · Supabase (Postgres + pgve
 | `npm run build` | Production build |
 | `npm run typecheck` | `tsc --noEmit` (strict) |
 | `npm run lint` | ESLint (`eslint-config-next`) |
+| `npm run test` | Vitest unit suite (`tests/unit/**/*.test.ts`) |
+| `npm run test:watch` | Vitest watch mode |
+| `npm run test:coverage` | Vitest + v8 coverage |
+| `npm run test:e2e` | Playwright (`tests/e2e/**/*.spec.ts`) |
 | `npm run seed` | Seed AWS SAA knowledge graph (certifications → domains → topics → concepts) |
 | `npm run reset-dev` | Wipe dev data, keep schema |
 | `npm run db:start` / `db:stop` | Boot/stop local Supabase stack |
@@ -24,7 +28,7 @@ Stack: Next.js 14 (App Router) · TypeScript strict · Supabase (Postgres + pgve
 | `npm run db:types` | Regenerate `types/supabase-generated.ts` |
 | `npm run setup` | One-shot: install + db start + push + types + seed |
 
-There is no test runner wired up yet (Playwright + unit tests are pending TODOs).
+Unit tests live under `tests/unit/` (vitest, node env). E2E specs live under `tests/e2e/` (Playwright). The `e2e-smoke` CI job is gated on repo var `E2E_ENABLED=true` — flip it once a staging Supabase is wired up (see `.github/workflows/ci.yml`).
 
 ## Local setup
 
@@ -94,8 +98,10 @@ if (!rl.allowed) return NextResponse.json({ error: "Rate limited" }, { status: 4
 
 Cron endpoints under `app/api/cron/*` are guarded by the `CRON_SECRET` header and invoked from `vercel.json`.
 
+`GET /api/health` is a public liveness probe — pings Supabase + Redis with a 3s timeout each, returns JSON + 200/503. Listed in `PUBLIC_PREFIXES` in `middleware.ts` so uptime monitors (BetterUptime/UptimeRobot/Vercel) don't get 307'd to `/login`.
+
 ## Notes for future Claude sessions
 
 - `CONSOLIDATION_NOTES.md` documents that this workspace was reconstructed from prior sandboxed sessions; some modules (notably `question-engine/`) may exist as skeletons. Verify a file's actual contents before assuming functionality.
 - Cron RPCs (`get_users_needing_nudge`, `get_broken_streaks_today`) live in migration 011. They return `streak_days` aliased from `profiles.current_streak` and `first_name` from `split_part(full_name, ' ', 1)` — the cron route handlers expect those exact field names.
-- Open TODOs: unit tests for `question-engine/selector` and `lib/fsrs`; Playwright E2E for the study session flow; first-run onboarding gate (exam date, daily goal) before `(dashboard)` is reachable.
+- The first-run onboarding gate is live in `middleware.ts` — redirects to `/onboarding` if `user_metadata.onboarding_completed !== true`, returning JSON 403 for `/api/*` callers so fetch-based flows don't silently follow a 307 into HTML.

@@ -12,6 +12,9 @@ const PUBLIC_ROUTES = [
 
 const PUBLIC_PREFIXES = [
   '/api/webhooks/',
+  // Public liveness/uptime probe — external monitors hit this unauthenticated.
+  // The handler pings Supabase + Redis and returns 200/503.
+  '/api/health',
   '/r/',
   '/_next/',
   '/favicon',

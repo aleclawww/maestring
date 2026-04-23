@@ -14,6 +14,21 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // Silence the noisy OpenTelemetry/require-in-the-middle warnings that
+    // @sentry/nextjs pulls in. These are informational ("Critical dependency:
+    // the request of a dependency is an expression") — they fire on every
+    // server compile and obscure real issues. The underlying instrumentation
+    // still works; webpack just can't statically analyze the dynamic require.
+    if (isServer) {
+      config.ignoreWarnings = [
+        ...(config.ignoreWarnings ?? []),
+        { module: /node_modules\/@opentelemetry\/instrumentation/ },
+        { module: /node_modules\/require-in-the-middle/ },
+      ]
+    }
+    return config
+  },
   async headers() {
     return [
       {
