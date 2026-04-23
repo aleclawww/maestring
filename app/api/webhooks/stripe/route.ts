@@ -86,16 +86,38 @@ export async function POST(req: NextRequest) {
         logger.info({ type: event.type }, "Unhandled Stripe event");
     }
 
-    await supabase
+    // Mark the event processed so the idempotency gate above short-circuits
+    // any Stripe retries. If this write fails, the next delivery will see
+    // `processed_at IS NULL` and re-run the handler — the handleX functions
+    // are idempotent (PR #24) so a duplicate run is safe, but we must NOT
+    // silently drop this write: returning 500 here lets Stripe retry on a
+    // real backoff schedule rather than compounding duplicate work forever.
+    const { error: markErr } = await supabase
       .from("stripe_events")
       .update({ processed_at: new Date().toISOString() })
       .eq("id", event.id);
+    if (markErr) {
+      captureApiException(markErr, { route: "/api/webhooks/stripe", extra: { eventId: event.id, type: event.type } });
+      logger.error(
+        { err: markErr, eventType: event.type, eventId: event.id },
+        "Failed to mark stripe_events row processed — forcing Stripe retry"
+      );
+      return NextResponse.json({ error: "Bookkeeping failed" }, { status: 500 });
+    }
   } catch (err) {
     // Record the failure so we can see it in the ledger and let Stripe retry.
-    await supabase
+    // If THIS update fails we still log + 500 — we cannot let the original
+    // handler error get swallowed on top of a failed ledger write.
+    const { error: ledgerErr } = await supabase
       .from("stripe_events")
       .update({ error: err instanceof Error ? err.message : String(err) })
       .eq("id", event.id);
+    if (ledgerErr) {
+      logger.error(
+        { err: ledgerErr, eventId: event.id, originalErr: err },
+        "Also failed to write stripe_events error column (original handler still failing)"
+      );
+    }
     captureApiException(err, { route: "/api/webhooks/stripe", extra: { eventId: event.id, type: event.type } });
     logger.error({ err, eventType: event.type, eventId: event.id }, "Stripe webhook handler failed");
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
