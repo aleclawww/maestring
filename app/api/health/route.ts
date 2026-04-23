@@ -8,13 +8,21 @@ import { logger } from '@/lib/logger'
 // is unreachable" from "everything's fine". This route is listed in
 // middleware PUBLIC_PREFIXES so it never 307s to /login.
 //
-// Status semantics:
-//   ok        — every upstream healthy
-//   degraded  — soft failure on a non-critical path (unused for now; reserved)
-//   down      — a critical upstream failed
+// Per-check severity:
+//   supabase — critical. If it's down, the app is effectively down.
+//   redis    — non-critical. Rate limiting (lib/redis/rate-limit) and cache
+//              helpers fail-open by design, so a Redis outage degrades
+//              (no rate caps, no caching) but doesn't break user flows.
+//              A Redis-only failure reports `degraded` + HTTP 200 so uptime
+//              monitors don't page on a non-user-facing issue. Operators
+//              still see the detail in the JSON body.
 //
-// HTTP: 200 for ok/degraded (monitor still reads JSON body), 503 for down.
-// Never caches: we want fresh reads on every probe.
+// Overall status:
+//   ok       — every check ok
+//   degraded — only non-critical checks are down
+//   down     — a critical check is down
+//
+// HTTP: 200 for ok/degraded, 503 for down. Never cached.
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -25,6 +33,7 @@ type CheckStatus = 'ok' | 'degraded' | 'down'
 interface Check {
   status: CheckStatus
   latencyMs: number
+  critical: boolean
   error?: string
 }
 
@@ -41,10 +50,11 @@ interface HealthResponse {
 
 const UPSTREAM_TIMEOUT_MS = 3_000
 
-async function withTimeout<T>(
-  fn: () => Promise<T>,
+async function withTimeout(
+  fn: () => Promise<void>,
   timeoutMs: number,
   label: string,
+  critical: boolean,
 ): Promise<Check> {
   const start = Date.now()
   try {
@@ -57,11 +67,12 @@ async function withTimeout<T>(
         ),
       ),
     ])
-    return { status: 'ok', latencyMs: Date.now() - start }
+    return { status: 'ok', latencyMs: Date.now() - start, critical }
   } catch (err) {
     return {
-      status: 'down',
+      status: critical ? 'down' : 'degraded',
       latencyMs: Date.now() - start,
+      critical,
       error: err instanceof Error ? err.message : String(err),
     }
   }
@@ -80,6 +91,7 @@ async function checkSupabase(): Promise<Check> {
     },
     UPSTREAM_TIMEOUT_MS,
     'supabase',
+    /* critical */ true,
   )
 }
 
@@ -93,7 +105,16 @@ async function checkRedis(): Promise<Check> {
     },
     UPSTREAM_TIMEOUT_MS,
     'redis',
+    /* critical */ false,
   )
+}
+
+function overallStatus(checks: Check[]): CheckStatus {
+  const criticalDown = checks.some(c => c.critical && c.status === 'down')
+  if (criticalDown) return 'down'
+  const anyDegraded = checks.some(c => c.status !== 'ok')
+  if (anyDegraded) return 'degraded'
+  return 'ok'
 }
 
 export async function GET() {
@@ -102,12 +123,7 @@ export async function GET() {
     checkRedis(),
   ])
 
-  const statuses: CheckStatus[] = [supabase.status, redisCheck.status]
-  const overall: CheckStatus = statuses.includes('down')
-    ? 'down'
-    : statuses.includes('degraded')
-      ? 'degraded'
-      : 'ok'
+  const overall = overallStatus([supabase, redisCheck])
 
   const body: HealthResponse = {
     status: overall,
@@ -118,7 +134,7 @@ export async function GET() {
   }
 
   if (overall !== 'ok') {
-    logger.warn({ checks: body.checks }, 'health check degraded/down')
+    logger.warn({ checks: body.checks }, `health check ${overall}`)
   }
 
   const httpStatus = overall === 'down' ? 503 : 200
@@ -137,10 +153,9 @@ export async function HEAD() {
     checkSupabase(),
     checkRedis(),
   ])
-  const down =
-    supabase.status === 'down' || redisCheck.status === 'down'
+  const overall = overallStatus([supabase, redisCheck])
   return new NextResponse(null, {
-    status: down ? 503 : 200,
+    status: overall === 'down' ? 503 : 200,
     headers: { 'Cache-Control': 'no-store, max-age=0' },
   })
 }
