@@ -87,6 +87,17 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Maestring',
+  url: 'https://maestring.com',
+  logo: 'https://maestring.com/android-chrome-512x512.png',
+  description:
+    'AWS certification prep with adaptive AI questions, FSRS spaced repetition, and realistic exam simulators.',
+  sameAs: [],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -94,6 +105,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+      </head>
       <body className="min-h-screen bg-background text-text-primary antialiased">
         <PostHogProvider>
           {children}
