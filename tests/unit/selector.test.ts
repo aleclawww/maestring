@@ -1,6 +1,62 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { enforceInterleaving, applySessionShape } from '@/lib/question-engine/selector'
 import type { StudyQueueItem } from '@/types/study'
+
+// Chainable Supabase-style builder for ensureConceptStatesExist tests. The
+// helper touches three different table paths:
+//   1. concepts.select(...).eq(...).eq(...)            → data, error
+//   2. user_concept_states.select(...).eq(...)          → data, error
+//   3. user_concept_states.insert(...)                  → { error }
+// The hoisted mock routes by (table, op) so each test can program what the
+// insert (and optionally the reads) return.
+const supabaseMock = vi.hoisted(() => {
+  type MockState = {
+    conceptsData: Array<{ id: string }>
+    existingStatesData: Array<{ concept_id: string }>
+    insertError: { message: string } | null
+  }
+  const state: MockState = {
+    conceptsData: [{ id: 'c1' }, { id: 'c2' }],
+    existingStatesData: [],
+    insertError: null,
+  }
+  const insertSpy = vi.fn(async () => ({ error: state.insertError }))
+  const from = vi.fn((table: string) => {
+    if (table === 'concepts') {
+      // select → eq → eq, with terminal awaited shape.
+      const chain = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        then: (resolve: (r: { data: Array<{ id: string }>; error: null }) => void) =>
+          resolve({ data: state.conceptsData, error: null }),
+      }
+      return chain
+    }
+    if (table === 'user_concept_states') {
+      const chain = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        then: (resolve: (r: { data: Array<{ concept_id: string }>; error: null }) => void) =>
+          resolve({ data: state.existingStatesData, error: null }),
+        insert: insertSpy,
+      }
+      return chain
+    }
+    throw new Error(`Unexpected table in mock: ${table}`)
+  })
+  return { state, from, insertSpy, client: { from } as unknown as { from: typeof from } }
+})
+
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => supabaseMock.client,
+}))
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: () => supabaseMock.client,
+}))
+vi.mock('@/lib/logger', () => {
+  const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+  return { default: logger, logger }
+})
 
 function item(
   id: string,
@@ -110,5 +166,35 @@ describe('selector — applySessionShape', () => {
     const out = applySessionShape(q, states)
     expect(out).toHaveLength(q.length)
     expect(out.map(i => i.conceptId).sort()).toEqual(q.map(i => i.conceptId).sort())
+  })
+})
+
+describe('selector — ensureConceptStatesExist', () => {
+  beforeEach(() => {
+    supabaseMock.state.conceptsData = [{ id: 'c1' }, { id: 'c2' }]
+    supabaseMock.state.existingStatesData = []
+    supabaseMock.state.insertError = null
+    supabaseMock.insertSpy.mockClear()
+  })
+
+  it('inserts the missing concepts when the batch insert succeeds', async () => {
+    const { ensureConceptStatesExist } = await import('@/lib/question-engine/selector')
+    await expect(ensureConceptStatesExist('user-1')).resolves.toBeUndefined()
+    expect(supabaseMock.insertSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('throws when the batch insert returns an error (no more silent swallow)', async () => {
+    supabaseMock.state.insertError = { message: 'duplicate key violates unique constraint' }
+    const { ensureConceptStatesExist } = await import('@/lib/question-engine/selector')
+    await expect(ensureConceptStatesExist('user-1')).rejects.toThrow(
+      /Failed to seed concept states.*duplicate key/
+    )
+  })
+
+  it('skips the insert entirely when every concept already has a state', async () => {
+    supabaseMock.state.existingStatesData = [{ concept_id: 'c1' }, { concept_id: 'c2' }]
+    const { ensureConceptStatesExist } = await import('@/lib/question-engine/selector')
+    await ensureConceptStatesExist('user-1')
+    expect(supabaseMock.insertSpy).not.toHaveBeenCalled()
   })
 })

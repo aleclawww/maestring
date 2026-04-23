@@ -62,8 +62,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
   }
 
-  // Ensure concept states exist for the user
-  await ensureConceptStatesExist(user.id);
+  // Ensure concept states exist for the user. Previously this was a bare
+  // `await` with no error handling; the helper also used to silently swallow
+  // its own insert errors. Now that it throws on failure, catch here and
+  // return a clean 500 so the client sees "Failed to create session" rather
+  // than an unhandled server error — the user avoids dropping into an empty
+  // study session with no concept states.
+  try {
+    await ensureConceptStatesExist(user.id);
+  } catch (seedErr) {
+    logger.error({ err: seedErr, userId: user.id }, "Failed to ensure concept states exist");
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+  }
 
   const { data: session, error } = await supabase
     .from("study_sessions")

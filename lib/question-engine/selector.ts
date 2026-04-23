@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getDueConcepts, getStudyPriority, initConceptState } from '@/lib/fsrs'
 import { CERTIFICATION_ID as DEFAULT_CERT_ID } from '@/lib/knowledge-graph/aws-saa'
 import { shuffle } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 import type { StudyQueueItem } from '@/types/study'
 import type { StudyMode, Tables } from '@/types/database'
 
@@ -235,9 +236,23 @@ export async function ensureConceptStatesExist(
   for (let i = 0; i < missing.length; i += BATCH) {
     const batch = missing.slice(i, i + BATCH)
     const initialState = initConceptState()
-    await admin.from('user_concept_states').insert(
+    // Previously this insert was a bare `await` with no error check, so a
+    // failure here left the user with zero concept_states and a broken study
+    // queue (selector returns []). Throw so the caller (study/session POST
+    // and the onboarding fallback path) returns 5xx instead of silently
+    // landing the user in an empty session.
+    const { error: insertErr } = await admin.from('user_concept_states').insert(
       batch.map(c => ({ user_id: userId, concept_id: c.id, ...initialState }))
     )
+    if (insertErr) {
+      logger.error(
+        { err: insertErr, userId, certificationId, batchStart: i, batchSize: batch.length },
+        'Failed to seed user_concept_states batch'
+      )
+      throw new Error(
+        `Failed to seed concept states: ${insertErr.message ?? 'unknown error'}`
+      )
+    }
   }
 }
 
