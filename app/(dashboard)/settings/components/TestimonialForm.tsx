@@ -52,11 +52,11 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
   if (done) {
     return (
       <section className="rounded-xl border border-border bg-surface p-5">
-        <h2 className="font-semibold mb-2">Testimonio</h2>
+        <h2 className="font-semibold mb-2">Testimonial</h2>
         <div className="rounded-lg bg-surface-2 p-3 text-sm text-text-secondary">
-          {done === 'approved' && '✅ Tu testimonio está publicado en la landing. ¡Gracias!'}
-          {done === 'pending' && '⏳ Testimonio enviado. Lo revisamos manualmente en 24-48h.'}
-          {done === 'rejected' && '❌ Testimonio no aprobado. Si crees que es un error, contáctanos.'}
+          {done === 'approved' && '✅ Your testimonial is published on the landing page. Thank you!'}
+          {done === 'pending' && '⏳ Testimonial submitted. We review each one manually within 24-48h.'}
+          {done === 'rejected' && '❌ Testimonial not approved. If you think this is a mistake, reach out.'}
         </div>
       </section>
     )
@@ -64,14 +64,14 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
 
   return (
     <section className="rounded-xl border border-border bg-surface p-5">
-      <h2 className="font-semibold mb-1">Compartir un testimonio</h2>
+      <h2 className="font-semibold mb-1">Share a testimonial</h2>
       <p className="text-xs text-text-muted mb-4">
-        Si has pasado el examen (o ves progreso real), tu quote puede aparecer en la landing. Revisamos cada envío.
+        If you've passed the exam (or see real progress), your quote may appear on the landing page. We review each submission.
       </p>
       <form onSubmit={submit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-text-muted">Nombre público</label>
+            <label className="text-xs text-text-muted">Public name</label>
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
@@ -82,7 +82,7 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
             />
           </div>
           <div>
-            <label className="text-xs text-text-muted">Rol (opcional)</label>
+            <label className="text-xs text-text-muted">Role (optional)</label>
             <input
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -94,7 +94,7 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
         </div>
         <div>
           <label className="text-xs text-text-muted">
-            Testimonio <span className={tooLong ? 'text-danger' : 'text-text-muted'}>({remaining})</span>
+            Testimonial <span className={tooLong ? 'text-danger' : 'text-text-muted'}>({remaining})</span>
           </label>
           <textarea
             value={content}
@@ -102,12 +102,12 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
             rows={4}
             maxLength={520}
             className="mt-1 w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
-            placeholder="Qué hizo la diferencia con Maestring, cómo cambió tu manera de estudiar, etc. Mínimo 20 caracteres."
+            placeholder="What made the difference with Maestring, how it changed the way you study, etc. Minimum 20 characters."
             required
           />
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-text-muted">Estrellas</label>
+          <label className="text-xs text-text-muted">Stars</label>
           <select
             value={stars}
             onChange={(e) => setStars(Number(e.target.value))}
@@ -127,7 +127,7 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
               checked={examPassed}
               onChange={(e) => setExamPassed(e.target.checked)}
             />
-            Ya aprobé el examen real
+            I already passed the real exam
           </label>
           {examPassed && (
             <input
@@ -147,7 +147,7 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
           disabled={sending || tooShort || tooLong}
           className="btn-primary text-sm disabled:opacity-40"
         >
-          {sending ? 'Enviando…' : 'Enviar para revisión'}
+          {sending ? 'Submitting…' : 'Submit for review'}
         </button>
       </form>
     </section>

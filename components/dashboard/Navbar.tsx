@@ -6,13 +6,13 @@ import Link from 'next/link'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/study': 'Sesión de Estudio',
-  '/exam': 'Simulacro de Examen',
-  '/progress': 'Mi Progreso',
-  '/documents': 'Documentos',
-  '/settings': 'Configuración',
-  '/referrals': 'Programa de Referidos',
-  '/onboarding': 'Configuración inicial',
+  '/study': 'Study Session',
+  '/exam': 'Exam Simulator',
+  '/progress': 'My Progress',
+  '/documents': 'Documents',
+  '/settings': 'Settings',
+  '/referrals': 'Referrals',
+  '/onboarding': 'Initial Setup',
 }
 
 interface NavbarProps {
@@ -35,7 +35,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           <button
             onClick={onMenuClick}
             className="rounded-lg p-2 text-text-muted hover:bg-surface-2 hover:text-text-primary transition-colors lg:hidden"
-            aria-label="Abrir menú"
+            aria-label="Open menu"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12h18M3 6h18M3 18h18" />
@@ -53,14 +53,14 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
         >
           <span>⚡</span>
-          Estudiar ahora
+          Study now
         </Link>
 
         {/* Notifications bell (placeholder) */}
         <button
           onClick={() => setNotifOpen(!notifOpen)}
           className="relative rounded-lg p-2 text-text-muted hover:bg-surface-2 hover:text-text-primary transition-colors"
-          aria-label="Notificaciones"
+          aria-label="Notifications"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />

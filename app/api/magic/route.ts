@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyMagicLink } from "@/lib/magic-links";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { checkAuthRateLimit } from "@/lib/redis/rate-limit";
+import { getRequestIp } from "@/lib/utils/request-ip";
 
 export const runtime = "edge";
 
 export async function GET(req: NextRequest) {
+  // Throttle token-bruteforce attempts per IP. Fails open if Redis is unreachable.
+  const rl = await checkAuthRateLimit(getRequestIp(req));
+  if (!rl.allowed) {
+    return NextResponse.redirect(new URL("/login?error=rate_limited", req.url));
+  }
+
   const token = req.nextUrl.searchParams.get("token");
   if (!token) {
     return NextResponse.redirect(new URL("/login?error=missing_token", req.url));

@@ -29,28 +29,28 @@ export function ProfileSettings({ userId, email, fullName, avatarUrl }: ProfileS
   return (
     <section>
       <h2 className="text-sm font-semibold text-text-primary mb-4 pb-2 border-b border-border">
-        Perfil
+        Profile
       </h2>
       <div className="space-y-4">
         <Input
           label="Email"
           value={email}
           disabled
-          helperText="El email no se puede cambiar."
+          helperText="Your email can't be changed."
         />
         <Input
-          label="Nombre completo"
+          label="Full name"
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Tu nombre"
+          placeholder="Your name"
         />
         <Button
           onClick={handleSave}
           loading={saving}
-          loadingText="Guardando..."
+          loadingText="Saving..."
           disabled={name === fullName}
         >
-          {saved ? '✓ Guardado' : 'Guardar cambios'}
+          {saved ? '✓ Saved' : 'Save changes'}
         </Button>
       </div>
     </section>

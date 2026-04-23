@@ -7,7 +7,7 @@ import { TestimonialForm } from './components/TestimonialForm'
 import { DangerZone } from './components/DangerZone'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Configuración' }
+export const metadata: Metadata = { title: 'Settings' }
 
 export default async function SettingsPage() {
   const user = await requireAuthenticatedUser()
@@ -27,7 +27,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-8">
-      <h1 className="text-xl font-bold text-text-primary">Configuración</h1>
+      <h1 className="text-xl font-bold text-text-primary">Settings</h1>
 
       <ProfileSettings
         userId={user.id}

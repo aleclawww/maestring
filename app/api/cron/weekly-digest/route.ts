@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import { WeeklyDigestEmail } from "@/lib/email/templates/WeeklyDigestEmail";
 import { createMagicLink } from "@/lib/magic-links";
 import { logger } from "@/lib/logger";
+import { runCron } from "@/lib/cron/run";
 import * as React from "react";
 
 type DigestRow = {
@@ -35,66 +36,64 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Vercel Hobby tier only allows daily crons; gate to Mondays here.
-  // Override with ?force=1 for manual runs.
   const url = new URL(req.url);
   const force = url.searchParams.get("force") === "1";
-  if (!force && new Date().getUTCDay() !== 1) {
-    return NextResponse.json({ skipped: "not_monday" });
-  }
 
-  const supabase = createAdminClient();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.rpc as any)("get_users_for_weekly_digest");
-  if (error) {
-    logger.error({ err: error }, "weekly digest RPC failed");
-    return NextResponse.json({ error: "RPC failed" }, { status: 500 });
-  }
-
-  const rows = (data ?? []) as DigestRow[];
-  if (rows.length === 0) return NextResponse.json({ sent: 0, total: 0 });
-
-  let sent = 0;
-  let failed = 0;
-
-  for (const r of rows) {
-    try {
-      const magicUrl = await createMagicLink(r.user_id, r.email, "study");
-
-      await sendEmail({
-        to: r.email,
-        subject:
-          r.sessions_week === 0
-            ? `${r.first_name}, tu semana de estudio está vacía`
-            : `Tu semana en Maestring — ${r.questions_week} preguntas, ${Math.round((r.accuracy_week ?? 0) * 100)}% aciertos`,
-        react: React.createElement(WeeklyDigestEmail, {
-          firstName: r.first_name,
-          studyUrl: magicUrl,
-          sessionsWeek: r.sessions_week,
-          questionsWeek: r.questions_week,
-          accuracyWeek: Number(r.accuracy_week ?? 0),
-          minutesWeek: r.minutes_week,
-          currentStreak: r.current_streak ?? 0,
-          daysUntilExam: r.days_until_exam,
-          readinessNow: r.readiness_now,
-          readinessDelta: r.readiness_delta,
-          passProbability: r.pass_probability != null ? Number(r.pass_probability) : null,
-          weakestDomainName: r.weakest_domain_name,
-          weakestDomainAccuracy: r.weakest_domain_accuracy != null ? Number(r.weakest_domain_accuracy) : null,
-          dueNext7d: r.due_next_7d,
-          bestExamScaled: r.best_exam_scaled,
-          bestExamPassed: r.best_exam_passed,
-        }),
-        tags: [{ name: "type", value: "weekly_digest" }],
-      });
-      sent++;
-    } catch (err) {
-      logger.error({ err, userId: r.user_id }, "Failed to send weekly digest");
-      failed++;
+  const outcome = await runCron("weekly-digest", async () => {
+    // Vercel Hobby tier only allows daily crons; gate to Mondays here.
+    if (!force && new Date().getUTCDay() !== 1) {
+      return { status: "skipped", metadata: { reason: "not_monday" } };
     }
-  }
 
-  logger.info({ sent, failed, total: rows.length }, "Weekly digest cron completed");
-  return NextResponse.json({ sent, failed, total: rows.length });
+    const supabase = createAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)("get_users_for_weekly_digest");
+    if (error) throw new Error(`RPC failed: ${error.message}`);
+
+    const rows = (data ?? []) as DigestRow[];
+    if (rows.length === 0) return { status: "ok", rowsAffected: 0, metadata: { total: 0 } };
+
+    let sent = 0;
+    let failed = 0;
+    for (const r of rows) {
+      try {
+        const magicUrl = await createMagicLink(r.user_id, r.email, "study");
+        await sendEmail({
+          to: r.email,
+          subject:
+            r.sessions_week === 0
+              ? `${r.first_name}, tu semana de estudio está vacía`
+              : `Tu semana en Maestring — ${r.questions_week} preguntas, ${Math.round((r.accuracy_week ?? 0) * 100)}% aciertos`,
+          react: React.createElement(WeeklyDigestEmail, {
+            firstName: r.first_name,
+            studyUrl: magicUrl,
+            sessionsWeek: r.sessions_week,
+            questionsWeek: r.questions_week,
+            accuracyWeek: Number(r.accuracy_week ?? 0),
+            minutesWeek: r.minutes_week,
+            currentStreak: r.current_streak ?? 0,
+            daysUntilExam: r.days_until_exam,
+            readinessNow: r.readiness_now,
+            readinessDelta: r.readiness_delta,
+            passProbability: r.pass_probability != null ? Number(r.pass_probability) : null,
+            weakestDomainName: r.weakest_domain_name,
+            weakestDomainAccuracy: r.weakest_domain_accuracy != null ? Number(r.weakest_domain_accuracy) : null,
+            dueNext7d: r.due_next_7d,
+            bestExamScaled: r.best_exam_scaled,
+            bestExamPassed: r.best_exam_passed,
+          }),
+          tags: [{ name: "type", value: "weekly_digest" }],
+        });
+        sent++;
+      } catch (err) {
+        logger.error({ err, userId: r.user_id }, "Failed to send weekly digest");
+        failed++;
+      }
+    }
+
+    return { status: "ok", rowsAffected: sent, metadata: { total: rows.length, failed } };
+  });
+
+  if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: 500 });
+  return NextResponse.json(outcome.result);
 }

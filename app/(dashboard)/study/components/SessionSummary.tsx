@@ -52,10 +52,10 @@ export function SessionSummary({ stats, onNewSession }: SessionSummaryProps) {
 
       <div className="w-full max-w-md text-center">
         <h1 className="mb-2 text-2xl font-bold text-text-primary">
-          {isGreat ? '¡Excelente trabajo! 🎉' : 'Sesión completada'}
+          {isGreat ? 'Great work! 🎉' : 'Session complete'}
         </h1>
         <p className="mb-8 text-text-secondary">
-          {stats.correctCount} de {stats.totalQuestions} respuestas correctas
+          {stats.correctCount} of {stats.totalQuestions} answers correct
         </p>
 
         {/* Score Ring */}
@@ -80,7 +80,7 @@ export function SessionSummary({ stats, onNewSession }: SessionSummaryProps) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-3xl font-bold text-text-primary">{accuracy}%</span>
-            <span className="text-xs text-text-muted">precisión</span>
+            <span className="text-xs text-text-muted">accuracy</span>
           </div>
         </div>
 
@@ -88,25 +88,25 @@ export function SessionSummary({ stats, onNewSession }: SessionSummaryProps) {
         <div className="mb-8 grid grid-cols-3 gap-4">
           <div className="rounded-xl border border-success/30 bg-success/10 p-3">
             <p className="text-2xl font-bold text-success">{stats.correctCount}</p>
-            <p className="text-xs text-text-muted">Correctas</p>
+            <p className="text-xs text-text-muted">Correct</p>
           </div>
           <div className="rounded-xl border border-danger/30 bg-danger/10 p-3">
             <p className="text-2xl font-bold text-danger">{stats.incorrectCount}</p>
-            <p className="text-xs text-text-muted">Incorrectas</p>
+            <p className="text-xs text-text-muted">Incorrect</p>
           </div>
           <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
             <p className="text-2xl font-bold text-primary">+{stats.xpEarned}</p>
-            <p className="text-xs text-text-muted">XP ganados</p>
+            <p className="text-xs text-text-muted">XP earned</p>
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex flex-col gap-3">
           <button onClick={onNewSession} className="btn-primary w-full">
-            Nueva sesión
+            New session
           </button>
           <Link href="/progress" className="btn-outline w-full text-center">
-            Ver mi progreso
+            View my progress
           </Link>
         </div>
       </div>

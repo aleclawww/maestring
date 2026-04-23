@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { StudySession } from './components/StudySession'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Sesión de Estudio' }
+export const metadata: Metadata = { title: 'Study Session' }
 
 export default async function StudyPage() {
   const user = await requireAuthenticatedUser()

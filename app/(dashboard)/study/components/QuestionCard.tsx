@@ -60,12 +60,12 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
 
   const difficultyLabel =
     question.difficulty < 0.3
-      ? { label: 'Fácil', color: 'text-success' }
+      ? { label: 'Easy', color: 'text-success' }
       : question.difficulty < 0.6
-      ? { label: 'Medio', color: 'text-warning' }
+      ? { label: 'Medium', color: 'text-warning' }
       : question.difficulty < 0.8
-      ? { label: 'Difícil', color: 'text-danger' }
-      : { label: 'Experto', color: 'text-danger' }
+      ? { label: 'Hard', color: 'text-danger' }
+      : { label: 'Expert', color: 'text-danger' }
 
   const scenario = question.scenarioContext ?? null
 
@@ -80,7 +80,7 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
           {attempt === 2 && (
             <>
               <span className="text-text-muted">·</span>
-              <span className="text-xs font-semibold text-warning">Reintento</span>
+              <span className="text-xs font-semibold text-warning">Retry</span>
             </>
           )}
         </div>
@@ -140,11 +140,11 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
       {hintShown && question.hint && (
         <div className="mx-6 mb-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-warning">
-            Pista
+            Hint
           </p>
           <p className="text-sm text-text-primary">{question.hint}</p>
           <p className="mt-2 text-xs italic text-text-muted">
-            Tienes un reintento. Esta pregunta ya no cuenta como "acierto a la primera".
+            You get one retry. This question no longer counts as a "first-try correct".
           </p>
         </div>
       )}
@@ -202,12 +202,12 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Evaluando...
+              Evaluating...
             </span>
           ) : attempt === 2 ? (
-            'Confirmar reintento'
+            'Confirm retry'
           ) : (
-            'Confirmar respuesta'
+            'Confirm answer'
           )}
         </button>
       </div>

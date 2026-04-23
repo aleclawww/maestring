@@ -204,6 +204,39 @@ export type Database = {
           },
         ]
       }
+      cron_runs: {
+        Row: {
+          ended_at: string | null
+          error: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          rows_affected: number | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          ended_at?: string | null
+          error?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          rows_affected?: number | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          ended_at?: string | null
+          error?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          rows_affected?: number | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       daily_llm_usage: {
         Row: {
           count: number
@@ -541,10 +574,13 @@ export type Database = {
           onboarding_completed: boolean
           referral_code: string
           referred_by: string | null
+          streak_freezes_available: number
+          streak_freezes_last_grant: string | null
           study_minutes_per_day: number
           timezone: string
           total_xp: number
           updated_at: string
+          welcome_email_sent_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -566,10 +602,13 @@ export type Database = {
           onboarding_completed?: boolean
           referral_code?: string
           referred_by?: string | null
+          streak_freezes_available?: number
+          streak_freezes_last_grant?: string | null
           study_minutes_per_day?: number
           timezone?: string
           total_xp?: number
           updated_at?: string
+          welcome_email_sent_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -591,10 +630,13 @@ export type Database = {
           onboarding_completed?: boolean
           referral_code?: string
           referred_by?: string | null
+          streak_freezes_available?: number
+          streak_freezes_last_grant?: string | null
           study_minutes_per_day?: number
           timezone?: string
           total_xp?: number
           updated_at?: string
+          welcome_email_sent_at?: string | null
         }
         Relationships: [
           {
@@ -717,6 +759,10 @@ export type Database = {
           options: Json
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
+          reject_reason: string | null
+          review_status: Database["public"]["Enums"]["question_review_status"]
+          reviewed_at: string | null
+          reviewed_by: string | null
           scenario_context: Json | null
           source: string
           tags: string[]
@@ -737,6 +783,10 @@ export type Database = {
           options: Json
           question_text: string
           question_type?: Database["public"]["Enums"]["question_type"]
+          reject_reason?: string | null
+          review_status?: Database["public"]["Enums"]["question_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           scenario_context?: Json | null
           source?: string
           tags?: string[]
@@ -757,6 +807,10 @@ export type Database = {
           options?: Json
           question_text?: string
           question_type?: Database["public"]["Enums"]["question_type"]
+          reject_reason?: string | null
+          review_status?: Database["public"]["Enums"]["question_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           scenario_context?: Json | null
           source?: string
           tags?: string[]
@@ -827,6 +881,51 @@ export type Database = {
           id?: string
           referred_id?: string
           referrer_id?: string
+        }
+        Relationships: []
+      }
+      streak_freeze_log: {
+        Row: {
+          id: string
+          missed_date: string
+          spent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          missed_date: string
+          spent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          missed_date?: string
+          spent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      stripe_events: {
+        Row: {
+          error: string | null
+          id: string
+          processed_at: string | null
+          received_at: string
+          type: string
+        }
+        Insert: {
+          error?: string | null
+          id: string
+          processed_at?: string | null
+          received_at?: string
+          type: string
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          processed_at?: string | null
+          received_at?: string
+          type?: string
         }
         Relationships: []
       }
@@ -1423,7 +1522,6 @@ export type Database = {
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
           scenario_context: Json
-          tags: string[]
         }[]
       }
       record_exam_answer: {
@@ -1485,6 +1583,7 @@ export type Database = {
         | "post_cert"
         | "maintenance"
       processing_status: "pending" | "processing" | "completed" | "failed"
+      question_review_status: "pending" | "approved" | "rejected"
       question_type: "multiple_choice" | "scenario" | "drag_drop"
       study_mode:
         | "discovery"
@@ -1639,6 +1738,7 @@ export const Constants = {
         "maintenance",
       ],
       processing_status: ["pending", "processing", "completed", "failed"],
+      question_review_status: ["pending", "approved", "rejected"],
       question_type: ["multiple_choice", "scenario", "drag_drop"],
       study_mode: [
         "discovery",

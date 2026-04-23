@@ -1,0 +1,11 @@
+Contact: mailto:security@maestring.com
+Expires: 2027-01-01T00:00:00.000Z
+Preferred-Languages: en, es
+Canonical: https://maestring.com/.well-known/security.txt
+Policy: https://maestring.com/legal/security-policy
+
+# Responsible disclosure
+# Please report vulnerabilities to the Contact address above. We acknowledge
+# within 2 business days and aim to remediate critical issues within 7 days.
+# Do not test against production user data; use your own account. Do not run
+# automated scanners against our infrastructure without prior coordination.

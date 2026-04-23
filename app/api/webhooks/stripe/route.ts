@@ -8,6 +8,8 @@ import {
   handleInvoicePaymentSucceeded,
 } from "@/lib/stripe/webhooks";
 import { logger } from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { captureApiException } from "@/lib/sentry/capture";
 
 const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"]!, { apiVersion: "2024-06-20" });
 
@@ -31,6 +33,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  // --- Idempotency gate -----------------------------------------------------
+  // Insert the event id; if it already exists, Stripe is retrying a delivery
+  // we already accepted — ack with 200 and skip the handler.
+  const supabase = createAdminClient();
+  const { error: insertErr } = await supabase
+    .from("stripe_events")
+    .insert({ id: event.id, type: event.type });
+
+  if (insertErr) {
+    // 23505 = unique_violation → row already exists. Only skip if the previous
+    // attempt actually finished (processed_at is set). If it failed mid-way,
+    // let Stripe's retry re-run the handler.
+    const isDuplicate = (insertErr as { code?: string }).code === "23505";
+    if (isDuplicate) {
+      const { data: existing } = await supabase
+        .from("stripe_events")
+        .select("processed_at")
+        .eq("id", event.id)
+        .maybeSingle();
+      if (existing?.processed_at) {
+        logger.info({ eventId: event.id, type: event.type }, "Stripe event already processed — skipping");
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      logger.info({ eventId: event.id, type: event.type }, "Retrying previously-failed Stripe event");
+    } else {
+      // Other insert errors: log but don't block payment processing.
+      captureApiException(insertErr, { route: "/api/webhooks/stripe", extra: { eventId: event.id } });
+      logger.error({ err: insertErr, eventId: event.id }, "Failed to write stripe_events row");
+    }
+  }
+  // -------------------------------------------------------------------------
+
   try {
     switch (event.type) {
       case "checkout.session.completed":
@@ -51,8 +85,19 @@ export async function POST(req: NextRequest) {
       default:
         logger.info({ type: event.type }, "Unhandled Stripe event");
     }
+
+    await supabase
+      .from("stripe_events")
+      .update({ processed_at: new Date().toISOString() })
+      .eq("id", event.id);
   } catch (err) {
-    logger.error({ err, eventType: event.type }, "Stripe webhook handler failed");
+    // Record the failure so we can see it in the ledger and let Stripe retry.
+    await supabase
+      .from("stripe_events")
+      .update({ error: err instanceof Error ? err.message : String(err) })
+      .eq("id", event.id);
+    captureApiException(err, { route: "/api/webhooks/stripe", extra: { eventId: event.id, type: event.type } });
+    logger.error({ err, eventType: event.type, eventId: event.id }, "Stripe webhook handler failed");
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }
 

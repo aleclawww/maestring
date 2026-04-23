@@ -43,12 +43,12 @@ export default async function ExamResultsPage({ params }: { params: { id: string
     <div className="p-6 max-w-3xl mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-text-primary mb-2">
-          {passed ? '🎉 ¡Aprobado!' : '📚 Sigue practicando'}
+          {passed ? '🎉 Passed!' : '📚 Keep practicing'}
         </h1>
         <p className="text-text-secondary">
           {passed
-            ? 'Has superado el umbral de aprobación. ¡Excelente trabajo!'
-            : 'No llegaste al mínimo esta vez. ¡Sigue estudiando!'}
+            ? "You've cleared the passing threshold. Great work!"
+            : "You didn't reach the minimum this time. Keep studying!"}
         </p>
       </div>
 
@@ -69,7 +69,7 @@ export default async function ExamResultsPage({ params }: { params: { id: string
             <span className="text-3xl font-bold text-text-primary">{scaled}</span>
             <span className="text-xs text-text-muted">/ {MAX_SCORE}</span>
             <span className={cn('text-xs font-bold mt-1', passed ? 'text-success' : 'text-danger')}>
-              {passed ? 'APROBADO' : 'REPROBADO'}
+              {passed ? 'PASSED' : 'FAILED'}
             </span>
           </div>
         </div>
@@ -77,30 +77,30 @@ export default async function ExamResultsPage({ params }: { params: { id: string
         <div className="flex-1 grid grid-cols-2 gap-4">
           <div className="rounded-xl border border-border bg-surface p-3 text-center">
             <p className="text-2xl font-bold text-success">{correct}</p>
-            <p className="text-xs text-text-muted">Correctas</p>
+            <p className="text-xs text-text-muted">Correct</p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-3 text-center">
             <p className="text-2xl font-bold text-danger">{total - correct}</p>
-            <p className="text-xs text-text-muted">Incorrectas</p>
+            <p className="text-xs text-text-muted">Incorrect</p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-3 text-center">
             <p className="text-2xl font-bold text-text-primary">{Math.round(accuracy * 100)}%</p>
-            <p className="text-xs text-text-muted">Precisión</p>
+            <p className="text-xs text-text-muted">Accuracy</p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-3 text-center">
             <p className={cn('text-2xl font-bold', passed ? 'text-success' : 'text-warning')}>
               {PASSING_SCORE}
             </p>
-            <p className="text-xs text-text-muted">Umbral mínimo</p>
+            <p className="text-xs text-text-muted">Passing threshold</p>
           </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-6 mb-6">
-        <h2 className="text-sm font-semibold text-text-primary mb-4">Resultado por dominio</h2>
+        <h2 className="text-sm font-semibold text-text-primary mb-4">Results by domain</h2>
         <div className="space-y-3">
           {byDomain.length === 0 && (
-            <p className="text-xs text-text-muted">Sin datos por dominio.</p>
+            <p className="text-xs text-text-muted">No data by domain.</p>
           )}
           {byDomain.map((d) => {
             const pct = Math.round(d.accuracy * 100)
@@ -109,7 +109,7 @@ export default async function ExamResultsPage({ params }: { params: { id: string
               <div key={d.slug}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-text-secondary">
-                    {d.name} <span className="text-text-muted">· peso {d.weight}%</span>
+                    {d.name} <span className="text-text-muted">· weight {d.weight}%</span>
                   </span>
                   <span className={ok ? 'text-success' : 'text-danger'}>
                     {pct}% ({d.correct}/{d.total})
@@ -129,10 +129,10 @@ export default async function ExamResultsPage({ params }: { params: { id: string
 
       <div className="flex gap-3">
         <Link href="/exam" className="btn-outline flex-1 text-center">
-          Nuevo simulacro
+          New mock exam
         </Link>
         <Link href="/study" className="btn-primary flex-1 text-center">
-          Seguir estudiando
+          Keep studying
         </Link>
       </div>
     </div>

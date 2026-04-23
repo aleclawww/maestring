@@ -3,13 +3,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { SubscriptionPlan, SubscriptionStatus } from '@/types/database'
 import logger from '@/lib/logger'
 
-function mapStripePlan(priceId: string): SubscriptionPlan {
+export function mapStripePlan(priceId: string): SubscriptionPlan {
   if (priceId === process.env.STRIPE_PRICE_PRO_ANNUAL) return 'pro_annual'
   if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY) return 'pro'
   return 'free'
 }
 
-function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
+export function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
   const map: Record<Stripe.Subscription.Status, SubscriptionStatus> = {
     active: 'active',
     trialing: 'trialing',

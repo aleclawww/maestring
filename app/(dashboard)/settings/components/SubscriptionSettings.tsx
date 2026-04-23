@@ -35,25 +35,25 @@ export function SubscriptionSettings({
   return (
     <section>
       <h2 className="text-sm font-semibold text-text-primary mb-4 pb-2 border-b border-border">
-        Suscripción
+        Subscription
       </h2>
       <div className="rounded-xl border border-border bg-surface-2 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-text-primary">Plan actual</p>
+          <p className="text-sm font-medium text-text-primary">Current plan</p>
           <Badge variant={plan === 'free' ? 'outline' : 'default'}>
-            {plan === 'free' ? 'Gratis' : plan === 'pro_annual' ? 'Pro Anual' : plan === 'enterprise' ? 'Enterprise' : 'Pro'}
+            {plan === 'free' ? 'Free' : plan === 'pro_annual' ? 'Pro Annual' : plan === 'enterprise' ? 'Enterprise' : 'Pro'}
           </Badge>
         </div>
         <div className="flex items-center justify-between">
-          <p className="text-sm text-text-secondary">Estado</p>
+          <p className="text-sm text-text-secondary">Status</p>
           <Badge variant={status === 'active' ? 'success' : status === 'trialing' ? 'info' : 'danger'}>
-            {status === 'active' ? 'Activo' : status === 'trialing' ? 'Prueba' : status}
+            {status === 'active' ? 'Active' : status === 'trialing' ? 'Trial' : status}
           </Badge>
         </div>
         {periodEnd && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-text-secondary">
-              {cancelAtPeriodEnd ? 'Cancela el' : 'Próximo cobro'}
+              {cancelAtPeriodEnd ? 'Cancels on' : 'Next charge'}
             </p>
             <p className="text-sm text-text-primary">{formatDate(periodEnd)}</p>
           </div>
@@ -65,17 +65,17 @@ export function SubscriptionSettings({
           plan="monthly"
           className="btn-primary mt-4 block text-center w-full"
         >
-          ✨ Actualizar a Pro
+          ✨ Upgrade to Pro
         </UpgradeButton>
       ) : stripeCustomerId ? (
         <Button
           onClick={handlePortal}
           loading={loading}
-          loadingText="Abriendo portal..."
+          loadingText="Opening portal..."
           variant="outline"
           className="mt-4 w-full"
         >
-          Gestionar suscripción
+          Manage subscription
         </Button>
       ) : null}
     </section>

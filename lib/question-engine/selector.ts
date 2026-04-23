@@ -17,7 +17,7 @@ const MAX_CONSECUTIVE_SAME_DOMAIN = 2
 // exceeds the cap, swap the offending item with the nearest item from a
 // different domain later in the queue. Pure reorder — never changes WHICH
 // items are in the session.
-function enforceInterleaving(
+export function enforceInterleaving(
   items: Array<StudyQueueItem & { domainId?: string | null }>,
   maxRun: number
 ): StudyQueueItem[] {
@@ -55,7 +55,7 @@ function enforceInterleaving(
  * Operates on items already chosen by FSRS — does not change WHAT is studied,
  * only the ORDER.
  */
-function applySessionShape(
+export function applySessionShape(
   items: StudyQueueItem[],
   states: Map<string, { stability: number; difficulty: number; lapses: number }>
 ): StudyQueueItem[] {

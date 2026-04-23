@@ -14,19 +14,19 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maestring.com'),
   title: {
     template: '%s | Maestring',
-    default: 'Maestring — Domina AWS con IA y Spaced Repetition',
+    default: 'Maestring — Master AWS with AI and Spaced Repetition',
   },
   description:
-    'Prepárate para AWS SAA-C03 con IA adaptativa, spaced repetition FSRS y simulacros reales. Aprueba en menos tiempo con el método más efectivo.',
+    'Prep for AWS SAA-C03 with adaptive AI, FSRS spaced repetition, and realistic exam simulators. Pass faster with the most effective method.',
   keywords: [
     'AWS',
     'SAA-C03',
-    'certificación',
+    'certification',
     'spaced repetition',
     'FSRS',
-    'inteligencia artificial',
-    'estudio',
-    'preparación',
+    'artificial intelligence',
+    'exam prep',
+    'study',
     'cloud',
   ],
   authors: [{ name: 'Maestring Team' }],
@@ -34,25 +34,25 @@ export const metadata: Metadata = {
   publisher: 'Maestring',
   openGraph: {
     type: 'website',
-    locale: 'es_ES',
+    locale: 'en_US',
     url: 'https://maestring.com',
     siteName: 'Maestring',
-    title: 'Maestring — Domina AWS con IA y Spaced Repetition',
+    title: 'Maestring — Master AWS with AI and Spaced Repetition',
     description:
-      'Prepárate para AWS SAA-C03 con IA adaptativa, spaced repetition FSRS y simulacros reales.',
+      'Prep for AWS SAA-C03 with adaptive AI, FSRS spaced repetition, and realistic exam simulators.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Maestring — Preparación AWS con IA',
+        alt: 'Maestring — AWS prep with AI',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Maestring — Domina AWS con IA',
-    description: 'Prepárate para AWS SAA-C03 con el método más efectivo: IA + FSRS.',
+    title: 'Maestring — Master AWS with AI',
+    description: 'Prep for AWS SAA-C03 with the most effective method: AI + FSRS.',
     images: ['/og-image.png'],
     creator: '@maestring',
   },
@@ -90,7 +90,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background text-text-primary antialiased">
         <PostHogProvider>
           {children}

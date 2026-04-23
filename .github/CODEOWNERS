@@ -1,0 +1,43 @@
+# CODEOWNERS — auto-request review for load-bearing paths.
+# Syntax: <path-glob> <@owner> [<@owner>...]. Last match wins.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
+
+# Default — anything not matched below.
+*                                   @aleclawww
+
+# Database schema. A bad migration = data loss or broken RLS.
+/supabase/migrations/**             @aleclawww
+/supabase/tests/**                  @aleclawww
+/types/supabase-generated.ts        @aleclawww
+/types/database.ts                  @aleclawww
+
+# Money path. Stripe webhooks, checkout, portal, subscription state.
+/lib/stripe/**                      @aleclawww
+/app/api/webhooks/stripe/**         @aleclawww
+/app/api/stripe/**                  @aleclawww
+
+# Auth + middleware. Gatekeepers for everything else.
+/middleware.ts                      @aleclawww
+/lib/supabase/**                    @aleclawww
+/app/auth/**                        @aleclawww
+/app/api/test/**                    @aleclawww
+
+# Scoring + FSRS. Silently wrong math ships "you failed" to someone who passed.
+/lib/fsrs/**                        @aleclawww
+/lib/exam/**                        @aleclawww
+/lib/question-engine/**             @aleclawww
+
+# Cron + infra. Silent failures here rot data over time.
+/app/api/cron/**                    @aleclawww
+/lib/cron/**                        @aleclawww
+/vercel.json                        @aleclawww
+
+# CI / supply chain. A bad workflow edit can leak secrets or ship unvetted code.
+/.github/workflows/**               @aleclawww
+/.github/dependabot.yml             @aleclawww
+/.github/CODEOWNERS                 @aleclawww
+
+# Security docs. Keep the written policy honest.
+/SECURITY.md                        @aleclawww
+/docs/security/**                   @aleclawww
+/public/.well-known/security.txt    @aleclawww

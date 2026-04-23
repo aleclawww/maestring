@@ -39,7 +39,7 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
       })
       router.refresh()
     } catch {
-      setError('No pudimos guardar el resultado. Inténtalo de nuevo.')
+      setError("We couldn't save your result. Try again.")
       setSubmitting(false)
     }
   }
@@ -52,12 +52,12 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-bold text-text-primary">
-            ¿Cómo te fue en el examen?
+            How did the exam go?
           </h2>
           <p className="mt-1 text-sm text-text-secondary">
-            Tu fecha objetivo era el {new Date(examDate).toLocaleDateString('es-ES')}.
-            Registrar tu resultado entrena el modelo que predice readiness para los
-            próximos estudiantes — y ajusta el tuyo si vuelves para SAP-C02 o DVA-C02.
+            Your target date was {new Date(examDate).toLocaleDateString('en-US')}.
+            Logging your result trains the model that predicts readiness for future
+            students — and tunes yours if you come back for SAP-C02 or DVA-C02.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -66,21 +66,21 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
               disabled={submitting}
               className="rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white hover:bg-success/90 disabled:opacity-50"
             >
-              ✅ Aprobé
+              ✅ I passed
             </button>
             <button
               onClick={() => submit('failed')}
               disabled={submitting}
               className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-sm font-semibold text-warning hover:bg-warning/20 disabled:opacity-50"
             >
-              🔁 No aprobé esta vez
+              🔁 Didn't pass this time
             </button>
             <button
               onClick={() => submit('unknown')}
               disabled={submitting}
               className="rounded-lg border border-border px-4 py-2 text-sm text-text-muted hover:bg-surface-2 disabled:opacity-50"
             >
-              No quiero decirlo
+              Prefer not to say
             </button>
           </div>
 
@@ -88,7 +88,7 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
             onClick={() => setScoreOpen(v => !v)}
             className="mt-3 text-xs text-primary hover:underline"
           >
-            {scoreOpen ? '— ocultar score' : '+ añadir score (opcional, 100–1000)'}
+            {scoreOpen ? '— hide score' : '+ add score (optional, 100–1000)'}
           </button>
           {scoreOpen && (
             <div className="mt-2 flex gap-2">
@@ -98,7 +98,7 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
                 max={1000}
                 value={score}
                 onChange={e => setScore(e.target.value)}
-                placeholder="Ej: 780"
+                placeholder="e.g. 780"
                 className="w-32 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:border-primary focus:outline-none"
               />
               <button
@@ -106,7 +106,7 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
                 disabled={submitting || !score}
                 className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
               >
-                Guardar con score
+                Save with score
               </button>
             </div>
           )}

@@ -19,7 +19,7 @@ function DeepDive({ content, tags, questionId, conceptId }: { content: string; t
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
         <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-          {open ? 'Ocultar profundización' : 'Profundizar en el concepto'}
+          {open ? 'Hide deep dive' : 'Dive deeper into this concept'}
         </span>
         <span className={cn('text-text-muted transition-transform', open && 'rotate-180')}>▾</span>
       </button>
@@ -101,12 +101,12 @@ export function AnswerFeedback({
               isOptimal ? 'text-success' : 'text-warning'
             )}
           >
-            {isOptimal ? 'Opción óptima' : 'Otra opción es preferible aquí'}
+            {isOptimal ? 'Optimal choice' : 'Another option is preferable here'}
           </p>
           <p className="text-xs text-text-muted">
             {isOptimal
-              ? 'El sistema reforzó este concepto en tu schedule.'
-              : 'El sistema ajustó tu schedule — esto te acerca al aprobado.'}
+              ? 'The system reinforced this concept in your schedule.'
+              : 'The system adjusted your schedule — this moves you closer to passing.'}
           </p>
         </div>
       </div>
@@ -114,7 +114,7 @@ export function AnswerFeedback({
       {/* Comparativa de respuestas */}
       <div className="px-6 py-4 space-y-3">
         <p className="text-sm font-medium text-text-secondary mb-3">
-          {isOptimal ? 'Tu elección:' : 'Comparativa:'}
+          {isOptimal ? 'Your choice:' : 'Comparison:'}
         </p>
 
         {question.options.map((option, i) => {
@@ -166,13 +166,13 @@ export function AnswerFeedback({
       {showElaborationStep && evaluation.elaboration && (
         <div className="border-t border-border/30 px-6 py-4 space-y-3 bg-warning/5">
           <p className="text-xs font-semibold text-warning uppercase tracking-wide">
-            Antes de continuar
+            Before you continue
           </p>
           <p className="text-sm text-text-primary">{evaluation.elaboration.prompt}</p>
           <textarea
             value={userElaboration}
             onChange={e => setUserElaboration(e.target.value)}
-            placeholder="Escribe en una línea (opcional, no se evalúa — el ejercicio es pensarlo)"
+            placeholder="Write one line (optional, not graded — the point is to think it through)"
             className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-warning focus:outline-none resize-none"
             rows={2}
           />
@@ -180,7 +180,7 @@ export function AnswerFeedback({
             onClick={() => setElaborationRevealed(true)}
             className="text-xs text-warning hover:underline"
           >
-            Mostrar el razonamiento del sistema →
+            Show the system’s reasoning →
           </button>
         </div>
       )}
@@ -191,7 +191,7 @@ export function AnswerFeedback({
           {!isOptimal && evaluation.elaboration?.validReasoningHint && (
             <div className="rounded-lg bg-surface-2 px-4 py-3">
               <p className="text-xs font-semibold text-text-muted mb-1">
-                Tu razonamiento
+                Your reasoning
               </p>
               <p className="text-sm text-text-secondary italic">
                 {evaluation.elaboration.validReasoningHint}
@@ -201,7 +201,7 @@ export function AnswerFeedback({
 
           <div>
             <p className="text-xs font-semibold text-text-muted mb-1 uppercase tracking-wide">
-              {isOptimal ? 'Por qué es óptima' : 'Por qué la otra es preferible aquí'}
+              {isOptimal ? 'Why it’s optimal' : 'Why the other is preferable here'}
             </p>
             <p className="text-sm text-text-secondary leading-relaxed">
               {evaluation.explanation}
@@ -212,7 +212,7 @@ export function AnswerFeedback({
               — and both can coexist if the question author wrote one. */}
           {(question.keyInsight || evaluation.keyInsight) && (
             <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3">
-              <p className="text-xs font-semibold text-primary mb-1">Clave para recordar</p>
+              <p className="text-xs font-semibold text-primary mb-1">Key takeaway</p>
               <p className="text-sm text-text-primary">
                 {question.keyInsight || evaluation.keyInsight}
               </p>
@@ -242,7 +242,7 @@ export function AnswerFeedback({
           disabled={showElaborationStep}
           className={cn('w-full btn-primary', showElaborationStep && 'opacity-50 cursor-not-allowed')}
         >
-          {isLast ? 'Ver resultados' : 'Siguiente pregunta →'}
+          {isLast ? 'See results' : 'Next question →'}
         </button>
       </div>
     </div>

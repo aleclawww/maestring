@@ -22,20 +22,20 @@ export function SessionProgress({
     <div className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur-sm px-6 py-3">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-text-muted">
-          Pregunta {current} de {total}
+          Question {current} of {total}
         </span>
         <div className="flex items-center gap-3">
           <span className="text-xs text-text-muted">{progress}%</span>
           {onAbandon && (
             <button
               onClick={() => {
-                if (confirm('¿Abandonar la sesión? Perderás el progreso de esta sesión.')) {
+                if (confirm('Abandon the session? You will lose this session’s progress.')) {
                   onAbandon()
                 }
               }}
               className="text-xs text-text-muted hover:text-danger transition-colors"
             >
-              Abandonar
+              Abandon
             </button>
           )}
         </div>

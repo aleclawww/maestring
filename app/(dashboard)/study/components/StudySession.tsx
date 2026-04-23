@@ -252,18 +252,18 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
       <div className="flex min-h-full flex-col items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
           <div className="mb-6 text-6xl">📖</div>
-          <h1 className="mb-2 text-2xl font-bold text-text-primary">Sesión de Estudio</h1>
+          <h1 className="mb-2 text-2xl font-bold text-text-primary">Study Session</h1>
           <p className="mb-8 text-text-secondary">
             {dueCount > 0
-              ? `Tienes ${dueCount} conceptos listos para repasar.`
-              : 'Excelente, estás al día. Exploremos nuevos conceptos.'}
+              ? `You have ${dueCount} concepts ready to review.`
+              : 'Nice — all caught up. Let’s explore new concepts.'}
           </p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             {[
-              { mode: 'review' as const, label: 'Repaso', desc: 'Conceptos vencidos', icon: '🔄' },
-              { mode: 'discovery' as const, label: 'Descubrimiento', desc: 'Nuevos conceptos', icon: '🆕' },
-              { mode: 'intensive' as const, label: 'Intensivo', desc: 'Preguntas difíciles', icon: '🔥' },
-              { mode: 'maintenance' as const, label: 'Mantenimiento', desc: 'Refuerzo ligero', icon: '✅' },
+              { mode: 'review' as const, label: 'Review', desc: 'Due concepts', icon: '🔄' },
+              { mode: 'discovery' as const, label: 'Discovery', desc: 'New concepts', icon: '🆕' },
+              { mode: 'intensive' as const, label: 'Intensive', desc: 'Hard questions', icon: '🔥' },
+              { mode: 'maintenance' as const, label: 'Maintenance', desc: 'Light reinforcement', icon: '✅' },
             ].map(({ mode, label, desc, icon }) => (
               <button
                 key={mode}
@@ -283,9 +283,9 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           >
             <span className="text-2xl">🧪</span>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-warning">Modo Exploración</p>
+              <p className="text-sm font-semibold text-warning">Exploration mode</p>
               <p className="text-xs text-text-muted">
-                Practica sin afectar tu Readiness — ideal para probar territorio nuevo.
+                Practice without affecting your Readiness — great for testing new ground.
               </p>
             </div>
           </button>
@@ -300,7 +300,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
       <div className="flex min-h-full items-center justify-center">
         <div className="text-center">
           <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-text-secondary">Generando pregunta...</p>
+          <p className="text-text-secondary">Generating question...</p>
         </div>
       </div>
     )
@@ -313,21 +313,21 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
         <div className="max-w-md w-full rounded-2xl border border-warning/40 bg-warning/5 p-6 text-center space-y-4">
           <div className="text-3xl">⏳</div>
           <h2 className="text-xl font-semibold text-text-primary">
-            Cuota diaria alcanzada
+            Daily quota reached
           </h2>
           <p className="text-sm text-text-secondary">
-            Has usado <strong>{state.used} / {state.quota}</strong> preguntas hoy en el plan gratuito.
-            Vuelve mañana, o desbloquea sesiones ilimitadas con Pro.
+            You’ve used <strong>{state.used} / {state.quota}</strong> questions today on the free plan.
+            Come back tomorrow, or unlock unlimited sessions with Pro.
           </p>
           <UpgradeButton plan="monthly" className="btn-primary w-full py-3 rounded-lg">
-            ✨ Hazte Pro — 7 días gratis
+            ✨ Go Pro — 7 days free
           </UpgradeButton>
           <button
             type="button"
             onClick={() => dispatch({ type: 'RESET' })}
             className="text-xs text-text-muted hover:text-text-secondary"
           >
-            Volver al inicio
+            Back to start
           </button>
         </div>
       </div>
@@ -349,7 +349,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
   const explorationBanner = isExploration ? (
     <div className="mx-4 sm:mx-6 mt-3 flex items-center gap-2 rounded-lg border border-dashed border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
       <span>🧪</span>
-      <span>Modo Exploración — esta sesión no avanza tu Readiness Score.</span>
+      <span>Exploration mode — this session doesn’t advance your Readiness Score.</span>
     </div>
   ) : null
 

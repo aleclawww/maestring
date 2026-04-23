@@ -42,7 +42,17 @@ function extractJSON(text: string): unknown {
 }
 
 export async function generateQuestion(
-  req: GenerateQuestionRequest & { conceptId?: string; fingerprint?: CognitiveFingerprint; userId?: string }
+  req: GenerateQuestionRequest & {
+    conceptId?: string
+    fingerprint?: CognitiveFingerprint
+    userId?: string
+    /**
+     * Review gate for the newly-inserted row. Defaults to 'approved' so
+     * hot-path user-facing generation stays unchanged. Cron/batch callers
+     * pass 'pending' to queue for admin approval.
+     */
+    reviewStatus?: 'pending' | 'approved'
+  }
 ) {
   const concept = getConceptBySlug(req.conceptSlug)
   if (!concept) throw new Error(`Unknown concept: ${req.conceptSlug}`)
@@ -133,6 +143,7 @@ export async function generateQuestion(
         difficulty: (raw['difficulty'] as number) ?? difficulty,
         question_type: 'multiple_choice',
         source: 'ai-generated',
+        review_status: req.reviewStatus ?? 'approved',
       }
       if (conceptId) insertPayload['concept_id'] = conceptId
 

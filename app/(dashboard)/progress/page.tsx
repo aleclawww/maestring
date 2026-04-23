@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Mi Progreso' }
+export const metadata: Metadata = { title: 'My Progress' }
 
 export default async function ProgressPage() {
   const user = await requireAuthenticatedUser()
@@ -82,10 +82,10 @@ export default async function ProgressPage() {
       {/* Stats overview */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: 'Sesiones totales', value: statsRow?.total_sessions ?? 0, icon: '📚' },
-          { label: 'XP total', value: (statsRow?.total_xp ?? 0).toLocaleString(), icon: '⭐' },
-          { label: 'Racha actual', value: `${statsRow?.current_streak ?? 0}d`, icon: '🔥' },
-          { label: 'Conceptos dominados', value: statsRow?.concepts_mastered ?? 0, icon: '🏆' },
+          { label: 'Total sessions', value: statsRow?.total_sessions ?? 0, icon: '📚' },
+          { label: 'Total XP', value: (statsRow?.total_xp ?? 0).toLocaleString(), icon: '⭐' },
+          { label: 'Current streak', value: `${statsRow?.current_streak ?? 0}d`, icon: '🔥' },
+          { label: 'Concepts mastered', value: statsRow?.concepts_mastered ?? 0, icon: '🏆' },
         ].map(s => (
           <Card key={s.label}>
             <CardContent className="pt-4">
@@ -100,7 +100,7 @@ export default async function ProgressPage() {
       {/* Activity Heatmap */}
       <Card>
         <CardHeader>
-          <CardTitle>Actividad — Últimas 12 semanas</CardTitle>
+          <CardTitle>Activity — Last 12 weeks</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-1 overflow-x-auto pb-2">
@@ -111,14 +111,14 @@ export default async function ProgressPage() {
                     key={day.date}
                     className="h-3 w-3 rounded-sm transition-colors"
                     style={{ backgroundColor: getHeatColor(day.count) }}
-                    title={`${day.date}: ${day.count} sesiones`}
+                    title={`${day.date}: ${day.count} sessions`}
                   />
                 ))}
               </div>
             ))}
           </div>
           <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
-            <span>Menos</span>
+            <span>Less</span>
             {[0, 1, 2, 3, 4].map(n => (
               <div
                 key={n}
@@ -126,7 +126,7 @@ export default async function ProgressPage() {
                 style={{ backgroundColor: getHeatColor(n) }}
               />
             ))}
-            <span>Más</span>
+            <span>More</span>
           </div>
         </CardContent>
       </Card>
@@ -134,7 +134,7 @@ export default async function ProgressPage() {
       {/* Domain progress */}
       <Card>
         <CardHeader>
-          <CardTitle>Progreso por dominio</CardTitle>
+          <CardTitle>Progress by domain</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -165,7 +165,7 @@ export default async function ProgressPage() {
                     />
                   </div>
                   <p className="text-xs text-text-muted mt-0.5">
-                    Peso en examen: {domain.exam_weight_percent}%
+                    Exam weight: {domain.exam_weight_percent}%
                   </p>
                 </div>
               )
@@ -177,7 +177,7 @@ export default async function ProgressPage() {
       {/* Recent sessions */}
       <Card>
         <CardHeader>
-          <CardTitle>Historial de sesiones</CardTitle>
+          <CardTitle>Session history</CardTitle>
         </CardHeader>
         <div className="divide-y divide-border">
           {(sessions ?? []).map(s => {
@@ -189,7 +189,7 @@ export default async function ProgressPage() {
               <div key={s.id} className="flex items-center justify-between px-6 py-3">
                 <div>
                   <p className="text-sm font-medium text-text-primary capitalize">
-                    {s.mode === 'discovery' ? 'Descubrimiento' : s.mode === 'review' ? 'Repaso' : s.mode === 'intensive' ? 'Intensivo' : 'Mantenimiento'}
+                    {s.mode === 'discovery' ? 'Discovery' : s.mode === 'review' ? 'Review' : s.mode === 'intensive' ? 'Intensive' : 'Maintenance'}
                   </p>
                   <p className="text-xs text-text-muted">
                     {formatRelativeTime(s.created_at)} · {formatDuration(s.total_time_seconds)}
@@ -200,7 +200,7 @@ export default async function ProgressPage() {
                     {accuracy}%
                   </Badge>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-text-primary">{s.concepts_studied} preguntas</p>
+                    <p className="text-sm font-medium text-text-primary">{s.concepts_studied} questions</p>
                     <p className="text-xs text-primary">+{s.xp_earned} XP</p>
                   </div>
                 </div>

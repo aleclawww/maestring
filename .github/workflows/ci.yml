@@ -122,6 +122,11 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       CRON_SECRET: ci-placeholder
       MAGIC_LINK_SECRET: ci-placeholder
+      # Enables the test-auth shim (/api/test/login) so authenticated specs
+      # run. MUST point SUPABASE_* at a dedicated CI/staging project — the
+      # shim creates a fixture user (e2e-fixture@maestring.test) via the
+      # service-role key. Never run this against the production project.
+      ALLOW_TEST_AUTH: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -132,6 +137,21 @@ jobs:
         with:
           path: node_modules
           key: node-modules-${{ hashFiles('package-lock.json') }}
+      # Guardrail: refuse to run the test-auth shim against production Supabase.
+      # Set repository variable PROD_SUPABASE_URL to the prod project URL; this
+      # step fails loudly if CI secrets were ever pointed at it.
+      - name: Assert non-prod Supabase target
+        env:
+          PROD_SUPABASE_URL: ${{ vars.PROD_SUPABASE_URL }}
+        run: |
+          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]; then
+            echo "::error::NEXT_PUBLIC_SUPABASE_URL is empty — CI secrets not configured"
+            exit 1
+          fi
+          if [ -n "${PROD_SUPABASE_URL:-}" ] && [ "$NEXT_PUBLIC_SUPABASE_URL" = "$PROD_SUPABASE_URL" ]; then
+            echo "::error::CI Supabase URL matches PROD_SUPABASE_URL — test-auth shim would create fixture users in prod. Point CI at a staging project."
+            exit 1
+          fi
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npm run test:e2e -- --grep @smoke

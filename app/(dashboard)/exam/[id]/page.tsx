@@ -57,7 +57,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
       const json = await res.json()
       if (cancelled) return
       if (!res.ok) {
-        setLoadError(json.error ?? 'No se pudo cargar')
+        setLoadError(json.error ?? "Couldn't load")
         return
       }
       if (json.data.session.status !== 'in_progress') {
@@ -122,14 +122,14 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
     return (
       <div className="p-10 text-center">
         <p className="text-danger mb-4">{loadError}</p>
-        <a href="/exam" className="btn-primary">Volver</a>
+        <a href="/exam" className="btn-primary">Back</a>
       </div>
     )
   }
 
   if (!session || !current) {
     return (
-      <div className="p-10 text-center text-text-muted">Cargando simulacro…</div>
+      <div className="p-10 text-center text-text-muted">Loading mock exam…</div>
     )
   }
 
@@ -148,9 +148,9 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
       >
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium text-text-secondary">
-            Pregunta {currentIdx + 1} / {items.length}
+            Question {currentIdx + 1} / {items.length}
           </span>
-          <span className="text-xs text-text-muted">{answeredCount} respondidas</span>
+          <span className="text-xs text-text-muted">{answeredCount} answered</span>
         </div>
         <div
           className={cn(
@@ -162,14 +162,14 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
         </div>
         <button
           onClick={() => {
-            if (confirm(`¿Enviar examen? Has respondido ${answeredCount}/${items.length} preguntas.`)) {
+            if (confirm(`Submit exam? You've answered ${answeredCount}/${items.length} questions.`)) {
               void submitExam()
             }
           }}
           disabled={submitting}
           className="btn-danger text-sm"
         >
-          {submitting ? 'Enviando…' : 'Enviar'}
+          {submitting ? 'Submitting…' : 'Submit'}
         </button>
       </div>
 
@@ -178,7 +178,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xs text-text-muted">
-                {current.question.domain_name ?? 'Dominio'}
+                {current.question.domain_name ?? 'Domain'}
               </span>
               <button
                 onClick={toggleFlag}
@@ -189,7 +189,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
                     : 'border-border text-text-muted hover:border-warning/50'
                 )}
               >
-                {current.flagged ? '🚩 Marcada' : '⚑ Marcar'}
+                {current.flagged ? '🚩 Flagged' : '⚑ Flag'}
               </button>
             </div>
             <p className="text-base text-text-primary leading-relaxed mb-6 whitespace-pre-wrap">
@@ -229,14 +229,14 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
                 onClick={() => setCurrentIdx((i) => i - 1)}
                 className="btn-outline flex-1 disabled:opacity-40"
               >
-                ← Anterior
+                ← Previous
               </button>
               <button
                 disabled={currentIdx === items.length - 1}
                 onClick={() => setCurrentIdx((i) => i + 1)}
                 className="btn-primary flex-1 disabled:opacity-40"
               >
-                Siguiente →
+                Next →
               </button>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
 
         <div className="hidden lg:flex w-56 flex-col border-l border-border bg-surface overflow-y-auto p-4">
           <p className="text-xs font-semibold text-text-muted mb-3 uppercase tracking-wide">
-            Navegación
+            Navigation
           </p>
           <div className="grid grid-cols-5 gap-1.5">
             {items.map((it, i) => (
@@ -268,13 +268,13 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
           </div>
           <div className="mt-4 space-y-2 text-xs text-text-muted">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-success/20" /> Respondida
+              <div className="h-3 w-3 rounded bg-success/20" /> Answered
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-warning/20" /> Marcada
+              <div className="h-3 w-3 rounded bg-warning/20" /> Flagged
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-surface-2" /> Sin responder
+              <div className="h-3 w-3 rounded bg-surface-2" /> Unanswered
             </div>
           </div>
         </div>

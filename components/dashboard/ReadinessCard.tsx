@@ -55,7 +55,7 @@ function bandColor(score: number) {
       text: 'text-success',
       bg: 'bg-success/10',
       border: 'border-l-success',
-      label: 'Preparado',
+      label: 'Ready',
     }
   if (score >= 50)
     return {
@@ -64,7 +64,7 @@ function bandColor(score: number) {
       text: 'text-warning',
       bg: 'bg-warning/10',
       border: 'border-l-warning',
-      label: 'En progreso',
+      label: 'In progress',
     }
   return {
     ring: 'stroke-danger',
@@ -72,7 +72,7 @@ function bandColor(score: number) {
     text: 'text-danger',
     bg: 'bg-danger/10',
     border: 'border-l-danger',
-    label: 'Construyendo base',
+    label: 'Building base',
   }
 }
 
@@ -145,7 +145,7 @@ function Sparkline({
   if (series.length < 2) {
     return (
       <p className="text-[10px] text-text-muted italic">
-        Trend disponible tras 2 snapshots diarios
+        Trend available after 2 daily snapshots
       </p>
     )
   }
@@ -177,7 +177,7 @@ function Sparkline({
 export function ReadinessCard({ data }: { data: ReadinessData }) {
   const band = bandColor(data.score)
   const eta = data.eta_ready_date
-    ? new Date(data.eta_ready_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+    ? new Date(data.eta_ready_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
     : null
   const coverage = data.total_concepts > 0
     ? Math.round((data.studied_concepts / data.total_concepts) * 100)
@@ -186,10 +186,10 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
   const passPct = Math.round((data.pass_probability ?? 0) * 100)
   const velocity = Number(data.velocity_per_week ?? 0)
   const velocityLabel = velocity > 0
-    ? `+${velocity.toFixed(1)} pts/sem`
+    ? `+${velocity.toFixed(1)} pts/wk`
     : velocity < 0
-    ? `${velocity.toFixed(1)} pts/sem`
-    : 'sin datos'
+    ? `${velocity.toFixed(1)} pts/wk`
+    : 'no data'
   const velocityClass = velocity > 0
     ? 'text-success'
     : velocity < 0
@@ -230,17 +230,17 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
               </div>
               <h2 className="text-lg font-bold text-text-primary">Readiness Score</h2>
               <p className="text-xs text-text-muted">
-                Cobertura: {coverage}% ({data.studied_concepts}/{data.total_concepts} conceptos)
+                Coverage: {coverage}% ({data.studied_concepts}/{data.total_concepts} concepts)
               </p>
               <p className="text-xs">
-                <span className="text-text-muted">P(aprobar) estimada: </span>
+                <span className="text-text-muted">Estimated P(pass): </span>
                 <strong className={band.text}>{passPct}%</strong>
-                <span className="text-text-muted"> · velocidad </span>
+                <span className="text-text-muted"> · velocity </span>
                 <strong className={velocityClass}>{velocityLabel}</strong>
               </p>
               {eta && (
                 <p className="text-xs text-text-secondary">
-                  A tu ritmo, llegas al 80 alrededor del <strong>{eta}</strong>
+                  At your pace, you'll hit 80 around <strong>{eta}</strong>
                 </p>
               )}
             </div>
@@ -249,7 +249,7 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
           <div className="flex flex-col gap-2 min-w-[220px]">
             <div>
               <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">
-                Tendencia 30 días
+                30-day trend
               </p>
               <div className={band.text}>
                 <Sparkline series={data.history} />
@@ -260,14 +260,14 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
                 href={studyHref}
                 className="block rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors px-3 py-2 text-xs"
               >
-                <p className="text-text-muted">Empezar por</p>
+                <p className="text-text-muted">Start with</p>
                 <p className="font-semibold text-text-primary">{data.weakest_domain}</p>
                 {data.weakest_concepts.length > 0 && (
                   <p className="text-text-muted mt-0.5 line-clamp-1">
                     {data.weakest_concepts.map(c => c.name).join(' · ')}
                   </p>
                 )}
-                <p className="text-primary mt-1 font-medium">Repasar ahora →</p>
+                <p className="text-primary mt-1 font-medium">Review now →</p>
               </Link>
             )}
             {data.at_risk_count > 0 && (
@@ -276,7 +276,7 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
                 onClick={openAtRisk}
                 className="w-full text-left rounded-lg bg-warning/10 hover:bg-warning/15 transition-colors px-3 py-2 text-xs text-warning"
               >
-                <strong>{data.at_risk_count}</strong> conceptos en riesgo (7 días) →
+                <strong>{data.at_risk_count}</strong> concepts at risk (7 days) →
               </button>
             )}
           </div>
@@ -303,19 +303,19 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
         )}
       </CardContent>
 
-      <Modal isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title="Conceptos en riesgo" size="lg">
+      <Modal isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title="Concepts at risk" size="lg">
         {atRiskLoading ? (
-          <p className="text-sm text-text-muted">Cargando…</p>
+          <p className="text-sm text-text-muted">Loading…</p>
         ) : !atRisk || atRisk.length === 0 ? (
-          <p className="text-sm text-text-muted">No hay conceptos en riesgo ahora mismo.</p>
+          <p className="text-sm text-text-muted">No concepts at risk right now.</p>
         ) : (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {atRisk.map(c => {
               const due = c.nextReviewDate ? new Date(c.nextReviewDate) : null
               const dueLabel = due
                 ? due.getTime() < Date.now()
-                  ? 'Vencido'
-                  : `En ${Math.max(1, Math.ceil((due.getTime() - Date.now()) / 86_400_000))}d`
+                  ? 'Overdue'
+                  : `In ${Math.max(1, Math.ceil((due.getTime() - Date.now()) / 86_400_000))}d`
                 : ''
               return (
                 <Link
@@ -328,7 +328,7 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
                       <p className="text-sm font-medium text-text-primary truncate">{c.name}</p>
                       <p className="text-xs text-text-muted truncate">
                         {c.domainName ?? '—'} · stability {c.stability.toFixed(1)}d
-                        {c.lapses > 0 && ` · ${c.lapses} lapsos`}
+                        {c.lapses > 0 && ` · ${c.lapses} lapses`}
                       </p>
                     </div>
                     <span className="text-xs font-medium text-warning whitespace-nowrap">{dueLabel}</span>

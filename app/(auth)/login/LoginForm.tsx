@@ -23,15 +23,19 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
     setLoading(true)
     setError(null)
 
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${nextUrl ?? '/dashboard'}`,
-      },
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        redirectTo: `${window.location.origin}/auth/callback?next=${nextUrl ?? '/dashboard'}`,
+        intent: 'login',
+      }),
     })
 
-    if (err) {
-      setError(err.message)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setError(j.message ?? 'Could not send the link.')
       setLoading(false)
     } else {
       setSent(true)
@@ -58,20 +62,20 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
     return (
       <div className="rounded-xl border border-success/30 bg-success/10 p-6 text-center">
         <div className="mb-3 text-4xl">📬</div>
-        <h2 className="mb-2 font-semibold text-text-primary">¡Revisa tu email!</h2>
+        <h2 className="mb-2 font-semibold text-text-primary">Check your email!</h2>
         <p className="text-sm text-text-secondary">
-          Te enviamos un enlace mágico a{' '}
-          <span className="font-medium text-text-primary">{email}</span>. Haz clic en él para
-          iniciar sesión.
+          We sent a magic link to{' '}
+          <span className="font-medium text-text-primary">{email}</span>. Click it to
+          sign in.
         </p>
         <p className="mt-3 text-xs text-text-muted">
-          El enlace expira en 1 hora. Revisa también tu carpeta de spam.
+          The link expires in 1 hour. Check your spam folder too.
         </p>
         <button
           onClick={() => setSent(false)}
           className="mt-4 text-sm text-primary hover:underline"
         >
-          Usar otro email
+          Use a different email
         </button>
       </div>
     )
@@ -98,7 +102,7 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
         )}
-        Continuar con Google
+        Continue with Google
       </button>
 
       <div className="relative mb-4">
@@ -106,7 +110,7 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-surface px-2 text-text-muted">o continúa con email</span>
+          <span className="bg-surface px-2 text-text-muted">or continue with email</span>
         </div>
       </div>
 
@@ -126,7 +130,7 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="tu@email.com"
+            placeholder="you@email.com"
             className="input-field"
             required
             autoComplete="email"
@@ -144,19 +148,19 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Enviando...
+              Sending...
             </>
           ) : (
             <>
               <span>✨</span>
-              Enviar enlace mágico
+              Send magic link
             </>
           )}
         </button>
       </form>
 
       <p className="mt-4 text-center text-xs text-text-muted">
-        Sin contraseña. Te enviamos un enlace al email.
+        No password. We'll email you a link.
       </p>
     </div>
   )

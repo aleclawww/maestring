@@ -15,13 +15,13 @@ export default function ExamIntroPage() {
       const res = await fetch('/api/exam/start', { method: 'POST' })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.message ?? json.error ?? 'No se pudo iniciar el simulacro')
+        setError(json.message ?? json.error ?? "Couldn't start the mock exam")
         setStarting(false)
         return
       }
       router.push(`/exam/${json.data.id}`)
     } catch {
-      setError('Error de red')
+      setError('Network error')
       setStarting(false)
     }
   }
@@ -30,30 +30,30 @@ export default function ExamIntroPage() {
     <div className="flex min-h-full items-center justify-center p-6">
       <div className="w-full max-w-lg text-center">
         <div className="text-6xl mb-6">📝</div>
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Simulacro SAA-C03</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-2">SAA-C03 mock exam</h1>
         <p className="text-text-secondary mb-8">
-          Réplica del examen oficial con las mismas condiciones.
+          A replica of the official exam under the same conditions.
         </p>
         <div className="grid grid-cols-3 gap-4 mb-8 text-center">
           <div className="rounded-xl border border-border bg-surface p-4">
             <p className="text-2xl font-bold text-text-primary">65</p>
-            <p className="text-xs text-text-muted">Preguntas</p>
+            <p className="text-xs text-text-muted">Questions</p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-4">
             <p className="text-2xl font-bold text-text-primary">130</p>
-            <p className="text-xs text-text-muted">Minutos</p>
+            <p className="text-xs text-text-muted">Minutes</p>
           </div>
           <div className="rounded-xl border border-border bg-surface p-4">
             <p className="text-2xl font-bold text-text-primary">720</p>
-            <p className="text-xs text-text-muted">Puntos para aprobar</p>
+            <p className="text-xs text-text-muted">Points to pass</p>
           </div>
         </div>
         <div className="mb-6 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning text-left">
-          <p className="font-semibold mb-1">⚠️ Condiciones del simulacro</p>
+          <p className="font-semibold mb-1">⚠️ Mock exam conditions</p>
           <ul className="text-xs text-warning/80 space-y-1 list-disc list-inside">
-            <li>El cronómetro es server-side: no se para al recargar.</li>
-            <li>El examen se envía automáticamente al agotar el tiempo.</li>
-            <li>Puedes marcar preguntas para revisar más tarde.</li>
+            <li>The timer is server-side: it doesn't pause on reload.</li>
+            <li>The exam submits automatically when time runs out.</li>
+            <li>You can flag questions to review later.</li>
           </ul>
         </div>
         {error && (
@@ -66,7 +66,7 @@ export default function ExamIntroPage() {
           disabled={starting}
           className="btn-primary w-full text-base py-3 disabled:opacity-50"
         >
-          {starting ? 'Iniciando…' : '🚀 Comenzar simulacro'}
+          {starting ? 'Starting…' : '🚀 Start mock exam'}
         </button>
       </div>
     </div>

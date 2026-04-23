@@ -14,7 +14,7 @@ interface Domain {
 
 type Background = 'developer' | 'sysadmin' | 'business' | 'student' | 'other'
 
-const STEPS = ['Background', 'Examen', 'Calibración', 'Diagnóstico', 'Listo'] as const
+const STEPS = ['Background', 'Exam', 'Calibration', 'Diagnostic', 'Ready'] as const
 
 interface DiagnosticQuestion {
   domainSlug: string
@@ -27,19 +27,19 @@ interface DiagnosticQuestion {
 }
 
 const LEVEL_LABELS = [
-  { v: 0, label: 'Cero', desc: 'Nunca lo he tocado' },
-  { v: 1, label: 'Lo he visto', desc: 'Sé que existe, no lo he usado' },
-  { v: 2, label: 'Básico', desc: 'Lo he usado en tutoriales' },
-  { v: 3, label: 'Intermedio', desc: 'Lo uso en proyectos reales' },
-  { v: 4, label: 'Avanzado', desc: 'Lo domino, podría enseñarlo' },
+  { v: 0, label: 'Zero', desc: "I've never touched it" },
+  { v: 1, label: "I've seen it", desc: "I know it exists, haven't used it" },
+  { v: 2, label: 'Basic', desc: "I've used it in tutorials" },
+  { v: 3, label: 'Intermediate', desc: 'I use it in real projects' },
+  { v: 4, label: 'Advanced', desc: 'I master it, could teach it' },
 ]
 
 const BACKGROUNDS: Array<{ v: Background; label: string; hint: string }> = [
-  { v: 'developer', label: 'Desarrollador', hint: 'Backend, frontend, full-stack' },
-  { v: 'sysadmin', label: 'SysAdmin / DevOps', hint: 'Infra, redes, operaciones' },
-  { v: 'business', label: 'Business / Producto', hint: 'PM, consultor, arquitecto de negocio' },
-  { v: 'student', label: 'Estudiante', hint: 'Sin experiencia profesional aún' },
-  { v: 'other', label: 'Otro', hint: '' },
+  { v: 'developer', label: 'Developer', hint: 'Backend, frontend, full-stack' },
+  { v: 'sysadmin', label: 'SysAdmin / DevOps', hint: 'Infra, networks, operations' },
+  { v: 'business', label: 'Business / Product', hint: 'PM, consultant, business architect' },
+  { v: 'student', label: 'Student', hint: 'No professional experience yet' },
+  { v: 'other', label: 'Other', hint: '' },
 ]
 
 export function OnboardingForm({ domains }: { domains: Domain[] }) {
@@ -117,7 +117,7 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
       })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
-        throw new Error(j.error || 'No se pudo guardar la calibración')
+        throw new Error(j.error || "Couldn't save your calibration")
       }
       track({
         name: 'onboarding_completed',
@@ -129,7 +129,7 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
       router.push('/dashboard')
       router.refresh()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error desconocido')
+      setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
@@ -151,10 +151,10 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
       <div className="p-6 space-y-6">
         {step === 0 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">¿Cuál es tu background?</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-1">What's your background?</h2>
             <p className="text-sm text-text-secondary mb-5">
-              Esto adapta el tono de las explicaciones — un developer recibe contexto técnico,
-              un perfil de business recibe analogías conceptuales.
+              This tunes the tone of explanations — a developer gets technical context,
+              a business profile gets conceptual analogies.
             </p>
             <div className="space-y-2">
               {BACKGROUNDS.map(b => (
@@ -182,9 +182,9 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
         {step === 1 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">¿Cuándo es tu examen?</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-1">When is your exam?</h2>
             <p className="text-sm text-text-secondary mb-5">
-              Calibramos el ritmo recomendado a partir de aquí.
+              We calibrate the recommended pace from this.
             </p>
             <input
               type="date"
@@ -197,14 +197,14 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
               <div className={`text-sm rounded-lg px-3 py-2 mb-5 ${
                 pace === 'sprint' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'
               }`}>
-                {days} días → modo <strong>{pace}</strong>
+                {days} days → <strong>{pace}</strong> mode
                 {pace === 'sprint'
-                  ? ': sesiones diarias, foco en dominios de alto peso.'
-                  : ': 3-4 sesiones/semana, exploración amplia.'}
+                  ? ': daily sessions, focus on high-weight domains.'
+                  : ': 3-4 sessions/week, broad exploration.'}
               </div>
             )}
             <label className="text-sm font-medium text-text-secondary mb-2 block">
-              Minutos al día disponibles:
+              Minutes per day available:
             </label>
             <div className="grid grid-cols-3 gap-3">
               {[15, 30, 45, 60, 90, 120].map(m => (
@@ -227,17 +227,17 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
         {step === 2 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">Nivel autopercibido por dominio</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-1">Self-rated level by domain</h2>
             <p className="text-sm text-text-secondary mb-5">
-              Sé honesto. Esto siembra tu modelo cognitivo — el sistema lo refinará con cada
-              respuesta. Subestimar es mejor que sobreestimar.
+              Be honest. This seeds your cognitive model — the system will refine it with every
+              answer. Underestimating is better than overestimating.
             </p>
             <div className="space-y-4">
               {domains.map(d => (
                 <div key={d.slug} className="rounded-lg border border-border p-3">
                   <div className="flex items-baseline justify-between gap-3 mb-2">
                     <p className="font-semibold text-text-primary text-sm">{d.name}</p>
-                    <span className="text-xs text-text-muted">{d.exam_weight_percent}% del examen</span>
+                    <span className="text-xs text-text-muted">{d.exam_weight_percent}% of the exam</span>
                   </div>
                   <div className="grid grid-cols-5 gap-1">
                     {LEVEL_LABELS.map(l => (
@@ -264,13 +264,13 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
         {step === 3 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">Diagnóstico rápido</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-1">Quick diagnostic</h2>
             <p className="text-sm text-text-secondary mb-5">
               {diagnostic.length > 0
-                ? `${diagnostic.length} preguntas (una por dominio). No se evalúa como examen — solo afinamos tu punto de partida. Fallar aquí es útil.`
+                ? `${diagnostic.length} questions (one per domain). It's not graded like an exam — we're just refining your starting point. Getting these wrong is useful.`
                 : diagnosticLoading
-                ? 'Cargando diagnóstico…'
-                : 'Tu plan inicial usará tu autoevaluación. El sistema se ajustará con las primeras sesiones.'}
+                ? 'Loading diagnostic…'
+                : 'Your initial plan will use your self-assessment. The system will adjust with your first sessions.'}
             </p>
             {diagnostic.map((q, qi) => {
               const selected = diagnosticAnswers[q.questionId]
@@ -310,7 +310,7 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
             })}
             {diagnostic.length > 0 && (
               <p className="text-xs text-text-muted italic">
-                Responde todas para continuar — o sáltalo si prefieres empezar con tu autoevaluación.
+                Answer all of them to continue — or skip if you'd rather start with your self-assessment.
               </p>
             )}
           </div>
@@ -318,26 +318,26 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
         {step === 4 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">Contrato psicológico</h2>
-            <p className="text-sm text-text-secondary mb-5">Antes de empezar, esto es importante:</p>
+            <h2 className="text-lg font-bold text-text-primary mb-1">Psychological contract</h2>
+            <p className="text-sm text-text-secondary mb-5">Before you start, this matters:</p>
             <div className="rounded-xl border border-border bg-surface-2 p-4 mb-5 space-y-3 text-sm">
               <p className="text-text-primary">
-                <strong>En Maestring, los errores no son problemas — son el mecanismo de aprendizaje.</strong>
+                <strong>In Maestring, mistakes aren't problems — they're the learning mechanism.</strong>
               </p>
               <p className="text-text-secondary">
-                Cada vez que falles una pregunta, el sistema aprende más sobre ti y ajusta tu plan.
-                Vas a fallar preguntas. Eso es exactamente lo que tiene que pasar.
+                Every time you miss a question, the system learns more about you and adjusts your plan.
+                You will miss questions. That's exactly what's supposed to happen.
               </p>
               <p className="text-text-secondary">
-                Tu Readiness Score empieza bajo y sube con repeticiones espaciadas — no con
-                respuestas correctas seguidas. La consistencia gana, no la velocidad.
+                Your Readiness Score starts low and rises with spaced repetitions — not with
+                consecutive correct answers. Consistency wins, not speed.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-surface-2 p-4 text-sm space-y-1">
-              <p>📅 Examen: <strong>{examTargetDate || 'sin fecha'}</strong>{days !== null && ` (${days}d)`}</p>
-              <p>⏱️ Estudio diario: <strong>{studyMinutesPerDay} min</strong></p>
+              <p>📅 Exam: <strong>{examTargetDate || 'no date'}</strong>{days !== null && ` (${days}d)`}</p>
+              <p>⏱️ Daily study: <strong>{studyMinutesPerDay} min</strong></p>
               <p>🎯 Background: <strong>{BACKGROUNDS.find(b => b.v === background)?.label}</strong></p>
-              <p>📊 Conceptos a sembrar: <strong>{domains.length * 5}</strong></p>
+              <p>📊 Concepts to seed: <strong>{domains.length * 5}</strong></p>
             </div>
             {error && <p className="text-sm text-danger mt-3">{error}</p>}
           </div>
@@ -346,16 +346,16 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
         <div className={`flex ${step > 0 ? 'justify-between' : 'justify-end'}`}>
           {step > 0 && (
             <button onClick={() => setStep(s => s - 1)} className="btn-outline" disabled={loading}>
-              ← Atrás
+              ← Back
             </button>
           )}
           {step < STEPS.length - 1 ? (
             <button onClick={() => setStep(s => s + 1)} className="btn-primary">
-              Continuar →
+              Continue →
             </button>
           ) : (
             <button onClick={submit} disabled={loading} className="btn-primary">
-              {loading ? 'Calibrando…' : 'Empezar a estudiar'}
+              {loading ? 'Calibrating…' : 'Start studying'}
             </button>
           )}
         </div>
