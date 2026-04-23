@@ -46,12 +46,21 @@ export async function POST(req: NextRequest) {
 
   const { mode, domainId, targetQuestions } = parsed.data;
 
-  // Abandon any existing active session
-  await supabase
+  // Abandon any existing active session. Must succeed before we insert a new
+  // one — otherwise the user ends up with two active sessions, which breaks
+  // the single-active invariant the rest of the study loop assumes (GET
+  // picks the latest "active" and the UI resumes against that). Silently
+  // swallowing this error was causing phantom duplicate sessions in prod.
+  const { error: abandonErr } = await supabase
     .from("study_sessions")
     .update({ status: "abandoned" })
     .eq("user_id", user.id)
     .eq("status", "active");
+
+  if (abandonErr) {
+    logger.error({ err: abandonErr, userId: user.id }, "Failed to abandon previous active session");
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+  }
 
   // Ensure concept states exist for the user
   await ensureConceptStatesExist(user.id);
@@ -135,11 +144,16 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "sessionId required" }, { status: 400 });
   }
 
-  await supabase
+  const { error } = await supabase
     .from("study_sessions")
     .update({ status: "abandoned" })
     .eq("id", sessionId)
     .eq("user_id", user.id);
+
+  if (error) {
+    logger.error({ err: error, sessionId, userId: user.id }, "Failed to abandon session");
+    return NextResponse.json({ error: "Failed to abandon session" }, { status: 500 });
+  }
 
   return NextResponse.json({ data: { success: true } });
 }
