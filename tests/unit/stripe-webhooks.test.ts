@@ -1,6 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mapStripePlan, mapStripeStatus } from '@/lib/stripe/webhooks'
 import type Stripe from 'stripe'
+
+// Chainable Supabase-style builder used by the handler tests below. We hoist
+// so the vi.mock factory can reach it without TDZ errors.
+const supabaseMock = vi.hoisted(() => {
+  const state: { updateError: { message: string } | null } = { updateError: null }
+  const builder: Record<string, (...args: unknown[]) => unknown> = {}
+  builder['update'] = vi.fn(() => builder)
+  builder['eq'] = vi.fn(async () => ({ error: state.updateError }))
+  const from = vi.fn(() => builder)
+  return { state, builder, from, client: { from } as unknown as { from: typeof from } }
+})
+
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => supabaseMock.client,
+}))
+vi.mock('@/lib/logger', () => {
+  const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+  return { default: logger, logger }
+})
 
 const ORIGINAL_ANNUAL = process.env.STRIPE_PRICE_PRO_ANNUAL
 const ORIGINAL_MONTHLY = process.env.STRIPE_PRICE_PRO_MONTHLY
@@ -79,5 +98,75 @@ describe('stripe webhooks — mapStripeStatus', () => {
       const mapped = mapStripeStatus(s)
       expect(['active', 'trialing', 'past_due', 'canceled', 'incomplete']).toContain(mapped)
     }
+  })
+})
+
+// -----------------------------------------------------------------------------
+// Handler error-propagation tests.
+//
+// Background: every handler here writes to Postgres via the Supabase admin
+// client. Previously some of them did `await supabase.from(...).update(...)`
+// without inspecting the `{ error }` return, so a transient DB failure would
+// silently drop the state transition. Stripe would see a 200 and never retry.
+//
+// The fix is to throw on `error` so the webhook route returns 5xx and Stripe
+// redelivers the event. These tests pin that contract.
+// -----------------------------------------------------------------------------
+describe('stripe webhooks — handler error propagation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    supabaseMock.state.updateError = null
+  })
+
+  function fakeInvoice(subscriptionId = 'sub_test_1'): Stripe.Invoice {
+    return { subscription: subscriptionId } as unknown as Stripe.Invoice
+  }
+  function fakeSubscription(id = 'sub_test_1'): Stripe.Subscription {
+    return {
+      id,
+      status: 'active',
+      cancel_at_period_end: false,
+      current_period_start: 1_700_000_000,
+      current_period_end: 1_702_000_000,
+      items: { data: [{ price: { id: 'price_monthly_456' } }] },
+    } as unknown as Stripe.Subscription
+  }
+
+  it('handleInvoicePaymentFailed throws when the update returns an error', async () => {
+    supabaseMock.state.updateError = { message: 'connection reset by peer' }
+    const { handleInvoicePaymentFailed } = await import('@/lib/stripe/webhooks')
+    await expect(handleInvoicePaymentFailed(fakeInvoice())).rejects.toMatchObject({
+      message: 'connection reset by peer',
+    })
+  })
+
+  it('handleInvoicePaymentFailed resolves quietly when the update succeeds', async () => {
+    supabaseMock.state.updateError = null
+    const { handleInvoicePaymentFailed } = await import('@/lib/stripe/webhooks')
+    await expect(handleInvoicePaymentFailed(fakeInvoice())).resolves.toBeUndefined()
+  })
+
+  it('handleInvoicePaymentSucceeded throws when the update returns an error', async () => {
+    supabaseMock.state.updateError = { message: 'deadlock detected' }
+    const { handleInvoicePaymentSucceeded } = await import('@/lib/stripe/webhooks')
+    await expect(handleInvoicePaymentSucceeded(fakeInvoice())).rejects.toMatchObject({
+      message: 'deadlock detected',
+    })
+  })
+
+  it('handleSubscriptionUpdated throws when the update returns an error', async () => {
+    supabaseMock.state.updateError = { message: 'row level security violation' }
+    const { handleSubscriptionUpdated } = await import('@/lib/stripe/webhooks')
+    await expect(handleSubscriptionUpdated(fakeSubscription())).rejects.toMatchObject({
+      message: 'row level security violation',
+    })
+  })
+
+  it('handleSubscriptionDeleted throws when the update returns an error', async () => {
+    supabaseMock.state.updateError = { message: 'statement timeout' }
+    const { handleSubscriptionDeleted } = await import('@/lib/stripe/webhooks')
+    await expect(handleSubscriptionDeleted(fakeSubscription())).rejects.toMatchObject({
+      message: 'statement timeout',
+    })
   })
 })
