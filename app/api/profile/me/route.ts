@@ -37,12 +37,22 @@ export async function DELETE() {
     );
   }
 
-  // 3. Sign out the current session cookie
+  // 3. Sign out the current session cookie. Even though the auth user has
+  //    already been deleted (so the cookies are effectively invalid), we
+  //    still try to signOut so Set-Cookie headers come back clean. An empty
+  //    catch here hid silent failures (cookie adapter throws, Supabase SDK
+  //    rejects, etc.); log them as warn so post-deletion login-loop reports
+  //    from users have a log trail to correlate against. Don't rethrow —
+  //    the primary deletion already succeeded and we must not 5xx after a
+  //    successful GDPR delete.
   try {
     const supabase = createClient();
     await supabase.auth.signOut();
-  } catch {
-    /* cookies will be invalid anyway after auth user delete */
+  } catch (err) {
+    logger.warn(
+      { err, userId },
+      "signOut failed after account delete — cookies may linger but auth user is already gone"
+    );
   }
 
   logger.info({ userId }, "Account deleted by user request (GDPR)");
