@@ -34,11 +34,22 @@ export async function runCron<T extends CronOutcome>(
   // blip doesn't block payroll-critical crons.
   let runId: string | null = null
   try {
-    const { data } = await supabase
+    // PostgREST returns { data, error } rather than throwing on DB errors, so
+    // we must destructure the error explicitly — the surrounding try/catch
+    // only catches thrown exceptions (network, serialization), not RLS or
+    // constraint failures. Without this, a misconfigured cron_runs policy
+    // would silently hide every "stuck cron" alert source.
+    const { data, error: insertErr } = await supabase
       .from('cron_runs')
       .insert({ name })
       .select('id')
       .single()
+    if (insertErr) {
+      logger.warn(
+        { err: insertErr, name },
+        'cron_runs insert returned error — proceeding without ledger row'
+      )
+    }
     runId = data?.id ?? null
   } catch (err) {
     logger.warn({ err, name }, 'cron_runs insert failed — proceeding without ledger row')
