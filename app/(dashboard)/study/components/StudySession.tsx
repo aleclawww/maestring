@@ -148,7 +148,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
     }
   }, [])
 
-  const submitAnswer = useCallback(async (selectedIndex: number) => {
+  const submitAnswer = useCallback(async (selectedIndex: number, firstAttemptCorrect: boolean) => {
     if (state.phase !== 'question') return
     const timeTaken = Date.now() - state.startedAt
     const questionNumber = state.questionNumber
@@ -175,13 +175,14 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           timeTakenMs: timeTaken,
           sessionId: sessionIdRef.current,
           conceptId: state.question.conceptId,
+          firstAttemptCorrect,
         }),
       })
       const { data: evaluation } = await res.json()
 
       answersRef.current.push({
         conceptId: state.question.conceptId,
-        isCorrect: evaluation.isCorrect,
+        isCorrect: evaluation.isCorrect && firstAttemptCorrect,
         timeTaken,
       })
       track({

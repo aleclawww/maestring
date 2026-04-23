@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/dashboard/Sidebar'
@@ -11,6 +12,14 @@ export default async function DashboardLayout({
 }) {
   const user = await requireAuthenticatedUser()
   const supabase = createClient()
+
+  // Onboarding runs inside this route group but renders as a standalone wizard
+  // — skip Sidebar/Navbar chrome so the user focuses on the flow.
+  const pathname = headers().get('x-pathname') ?? ''
+  const isOnboardingFlow = pathname === '/onboarding' || pathname.startsWith('/onboarding/')
+  if (isOnboardingFlow) {
+    return <>{children}</>
+  }
 
   const [{ data: profile }, { data: subscription }] = await Promise.all([
     supabase

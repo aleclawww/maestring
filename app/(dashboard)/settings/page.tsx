@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ProfileSettings } from './components/ProfileSettings'
 import { SubscriptionSettings } from './components/SubscriptionSettings'
 import { NotificationSettings } from './components/NotificationSettings'
+import { TestimonialForm } from './components/TestimonialForm'
 import { DangerZone } from './components/DangerZone'
 import type { Metadata } from 'next'
 
@@ -12,9 +13,16 @@ export default async function SettingsPage() {
   const user = await requireAuthenticatedUser()
   const supabase = createClient()
 
-  const [{ data: profile }, { data: subscription }] = await Promise.all([
+  const [{ data: profile }, { data: subscription }, { data: existingTestimonial }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('subscriptions').select('*').eq('user_id', user.id).single(),
+    supabase
+      .from('testimonials')
+      .select('status, content, display_name, role')
+      .eq('user_id', user.id)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   return (
@@ -29,6 +37,11 @@ export default async function SettingsPage() {
       />
 
       <NotificationSettings userId={user.id} studyMinutesPerDay={profile?.study_minutes_per_day ?? 30} />
+
+      <TestimonialForm
+        existing={existingTestimonial as { status: 'pending' | 'approved' | 'rejected'; content: string; display_name: string; role: string | null } | null}
+        defaultName={profile?.full_name ? profile.full_name.split(' ')[0] + ' ' + (profile.full_name.split(' ')[1]?.[0] ?? '') + '.' : ''}
+      />
 
       <SubscriptionSettings
         plan={subscription?.plan ?? 'free'}

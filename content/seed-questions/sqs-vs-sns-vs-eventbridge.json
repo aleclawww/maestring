@@ -1,0 +1,179 @@
+{
+  "conceptSlug": "sqs-vs-sns-vs-eventbridge",
+  "certificationId": "aws-saa-c03",
+  "questions": [
+    {
+      "difficulty": 0.25,
+      "tags": ["sqs", "queue", "decoupling"],
+      "questionText": "Un servicio web recibe picos de 10.000 requests/segundo para procesar vídeos. El procesamiento tarda 30 segundos por vídeo y el backend solo puede con 100/seg sostenidos. ¿Qué servicio desacopla productor y consumidor amortiguando el pico?",
+      "options": [
+        "Amazon SQS — cola que absorbe el pico y permite al worker consumir a su ritmo",
+        "Amazon SNS — topic pub/sub que entrega en tiempo real",
+        "Amazon EventBridge — bus de eventos con filtros complejos",
+        "Amazon Kinesis Data Firehose — streaming a S3"
+      ],
+      "correctIndex": 0,
+      "hint": "¿Qué servicio es pull-based (el worker decide cuándo consumir) vs push-based?",
+      "explanation": "SQS es una cola pull-based: los productores escriben mensajes sin esperar, los consumidores los sacan al ritmo que su capacidad permita. Perfecto para amortiguar picos. SNS es push y entrega inmediatamente (sobrecargaría al worker). EventBridge es para routing de eventos, no buffering masivo.",
+      "explanationDeep": "SQS Standard: throughput casi ilimitado, at-least-once delivery (puede duplicar), orden best-effort (no garantizado). FIFO: 300 msg/s por shard sin batching, 3000 con batching, exactly-once, orden garantizado por MessageGroupId. Retention: 1 min a 14 días (default 4 días). Visibility timeout: tiempo que un mensaje desaparece de la cola mientras el worker lo procesa (default 30s, extiende con ChangeMessageVisibility). Dead-letter queue: tras N recepciones fallidas (maxReceiveCount) el mensaje va a DLQ para inspección. Long polling (ReceiveMessageWaitTimeSeconds=20) reduce costes vs short polling.",
+      "keyInsight": "SQS = cola pull-based para desacoplar y amortiguar. SNS = push pub/sub. EventBridge = routing con filtros.",
+      "scenarioContext": {
+        "numbers": { "burst_rps": 10000, "sustained_rps": 100, "process_time_s": 30 }
+      }
+    },
+    {
+      "difficulty": 0.3,
+      "tags": ["sns", "fan-out", "pub-sub"],
+      "questionText": "Cuando un usuario completa una compra, el sistema debe: (1) enviar email de confirmación, (2) actualizar el inventario, (3) disparar fulfillment, (4) registrar evento en data lake. Los equipos son independientes y cada uno evoluciona su lógica. ¿Qué patrón aplicas?",
+      "options": [
+        "SNS topic 'order-completed' al que cada equipo suscribe su cola SQS (fan-out pattern)",
+        "Llamar síncronamente las 4 APIs desde el servicio de checkout",
+        "Una única cola SQS que los 4 servicios leen compitiendo por los mensajes",
+        "Un cron job que cada 5 minutos revisa la tabla de pedidos"
+      ],
+      "correctIndex": 0,
+      "hint": "SNS-to-SQS fan-out: un publish → múltiples copias independientes en colas separadas.",
+      "explanation": "El patrón SNS→SQS fan-out publica una vez al topic, que entrega una copia a CADA cola suscrita. Cada equipo consume su cola a su ritmo, con su propio retry/DLQ, sin afectar a los demás. Una sola cola compartida haría que cada mensaje lo procese solo UN consumidor (competing consumers), lo cual no sirve para este caso.",
+      "explanationDeep": "SNS características: hasta 12.5M suscripciones por topic, soporta SQS, Lambda, HTTP(S), Email, SMS, Mobile Push, Firehose, cross-region. Mensaje máx 256 KB (1 MB con SNS Extended Library + S3 payload). FIFO topics (con FIFO queues) preservan orden por MessageGroupId pero límite 300 publish/s. Filtros de suscripción (message filtering): cada subscriber puede filtrar por atributos del mensaje, reduciendo entregas inútiles. Durabilidad: SNS reintenta con backoff pero si la cola destino falla permanentemente se pierde — por eso SNS soporta Redrive Policy con DLQ por suscripción (added 2020). Fan-out robusto = SNS con DLQ por subscription + SQS con DLQ por cola.",
+      "keyInsight": "Fan-out a N servicios independientes = SNS topic + SQS por consumidor. Una cola compartida solo vale si los workers son clones (competing consumers).",
+      "scenarioContext": {
+        "architecture": "Checkout → SNS:order-completed → [SQS:email, SQS:inventory, SQS:fulfillment, SQS:datalake]"
+      }
+    },
+    {
+      "difficulty": 0.45,
+      "tags": ["eventbridge", "event-routing", "filter-pattern"],
+      "questionText": "Tienes eventos heterogéneos (OrderPlaced, UserSignedUp, PaymentFailed...) provenientes de 12 microservicios y 3 SaaS externos (Stripe, Zendesk, Shopify). Necesitas enrutar cada tipo a múltiples consumidores con filtros por atributos (ej. solo orders >$500 van a fraud-review). ¿Qué servicio es el indicado?",
+      "options": [
+        "EventBridge — event bus con rules y pattern matching avanzado (incluye integración nativa con SaaS partners)",
+        "SNS — basta con topics por tipo de evento y filtros de suscripción",
+        "SQS — colas por tipo, el productor decide a cuál escribir",
+        "Kinesis Data Streams con múltiples consumer apps"
+      ],
+      "correctIndex": 0,
+      "hint": "Dos señales: (1) integración con SaaS externos y (2) pattern matching complejo en JSON.",
+      "explanation": "EventBridge es el event bus de AWS con event pattern matching rico (compara objetos JSON anidados, prefix/suffix, numeric ranges, IP ranges) y Partner Event Sources nativos para Stripe, Shopify, Zendesk, etc. Cada rule enruta a múltiples targets (Lambda, SQS, SNS, Step Functions, API Gateway, cross-account/region). SNS es más simple pero no tiene integración SaaS nativa ni partner events.",
+      "explanationDeep": "EventBridge diferencias clave vs SNS: (1) Schema Registry para validar y generar bindings; (2) Partner Event Sources (Stripe, Auth0, MongoDB, Datadog, PagerDuty, Segment, Shopify, Zendesk…); (3) rules con pattern matching sobre cualquier campo del evento JSON (ej. `{\"detail\": {\"amount\": [{\"numeric\": [\">\", 500]}]}}`); (4) targets incluyen ~20 servicios AWS + API destinations (HTTPS genérico con auth); (5) archive + replay — puedes archivar eventos y reproducirlos sobre nuevas rules. Costes: $1 por millón de eventos (vs SNS $0.50 por millón publishes). Cuándo SNS sigue siendo mejor: fan-out de alto volumen simple (pub/sub clásico); cuándo EventBridge gana: routing complejo, eventos de SaaS, event-driven architectures con schema governance.",
+      "keyInsight": "EventBridge = event bus con pattern matching rico + Partner Sources. SNS = pub/sub simple de alto throughput.",
+      "scenarioContext": {
+        "constraints": ["multi-source", "SaaS integration", "conditional routing"]
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["sqs-fifo", "ordering", "deduplication"],
+      "questionText": "Un sistema procesa transacciones bancarias donde el orden por cuenta IMPORTA (depositar antes que retirar) y duplicados son inaceptables. Cada cuenta es independiente. ¿Qué configuración SQS aplicas?",
+      "options": [
+        "SQS FIFO con MessageGroupId = accountId (paraleliza entre cuentas, ordena dentro de cada cuenta) y ContentBasedDeduplication habilitado",
+        "SQS Standard con retry logic en el consumer que revisa timestamps",
+        "Una SQS FIFO única sin MessageGroupId — el orden global es suficiente",
+        "Kinesis Data Streams con una sola partición"
+      ],
+      "correctIndex": 0,
+      "hint": "FIFO ordena DENTRO de cada MessageGroupId pero paraleliza ENTRE grupos. Elige el group id adecuado.",
+      "explanation": "SQS FIFO garantiza orden dentro de cada MessageGroupId y exactly-once. Usar accountId como group permite paralelismo entre cuentas distintas (un worker por cuenta) mientras preserva orden dentro de cada cuenta. ContentBasedDeduplication hashea el body para detectar duplicados automáticamente (alternativa: MessageDeduplicationId manual). Sin MessageGroupId perderías el paralelismo.",
+      "explanationDeep": "FIFO throughput: 300 msg/s sin batching, 3000 msg/s con batching por 'high throughput mode' (split por MessageGroupId). Deduplication window: 5 minutos — mensajes con mismo hash dentro de esa ventana se descartan silenciosamente. Caveat importante: si el worker crashea durante el procesamiento, el mensaje reaparece al expirar visibility timeout pero SIGUIENDO el orden del grupo — es decir, bloquea los mensajes siguientes del mismo grupo hasta que se procese o vaya a DLQ. Por eso el DLQ y el tuning de visibility timeout son críticos en FIFO. Standard no tiene este bloqueo pero no garantiza orden ni exactly-once.",
+      "keyInsight": "FIFO + MessageGroupId = orden por grupo + paralelismo entre grupos. Elige group id que maximice paralelismo preservando orden.",
+      "scenarioContext": {
+        "constraints": ["per-account ordering", "exactly-once", "parallelizable across accounts"]
+      }
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["sqs", "visibility-timeout", "processing"],
+      "questionText": "Un worker SQS procesa mensajes en 45 segundos promedio. Visibility timeout está configurado a 30s. Algunos mensajes se procesan DOS veces. ¿Por qué y cómo lo arreglas?",
+      "options": [
+        "El visibility timeout expira antes de que el worker termine — otro worker recoge el mismo mensaje. Sube el timeout o llama ChangeMessageVisibility periódicamente",
+        "SQS Standard duplica siempre — migra a FIFO",
+        "El DLQ está redirigiendo los mensajes dos veces — deshabilita DLQ",
+        "Bug conocido de SQS resuelto en la region us-west-2"
+      ],
+      "correctIndex": 0,
+      "hint": "Visibility timeout debe cubrir el tiempo máximo de procesamiento. Si expira, el mensaje reaparece y otro worker lo toma.",
+      "explanation": "Cuando un worker recibe un mensaje, SQS lo oculta durante el visibility timeout. Si el worker no llama DeleteMessage antes de que expire, SQS asume fallo y lo devuelve a la cola — otro worker (o el mismo) lo recibe otra vez. Solución: subir el timeout al p99 del tiempo de procesamiento, o usar ChangeMessageVisibility para extenderlo dinámicamente mientras se procesa.",
+      "explanationDeep": "Visibility timeout rango: 0s a 12 horas (default 30s). Estrategias: (1) set at-queue level por p99 conservador; (2) ChangeMessageVisibility extiende un mensaje concreto cuando sabes que tardará más (useful para variance alta); (3) heartbeat pattern: el worker llama ChangeMessageVisibility cada X segundos mientras procesa — si crashea, el timeout corto restante permite re-delivery rápido. Siempre combina con DLQ: si maxReceiveCount (típico 3-5) es superado, el mensaje va al DLQ para inspección. Anti-patrones: timeout muy alto → mensajes huérfanos si el worker muere silenciosamente; timeout muy bajo → duplicados constantes.",
+      "keyInsight": "Visibility timeout < tiempo procesamiento = duplicados. Fix: subir timeout al p99 o usar heartbeat ChangeMessageVisibility.",
+      "scenarioContext": {
+        "numbers": { "avg_process_s": 45, "visibility_timeout_s": 30 }
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["lambda-trigger", "sqs-lambda", "scaling"],
+      "questionText": "Configuras una Lambda como consumer de una SQS Standard que recibe 5.000 mensajes/min. ¿Cómo escala Lambda automáticamente?",
+      "options": [
+        "Lambda Event Source Mapping hace polling de la cola y escala las invocaciones concurrentes hasta 1000 (default) — añade 60 funciones cada minuto hasta igualar carga",
+        "Lambda ignora la cola hasta que alguien manualmente invoca la función",
+        "Solo una invocación a la vez — SQS es secuencial",
+        "Lambda escala infinitamente sin límite"
+      ],
+      "correctIndex": 0,
+      "hint": "Event Source Mapping con SQS Standard tiene una política de escalado predecible: añade ~60 instancias/minuto hasta tope de concurrencia.",
+      "explanation": "Lambda Event Source Mapping para SQS Standard polea la cola, lee batches (hasta 10 mensajes por invocation, o 10.000 con batch window) e invoca la función. Escala añadiendo ~60 funciones concurrentes por minuto hasta alcanzar el concurrency limit (default 1000 por región, pero tu función puede tener reserved/provisioned). Para FIFO el escalado se limita al número de MessageGroupIds activos.",
+      "explanationDeep": "Parámetros clave del Event Source Mapping: BatchSize (1-10.000, aunque payload total ≤6 MB y cada mensaje ≤256 KB), MaximumBatchingWindowInSeconds (0-300, espera hasta llenar batch), FunctionResponseTypes=ReportBatchItemFailures permite que Lambda devuelva IDs de mensajes fallidos individuales sin rollbackear todo el batch. Si la función falla (throws o timeout), todo el batch vuelve a la cola y el retry cuenta contra maxReceiveCount de SQS (→ DLQ tras N reintentos). Mejor práctica: DLQ en la cola SQS (no en Lambda) para mantener el contexto. Concurrency tuning: usa reserved concurrency para evitar que esta función monopolice la cuenta; usa provisioned concurrency si hay cold starts críticos.",
+      "keyInsight": "Lambda + SQS Standard = Event Source Mapping escala ~60 conc/min hasta concurrency limit. DLQ en SQS, no en Lambda.",
+      "scenarioContext": {
+        "numbers": { "msgs_per_min": 5000 }
+      }
+    },
+    {
+      "difficulty": 0.55,
+      "tags": ["eventbridge-scheduler", "cron", "serverless"],
+      "questionText": "Necesitas ejecutar 50.000 tareas programadas al día, cada una a un timestamp específico por cliente (ej. recordatorios personalizados a las 9am de su timezone). CloudWatch Events tiene límite de 300 rules por bus. ¿Qué usas?",
+      "options": [
+        "EventBridge Scheduler — soporta millones de schedules one-time o recurrentes, con timezone y targets directos",
+        "Crear un cron Lambda que cada minuto consulte una tabla DynamoDB y dispare las tareas vencidas",
+        "Un millón de CloudWatch Events rules aumentando el límite por soporte",
+        "Step Functions con Wait states infinitos"
+      ],
+      "correctIndex": 0,
+      "hint": "EventBridge Scheduler (2022) es un servicio distinto de EventBridge Rules, diseñado específicamente para escalar a millones de schedules.",
+      "explanation": "EventBridge Scheduler permite crear hasta 1M schedules por cuenta (one-time o recurrentes), con soporte de timezones, payloads personalizados y targets a 270+ servicios AWS. Rules de EventBridge están limitadas a ~300 por bus y no soportan timezones. El patrón DynamoDB+Lambda funciona pero requiere construir timing y retries tú mismo.",
+      "explanationDeep": "EventBridge Scheduler features: (1) schedule expressions: `at(2025-01-15T09:00:00)` one-time, `rate(5 minutes)`, `cron(0 9 * * ? *)` con timezone; (2) flexible time windows para dispersar carga; (3) retry policy + DLQ por schedule; (4) targets directos a Lambda, SQS, ECS, SNS, Step Functions, Kinesis y 270+ APIs via Universal Target (SDK-style JSON). Diferencia con Rules de EventBridge: Rules son reactivas (event-driven), Scheduler es proactivo (time-driven), y Scheduler escala a ~1M vs 300 rules. Caso de uso clásico: recordatorios por usuario en sus timezones, cleanup jobs programados, scheduled notifications para apps mobile, A/B tests con expiración programada.",
+      "keyInsight": "Schedules masivos con timezones = EventBridge Scheduler (no Rules). Millones de schedules soportados.",
+      "scenarioContext": {
+        "numbers": { "daily_tasks": 50000 },
+        "constraints": ["per-user timezones", "specific timestamps", "scale"]
+      }
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["kinesis-vs-sqs", "streaming", "replay"],
+      "questionText": "Un sistema de analytics recibe 100.000 events/seg y necesita: (1) múltiples consumers independientes procesando el mismo stream, (2) capacidad de reprocesar eventos pasados (última semana) cuando cambie la lógica. ¿Qué servicio?",
+      "options": [
+        "Kinesis Data Streams — stream con retention hasta 365 días y múltiples consumers leyendo por checkpoint independiente",
+        "SQS Standard con múltiples colas suscritas a un SNS",
+        "EventBridge con archive + replay",
+        "DynamoDB Streams con Lambda"
+      ],
+      "correctIndex": 0,
+      "hint": "Kinesis mantiene los eventos en el stream y cada consumer lleva su propio checkpoint. Puede rebobinar dentro de la retention window.",
+      "explanation": "Kinesis Data Streams conserva los eventos (retention 24h default, configurable hasta 365 días) y permite a múltiples aplicaciones leer independientemente con sus propios checkpoints. Para reprocesar, el consumer reinicia desde un TRIM_HORIZON o timestamp pasado. SQS borra el mensaje al ack — no hay replay. EventBridge replay existe pero tiene límites y no es para 100K events/s sostenidos.",
+      "explanationDeep": "Kinesis Data Streams: capacity en shards (1 MB/s ingestion, 2 MB/s egress por shard; 1000 records/s ingest). Para 100K events/s necesitas provisioned mode o on-demand (autoscaling hasta 200 MB/s). Cada consumer lleva checkpoint en DynamoDB (KCL library) o commit con GetShardIterator manual. Enhanced Fan-Out (EFO): cada consumer recibe 2 MB/s DEDICADO por shard (no comparte), útil con >2 consumers. Comparativa rápida: SQS = queue 1-a-1 (o fanout via SNS copies), Kinesis = log compartido multi-reader con replay, MSK/Kafka = lo mismo que Kinesis pero con más control y complejidad operativa (Kinesis es managed, MSK es Kafka gestionado), EventBridge = routing + archive pero no throughput streaming.",
+      "keyInsight": "Streaming con replay + múltiples consumers independientes = Kinesis Data Streams. SQS no soporta replay.",
+      "scenarioContext": {
+        "numbers": { "events_per_sec": 100000, "retention_days": 7 },
+        "constraints": ["multiple independent consumers", "replay capability"]
+      }
+    },
+    {
+      "difficulty": 0.35,
+      "tags": ["dlq", "poison-pill", "reliability"],
+      "questionText": "Una Lambda consume SQS y falla consistentemente en ciertos mensajes (bug en parsing). Cada mensaje causa 5 retries y bloquea el throughput. ¿Qué añades?",
+      "options": [
+        "Dead Letter Queue con maxReceiveCount=3 — mensajes problemáticos salen de la cola principal tras 3 fallos y van a DLQ para análisis posterior",
+        "Desactivar retries en Lambda",
+        "Aumentar el visibility timeout a 12 horas",
+        "Crear una segunda SQS espejo donde duplicar todos los mensajes"
+      ],
+      "correctIndex": 0,
+      "hint": "DLQ con maxReceiveCount controlado aísla los 'poison messages' sin pararlo todo.",
+      "explanation": "La Dead Letter Queue recoge mensajes que fallaron más de maxReceiveCount veces. Así los poison pills salen del flujo principal sin afectar throughput, y el equipo puede inspeccionarlos, corregir el bug y reinyectarlos cuando toque. maxReceiveCount=3 es un balance típico (permite reintentos por errores transitorios, pero no infinitos).",
+      "explanationDeep": "Buenas prácticas DLQ: (1) alarma CloudWatch sobre ApproximateNumberOfMessagesVisible en la DLQ — cualquier valor >0 debería escalar a on-call; (2) Redrive allow policy limita qué colas pueden enviar a esta DLQ; (3) Redrive to source (consola SQS o SDK, released 2021) permite mover mensajes de DLQ a la cola original en un click; (4) retention de DLQ más larga (14 días) que la cola principal para dar tiempo a debug. Para Lambda con SQS, alternativa: ReportBatchItemFailures permite marcar mensajes concretos del batch como fallidos sin tirar el batch entero — reduce falsos positivos al DLQ. Nunca uses la misma cola como su propia DLQ (loop infinito).",
+      "keyInsight": "Poison pills → DLQ con maxReceiveCount bajo + alarma. Desbloquea throughput sin perder evidencia del error.",
+      "scenarioContext": {
+        "constraints": ["poison messages", "throughput-sensitive", "observability"]
+      }
+    }
+  ]
+}

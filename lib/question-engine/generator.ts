@@ -5,6 +5,7 @@ import { getConceptBySlug } from '@/lib/knowledge-graph/aws-saa'
 import { EvaluationResultSchema } from '@/types/study'
 import { sleep } from '@/lib/utils'
 import logger from '@/lib/logger'
+import { recordLlmUsage } from '@/lib/llm/usage'
 import type { GenerateQuestionRequest, EvaluationResult } from '@/types/study'
 
 const anthropic = new Anthropic({
@@ -41,7 +42,7 @@ function extractJSON(text: string): unknown {
 }
 
 export async function generateQuestion(
-  req: GenerateQuestionRequest & { conceptId?: string; fingerprint?: CognitiveFingerprint }
+  req: GenerateQuestionRequest & { conceptId?: string; fingerprint?: CognitiveFingerprint; userId?: string }
 ) {
   const concept = getConceptBySlug(req.conceptSlug)
   if (!concept) throw new Error(`Unknown concept: ${req.conceptSlug}`)
@@ -74,12 +75,24 @@ export async function generateQuestion(
       await sleep(Math.pow(2, attempt) * 1000)
     }
 
+    const t0 = Date.now()
     try {
       const response = await anthropic.messages.create({
         model: MODEL,
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
+      })
+
+      recordLlmUsage({
+        userId: req.userId ?? null,
+        route: 'question-engine.generate',
+        model: MODEL,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        latencyMs: Date.now() - t0,
+        success: true,
+        metadata: { concept_slug: req.conceptSlug, attempt },
       })
 
       const content = response.content[0]
@@ -193,9 +206,11 @@ export async function elaborateAnswer(
   options: string[],
   correctIndex: number,
   selectedIndex: number,
-  explanation: string
+  explanation: string,
+  userId?: string
 ): Promise<EvaluationResult> {
   const local = evaluateAnswerLocal(options, correctIndex, selectedIndex, explanation)
+  const t0 = Date.now()
   try {
     const prompt = formatEvaluationPrompt(
       questionText,
@@ -210,6 +225,16 @@ export async function elaborateAnswer(
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
+    })
+
+    recordLlmUsage({
+      userId: userId ?? null,
+      route: 'question-engine.elaborate',
+      model: MODEL,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      latencyMs: Date.now() - t0,
+      success: true,
     })
 
     const content = response.content[0]

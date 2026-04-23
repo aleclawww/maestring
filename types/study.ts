@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+export const ScenarioContextSchema = z
+  .object({
+    numbers: z.record(z.union([z.number(), z.string()])).optional(),
+    architecture: z.string().optional(),
+    costTable: z.array(z.record(z.union([z.number(), z.string()]))).optional(),
+    constraints: z.array(z.string()).optional(),
+  })
+  .nullable()
+  .optional()
+
 export const QuestionSchema = z.object({
   id: z.string().uuid(),
   conceptId: z.string().uuid(),
@@ -12,6 +22,12 @@ export const QuestionSchema = z.object({
   explanation: z.string().min(10),
   difficulty: z.number().min(0).max(1),
   questionType: z.enum(['multiple_choice', 'scenario', 'drag_drop']),
+  // Rich content (migration 017) — optional for backward compat with generated questions.
+  hint: z.string().nullable().optional(),
+  explanationDeep: z.string().nullable().optional(),
+  keyInsight: z.string().nullable().optional(),
+  scenarioContext: ScenarioContextSchema,
+  tags: z.array(z.string()).default([]),
 })
 
 export const EvaluationResultSchema = z.object({

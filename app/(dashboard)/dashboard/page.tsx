@@ -39,7 +39,7 @@ export default async function DashboardPage() {
       .select('state, reps, lapses, concept_id, next_review_date')
       .eq('user_id', user.id),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    supabase.rpc('get_exam_readiness' as any, { p_user_id: user.id }),
+    supabase.rpc('get_exam_readiness_v2' as any, { p_user_id: user.id }),
   ])
 
   const readiness = (readinessRows as ReadinessData[] | null)?.[0] ?? null

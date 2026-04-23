@@ -30,6 +30,10 @@ function isPublic(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Expose pathname to server components / layouts (they can't read the URL
+  // directly in RSC). Layouts conditionally render chrome based on this.
+  request.headers.set('x-pathname', pathname)
+
   // Protect cron routes
   if (pathname.startsWith('/api/cron/')) {
     const authHeader = request.headers.get('authorization')

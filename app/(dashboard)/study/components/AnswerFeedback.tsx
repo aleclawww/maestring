@@ -2,7 +2,49 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { track } from '@/lib/analytics'
 import type { Question, EvaluationResult } from '@/types/study'
+
+function DeepDive({ content, tags, questionId, conceptId }: { content: string; tags: string[]; questionId: string; conceptId: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="rounded-lg border border-border bg-surface-2">
+      <button
+        onClick={() => {
+          setOpen(v => {
+            if (!v) track({ name: 'deep_explanation_opened', properties: { concept_id: conceptId, question_id: questionId } })
+            return !v
+          })
+        }}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          {open ? 'Ocultar profundización' : 'Profundizar en el concepto'}
+        </span>
+        <span className={cn('text-text-muted transition-transform', open && 'rotate-180')}>▾</span>
+      </button>
+      {open && (
+        <div className="border-t border-border/40 px-4 py-3 space-y-3">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
+            {content}
+          </p>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {tags.map(t => (
+                <span
+                  key={t}
+                  className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface AnswerFeedbackProps {
   question: Question
@@ -166,11 +208,25 @@ export function AnswerFeedback({
             </p>
           </div>
 
-          {evaluation.keyInsight && (
+          {/* Rich keyInsight (from pool) beats the generic one from the evaluator
+              — and both can coexist if the question author wrote one. */}
+          {(question.keyInsight || evaluation.keyInsight) && (
             <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3">
               <p className="text-xs font-semibold text-primary mb-1">Clave para recordar</p>
-              <p className="text-sm text-text-primary">{evaluation.keyInsight}</p>
+              <p className="text-sm text-text-primary">
+                {question.keyInsight || evaluation.keyInsight}
+              </p>
             </div>
+          )}
+
+          {/* Deep dive — only shown on demand to avoid wall-of-text. */}
+          {question.explanationDeep && (
+            <DeepDive
+              content={question.explanationDeep}
+              tags={question.tags ?? []}
+              questionId={question.id}
+              conceptId={question.conceptId}
+            />
           )}
 
           {evaluation.studyTip && (

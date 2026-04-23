@@ -1,0 +1,110 @@
+---
+title: "IAM policies vs resource policies en AWS: cuándo usar cada una (con ejemplos reales)"
+description: "La diferencia entre identity-based y resource-based policies en AWS, cómo interactúan en el examen SAA-C03 y los 4 patrones que tienes que saber resolver."
+publishedAt: "2026-04-11"
+tags: ["aws", "iam", "seguridad", "saa-c03"]
+featured: true
+---
+
+Si en el SAA-C03 fallas preguntas de IAM, casi siempre es porque no tienes claro **cuándo AWS evalúa una identity-based policy y cuándo una resource-based policy** — y sobre todo, qué pasa cuando hay las dos.
+
+Vamos al grano.
+
+## Las dos familias
+
+### 1. Identity-based policies
+
+Se **adjuntan a un principal**: user, group, role. Responden a *"¿qué puede hacer este principal?"*.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::my-bucket/*"
+  }]
+}
+```
+
+### 2. Resource-based policies
+
+Se **adjuntan a un recurso**: S3 bucket, SQS queue, SNS topic, KMS key, Lambda function, SecretsManager secret. Responden a *"¿quién puede hacer qué sobre este recurso?"*.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "AWS": "arn:aws:iam::111111111111:root" },
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::my-bucket/*"
+  }]
+}
+```
+
+Fíjate en `"Principal"`: esa clave **solo existe en resource-based policies**. Si ves `Principal` en una pregunta del examen, es resource-based.
+
+## Qué recursos soportan resource-based policies
+
+No todos. Memoriza estos porque caen:
+
+- S3 (bucket policies + ACLs legacy)
+- SQS, SNS
+- Lambda
+- KMS (key policies — **obligatorias**, no opcionales)
+- SecretsManager, SSM Parameter Store (Advanced)
+- API Gateway (resource policies)
+- ECR
+- Glacier vault
+
+EC2, RDS, DynamoDB (en general), EBS, EFS — **no** tienen resource-based policies tradicionales. Controlas el acceso vía IAM + security groups + VPC endpoints.
+
+## La regla que decide todo
+
+Cuando un principal accede a un recurso en la **misma cuenta**:
+
+> Si **identity-based** o **resource-based** permite la acción, **se permite** (salvo Deny explícito o SCP).
+
+Cuando es **cross-account**:
+
+> Deben **ambas** políticas permitirlo. Identity del usuario en cuenta A + resource policy del recurso en cuenta B.
+
+Esta es la trampa del examen. Una pregunta te dice *"Bob en cuenta A tiene s3:GetObject sobre bucket en cuenta B, pero el bucket no menciona cuenta A"* — **la respuesta es que no puede acceder**, porque cross-account exige las dos.
+
+## Los 4 patrones del SAA-C03
+
+### Patrón 1: Cross-account S3 access
+
+- Bucket en cuenta B.
+- Role en cuenta A que necesita leer.
+- **Solución**: bucket policy en B que permite a `arn:aws:iam::A:role/ReaderRole` + identity policy en A con `s3:GetObject`.
+
+### Patrón 2: Lambda invocado por S3 (mismo account)
+
+- S3 event → Lambda.
+- **Solución**: resource-based policy en la Lambda permite a `s3.amazonaws.com` con `SourceArn` del bucket. **No** se usa identity-based para esto — S3 no asume un role, invoca directamente vía servicio.
+
+### Patrón 3: Cross-account KMS
+
+- Datos cifrados con KMS key en cuenta B, leídos desde cuenta A.
+- **Solución**: key policy de B permite `kms:Decrypt` al role de A **Y** role de A tiene `kms:Decrypt` en su identity policy.
+- Si key policy no lo permite, **ni siquiera el root de A puede descifrar**. Las key policies mandan sobre IAM.
+
+### Patrón 4: Permission boundaries
+
+No es resource-based, pero cae en la misma familia de preguntas. Un **permission boundary** en una identity-based policy **limita** lo que un role puede hacer, aunque su policy diga `Allow *`. Intersección, no unión.
+
+## Debugging rápido en el examen
+
+1. ¿La pregunta habla de dos cuentas? → Cross-account: las dos policies deben permitirlo.
+2. ¿Hay un `Deny` explícito en cualquier sitio (SCP, boundary, policy)? → Deniega, fin.
+3. ¿El recurso es S3/SQS/SNS/Lambda/KMS? → Revisa resource policy además de IAM.
+4. ¿El acceso es desde un servicio (S3 → Lambda, API Gateway → Lambda)? → Casi siempre resource policy con `Principal: service.amazonaws.com`.
+
+## Lectura adicional
+
+- [AWS IAM policy evaluation logic](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html)
+- [S3 bucket policies examples](https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-bucket-policies.html)
+
+Si quieres practicar estos 4 patrones con preguntas generadas sobre tus errores reales (no un banco estático), [prueba Maestring gratis](/signup).

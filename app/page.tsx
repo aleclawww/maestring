@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: "Maestring — Adaptive AWS Certification Prep",
@@ -40,26 +43,31 @@ const FEATURES = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: "Sofia M.",
-    role: "Cloud Engineer",
-    text: "I failed my first SAA attempt using Udemy alone. With Maestring's adaptive engine I passed on my second try in 6 weeks.",
-    stars: 5,
-  },
-  {
-    name: "Raj P.",
-    role: "DevOps Lead",
-    text: "The spaced repetition is a game changer. I went from 60% to 85% on practice exams in 3 weeks.",
-    stars: 5,
-  },
-  {
-    name: "Alex K.",
-    role: "Backend Engineer",
-    text: "I uploaded the AWS Well-Architected whitepaper and it generated 200 fresh questions overnight. Incredible.",
-    stars: 5,
-  },
-];
+type Testimonial = {
+  id: string;
+  display_name: string;
+  role: string | null;
+  content: string;
+  stars: number;
+  exam_passed: boolean | null;
+  scaled_score: number | null;
+};
+
+async function getTestimonials(): Promise<Testimonial[]> {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("testimonials")
+      .select("id, display_name, role, content, stars, exam_passed, scaled_score, featured, submitted_at")
+      .eq("status", "approved")
+      .order("featured", { ascending: false })
+      .order("submitted_at", { ascending: false })
+      .limit(6);
+    return (data ?? []) as Testimonial[];
+  } catch {
+    return [];
+  }
+}
 
 const FAQS = [
   {
@@ -84,8 +92,9 @@ const FAQS = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
   const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "";
+  const testimonials = await getTestimonials();
 
   return (
     <div className="min-h-screen bg-[#0f1117] text-white">
@@ -173,26 +182,39 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
-        <h2 className="text-3xl font-bold text-center mb-12">From engineers who passed</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name} className="card-base p-6">
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: t.stars }).map((_, i) => (
-                  <span key={i} className="text-yellow-400">★</span>
-                ))}
+      {/* Testimonials — only rendered if we have approved real quotes.
+          No fake fallback (FTC truth-in-advertising). */}
+      {testimonials.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 py-24">
+          <h2 className="text-3xl font-bold text-center mb-2">From engineers who passed</h2>
+          <p className="text-zinc-500 text-center mb-12 text-sm">
+            Real, verified quotes. Submit yours from Settings after you clear the exam.
+          </p>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.slice(0, 6).map((t) => (
+              <div key={t.id} className="card-base p-6">
+                <div className="flex gap-1 mb-4">
+                  {Array.from({ length: t.stars }).map((_, i) => (
+                    <span key={i} className="text-yellow-400">★</span>
+                  ))}
+                </div>
+                <p className="text-zinc-300 mb-4 leading-relaxed">&ldquo;{t.content}&rdquo;</p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <div className="font-semibold text-sm">{t.display_name}</div>
+                    {t.role && <div className="text-zinc-500 text-sm">{t.role}</div>}
+                  </div>
+                  {t.exam_passed && t.scaled_score && (
+                    <div className="text-xs text-emerald-400 border border-emerald-500/30 rounded px-2 py-0.5">
+                      Passed · {t.scaled_score}
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="text-zinc-300 mb-4 leading-relaxed">"{t.text}"</p>
-              <div>
-                <div className="font-semibold text-sm">{t.name}</div>
-                <div className="text-zinc-500 text-sm">{t.role}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Pricing */}
       <section id="pricing" className="bg-zinc-900/50 py-24">

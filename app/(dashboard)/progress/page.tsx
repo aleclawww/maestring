@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatRelativeTime, formatDuration } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Mi Progreso' }
@@ -17,6 +18,7 @@ export default async function ProgressPage() {
     { data: sessions },
     { data: domains },
     { data: conceptStates },
+    { data: readinessRows },
   ] = await Promise.all([
     supabase.rpc('get_user_stats', { p_user_id: user.id }),
     supabase.rpc('get_study_heatmap', { p_user_id: user.id, p_days: 84 }),
@@ -35,7 +37,11 @@ export default async function ProgressPage() {
       .from('user_concept_states')
       .select('concept_id, state, reps, lapses, stability')
       .eq('user_id', user.id),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    supabase.rpc('get_exam_readiness_v2' as any, { p_user_id: user.id }),
   ])
+
+  const readiness = (readinessRows as ReadinessData[] | null)?.[0] ?? null
 
   const statsRow = stats?.[0]
   const masteredIds = new Set(
@@ -70,6 +76,9 @@ export default async function ProgressPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Readiness — mismo componente que el dashboard, con CI + P(aprobar) + trend */}
+      {readiness && <ReadinessCard data={readiness} />}
+
       {/* Stats overview */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[

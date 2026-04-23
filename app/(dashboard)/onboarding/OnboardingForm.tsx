@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { track } from '@/lib/analytics'
 
@@ -14,7 +14,17 @@ interface Domain {
 
 type Background = 'developer' | 'sysadmin' | 'business' | 'student' | 'other'
 
-const STEPS = ['Background', 'Examen', 'Calibración', 'Listo'] as const
+const STEPS = ['Background', 'Examen', 'Calibración', 'Diagnóstico', 'Listo'] as const
+
+interface DiagnosticQuestion {
+  domainSlug: string
+  conceptId: string
+  conceptName: string
+  questionId: string
+  questionText: string
+  options: string[]
+  correctIndex: number
+}
 
 const LEVEL_LABELS = [
   { v: 0, label: 'Cero', desc: 'Nunca lo he tocado' },
@@ -37,6 +47,23 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const startedRef = useRef(false)
+  const lastStepFiredRef = useRef<number>(-1)
+
+  useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+    track({ name: 'onboarding_started' })
+  }, [])
+
+  useEffect(() => {
+    if (step === lastStepFiredRef.current) return
+    lastStepFiredRef.current = step
+    track({
+      name: 'onboarding_step_completed',
+      properties: { step, step_name: STEPS[step] ?? `step_${step}` },
+    })
+  }, [step])
 
   const [background, setBackground] = useState<Background>('developer')
   const [examTargetDate, setExamTargetDate] = useState('')
@@ -44,6 +71,21 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
   const [selfLevels, setSelfLevels] = useState<Record<string, number>>(
     () => Object.fromEntries(domains.map(d => [d.slug, 1]))
   )
+  const [diagnostic, setDiagnostic] = useState<DiagnosticQuestion[]>([])
+  const [diagnosticLoading, setDiagnosticLoading] = useState(false)
+  const [diagnosticAnswers, setDiagnosticAnswers] = useState<Record<string, number>>({})
+  const diagnosticFetchedRef = useRef(false)
+
+  useEffect(() => {
+    if (step !== 3 || diagnosticFetchedRef.current) return
+    diagnosticFetchedRef.current = true
+    setDiagnosticLoading(true)
+    fetch('/api/onboarding/diagnostic')
+      .then(r => r.json())
+      .then(j => setDiagnostic(j?.data?.questions ?? []))
+      .catch(() => setDiagnostic([]))
+      .finally(() => setDiagnosticLoading(false))
+  }, [step])
 
   const days = examTargetDate
     ? Math.ceil((new Date(examTargetDate).getTime() - Date.now()) / 86_400_000)
@@ -55,6 +97,12 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
     setLoading(true)
     setError(null)
     try {
+      const diagnosticResults = diagnostic
+        .filter(q => diagnosticAnswers[q.questionId] !== undefined)
+        .map(q => ({
+          domainSlug: q.domainSlug,
+          isCorrect: diagnosticAnswers[q.questionId] === q.correctIndex,
+        }))
       const res = await fetch('/api/onboarding/calibrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,6 +112,7 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
           studyMinutesPerDay,
           background,
           selfLevels,
+          diagnosticResults,
         }),
       })
       if (!res.ok) {
@@ -214,6 +263,60 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
         )}
 
         {step === 3 && (
+          <div>
+            <h2 className="text-lg font-bold text-text-primary mb-1">Diagnóstico rápido</h2>
+            <p className="text-sm text-text-secondary mb-5">
+              {diagnostic.length > 0
+                ? `${diagnostic.length} preguntas (una por dominio). No se evalúa como examen — solo afinamos tu punto de partida. Fallar aquí es útil.`
+                : diagnosticLoading
+                ? 'Cargando diagnóstico…'
+                : 'Tu plan inicial usará tu autoevaluación. El sistema se ajustará con las primeras sesiones.'}
+            </p>
+            {diagnostic.map((q, qi) => {
+              const selected = diagnosticAnswers[q.questionId]
+              return (
+                <div key={q.questionId} className="rounded-xl border border-border p-4 mb-4">
+                  <div className="flex items-baseline justify-between gap-2 mb-2">
+                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                      {qi + 1}/{diagnostic.length} · {q.conceptName}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-text-primary mb-3 leading-relaxed">
+                    {q.questionText}
+                  </p>
+                  <div className="space-y-2">
+                    {q.options.map((opt, oi) => (
+                      <button
+                        key={oi}
+                        type="button"
+                        onClick={() =>
+                          setDiagnosticAnswers(a => ({ ...a, [q.questionId]: oi }))
+                        }
+                        className={`w-full text-left rounded-lg border px-3 py-2 text-sm ${
+                          selected === oi
+                            ? 'border-primary bg-primary/10 text-text-primary'
+                            : 'border-border text-text-secondary hover:border-primary/50'
+                        }`}
+                      >
+                        <span className="mr-2 font-semibold">
+                          {String.fromCharCode(65 + oi)}.
+                        </span>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+            {diagnostic.length > 0 && (
+              <p className="text-xs text-text-muted italic">
+                Responde todas para continuar — o sáltalo si prefieres empezar con tu autoevaluación.
+              </p>
+            )}
+          </div>
+        )}
+
+        {step === 4 && (
           <div>
             <h2 className="text-lg font-bold text-text-primary mb-1">Contrato psicológico</h2>
             <p className="text-sm text-text-secondary mb-5">Antes de empezar, esto es importante:</p>

@@ -1,0 +1,93 @@
+---
+title: "VPC Peering vs Transit Gateway vs PrivateLink: cuál elegir en AWS SAA-C03"
+description: "Comparativa clara entre VPC Peering, Transit Gateway y PrivateLink: cuándo usar cada uno, costes, límites, y cómo las preguntas del SAA-C03 intentan confundirte."
+publishedAt: "2026-04-04"
+tags: ["aws", "vpc", "networking", "saa-c03"]
+featured: true
+---
+
+Las preguntas de networking en el **SAA-C03** siempre te dan 4 opciones donde **tres son técnicamente válidas** pero solo una es la óptima. La diferencia está en entender el trade-off entre VPC Peering, Transit Gateway y PrivateLink.
+
+## TL;DR (útil para el examen)
+
+| Caso | Usa |
+|---|---|
+| 2 VPCs, conectividad total, misma o cross-account | **VPC Peering** |
+| 10+ VPCs, topología hub-and-spoke, routing centralizado | **Transit Gateway** |
+| Exponer un servicio específico (no toda la VPC) | **PrivateLink / VPC Endpoint Service** |
+| Acceso a AWS services (S3, DynamoDB) sin salir a internet | **VPC Endpoint** (Gateway o Interface) |
+| On-prem ↔ AWS | **Direct Connect + TGW** o **Site-to-Site VPN + TGW** |
+
+## VPC Peering
+
+Conexión **1-a-1** entre dos VPCs. Peering es:
+
+- **Sin transitividad**: si A ↔ B y B ↔ C, **A no puede hablar con C** via B.
+- Mismo CIDR imposible. Ranges deben no solaparse.
+- Sin coste de hora, solo **data transfer inter-AZ** (~$0.01/GB).
+- Soporta cross-region y cross-account.
+
+Cuándo lo elige el examen: **dos VPCs**, sin mención de futura expansión. Más barato que TGW si no necesitas el hub.
+
+## Transit Gateway (TGW)
+
+Hub central que conecta VPCs, VPNs y Direct Connect. Es:
+
+- **Totalmente transitivo**. Defines route tables en el TGW para controlar qué va con qué.
+- Cobra **por hora** (~$0.05/h = $36/mes por attachment) **más** data processing ($0.02/GB).
+- Soporta segmentación: VPCs de prod en una route table, VPCs de dev en otra, ambos con salida a shared services.
+- Cross-region via **Transit Gateway Peering**.
+
+Cuándo lo elige el examen: **multiple VPCs** + palabras como "simplify", "centralized routing", "scalable", "segment by environment".
+
+## PrivateLink (VPC Endpoint Services)
+
+Expone **un único servicio** (un NLB, típicamente) a otras VPCs o cuentas vía ENIs privadas. Es:
+
+- **Unidireccional**: consumidor → productor. El productor no ve la red del consumidor.
+- Sin problemas de CIDR solapado: el tráfico va a ENIs en la VPC del consumidor.
+- Ideal para SaaS (un proveedor expone una API a muchos clientes sin peering ni IAM cruzado).
+
+Cuándo lo elige el examen: preguntas con "**without exposing the entire VPC**", "SaaS", "third-party service", o cuando los CIDRs solaparían.
+
+## Trampas clásicas del SAA-C03
+
+### Trampa 1: "Transitive peering"
+
+La pregunta describe 3 VPCs peered en cadena y pregunta si la VPC A puede hablar con la C. **No**. Peering no es transitivo. La respuesta correcta es *"usar Transit Gateway"* o *"añadir peering directo A ↔ C"*.
+
+### Trampa 2: CIDR overlap
+
+VPCs con mismo CIDR (ej. `10.0.0.0/16`). Peering imposible. TGW también imposible (necesita IPs únicas para routing). **Solución**: PrivateLink, porque el tráfico termina en ENIs locales, no hay routing IP-a-IP.
+
+### Trampa 3: On-prem + multi-VPC
+
+Pregunta típica: "empresa con 20 VPCs y datacenter on-prem". Respuesta mala: "un VPN por VPC" (20 túneles, inmanejable). Respuesta buena: **Direct Connect o VPN → Transit Gateway**, y el TGW propaga rutas a todas las VPCs.
+
+### Trampa 4: "Cheapest option"
+
+Cuidado — "cheapest" no siempre es peering. Si ya tienes 10+ VPCs, TGW suele ser más barato total porque evitas la maraña de route tables, y el coste por GB es similar.
+
+### Trampa 5: VPC Endpoint Gateway vs Interface
+
+- **Gateway endpoint**: solo S3 y DynamoDB. **Gratis** (solo pagas data transfer normal). Se añade como ruta en route table.
+- **Interface endpoint** (PrivateLink): todos los demás servicios AWS. Cobra **$0.01/h por AZ** + data processing. Crea ENIs.
+
+Pregunta típica: *"acceso privado a S3 desde VPC sin salir a internet"* → **Gateway endpoint**, porque es gratis y solo S3/DynamoDB lo soportan.
+
+## Checklist mental
+
+Antes de elegir la opción:
+
+1. ¿Cuántas VPCs? (2 = peering; 3+ = empieza a pensar TGW)
+2. ¿Necesito transitividad? (Sí = TGW)
+3. ¿CIDRs solapados? (Sí = PrivateLink)
+4. ¿Expongo **todo** o **un servicio**? (Servicio = PrivateLink)
+5. ¿Incluye on-prem? (Sí = TGW con Direct Connect/VPN attachment)
+
+## Recursos
+
+- [AWS networking reference architectures](https://aws.amazon.com/architecture/networking-content/)
+- [TGW vs Peering pricing calculator](https://calculator.aws/)
+
+Para convertir este tipo de trade-offs en intuición sin memorizar, [Maestring te genera preguntas adaptadas a los errores que cometes](/signup). Es gratis empezar.

@@ -1,0 +1,80 @@
+---
+title: "Plan de estudio AWS SAA-C03: cómo aprobar en 6 semanas (método real)"
+description: "Plan de estudio realista para AWS Solutions Architect Associate (SAA-C03): qué estudiar cada semana, cómo usar spaced repetition y cuándo hacer simulacros."
+publishedAt: "2026-04-18"
+tags: ["aws", "saa-c03", "plan-de-estudio", "certificacion"]
+featured: true
+---
+
+Aprobar el **AWS SAA-C03** no es cuestión de memorizar 500 flashcards. Es cuestión de **entender 5–6 patrones arquitectónicos** y aplicarlos a 65 preguntas que el examen diseña para confundirte entre dos opciones casi correctas. Este plan de 6 semanas es el que usamos en Maestring como baseline, y el que revalidamos contra cientos de outcomes reales.
+
+## Qué mide realmente el SAA-C03
+
+El blueprint oficial reparte 4 dominios con estos pesos aproximados:
+
+| Dominio | Peso | Qué evalúa |
+|---|---|---|
+| Design Secure Architectures | 30% | IAM, KMS, VPC endpoints, security groups vs NACLs |
+| Design Resilient Architectures | 26% | Multi-AZ, auto-scaling, DR patterns, RTO/RPO |
+| Design High-Performing Architectures | 24% | Storage tiers, caching, read replicas, DAX |
+| Design Cost-Optimized Architectures | 20% | Spot, reserved, S3 lifecycle, lambda vs EC2 |
+
+Si un dominio no está en tu plan, **estás perdiendo puntos garantizados**.
+
+## Semana 1 — IAM + VPC (el 40% oculto del examen)
+
+IAM y VPC aparecen en **todos** los dominios porque son transversales. Empezar aquí te da palanca para entender el resto.
+
+- **IAM**: users vs roles, trust policies, resource-based vs identity-based, permission boundaries, STS AssumeRole.
+- **VPC**: subnets públicas vs privadas, route tables, IGW vs NAT, **VPC endpoints (Gateway vs Interface)**, peering vs transit gateway.
+- Haz 20–30 preguntas al final de la semana. No intentes saltar al simulacro todavía.
+
+## Semana 2 — Compute + Storage
+
+- **EC2**: instance types, placement groups, ENI vs EFA, spot interruption handling.
+- **S3**: storage classes, lifecycle, versioning, Object Lock, replication (SRR/CRR), Transfer Acceleration vs CloudFront.
+- **EBS vs EFS vs FSx**: cuándo usar cada uno. Este trade-off aparece en 3–5 preguntas garantizadas.
+
+## Semana 3 — Databases + Caching
+
+- RDS Multi-AZ vs Read Replicas (**sí, caen juntas; sí, miden si sabes diferenciarlas**).
+- DynamoDB: partition key design, GSI vs LSI, DAX.
+- ElastiCache: Redis vs Memcached, cluster mode, failover.
+
+## Semana 4 — Integration + Monitoring
+
+- SQS vs SNS vs EventBridge vs Kinesis.
+- CloudWatch: metrics vs logs vs alarms, metric filters, composite alarms.
+- CloudTrail vs Config: compliance, data events, aggregation across accounts.
+
+## Semana 5 — Patrones de arquitectura
+
+No más flashcards aisladas. Ahora lees [AWS Well-Architected whitepaper](https://aws.amazon.com/architecture/well-architected/) y **dibujas** estos patrones a mano:
+
+1. Three-tier web app con Auto Scaling + RDS Multi-AZ
+2. Serverless API con API Gateway → Lambda → DynamoDB
+3. Data lake con S3 + Glue + Athena
+4. Multi-region DR (pilot light vs warm standby vs active-active)
+5. Hybrid con Direct Connect + VPN failover
+
+Si puedes dibujar los 5 sin mirar, estás listo para simulacros.
+
+## Semana 6 — Simulacros + debilidades
+
+- 3 simulacros completos de 65 preguntas en condiciones reales (130 min, sin pausas).
+- Después de cada uno, **no revises el examen entero**. Revisa solo las preguntas falladas y búscalas en tu plan de estudio. Ese bucle de feedback es lo que convierte un 68% en un 78%.
+- Si fallas una pregunta de IAM, no repases "IAM". Identifica **qué concepto específico** falló (ej. "permission boundary vs SCP") y repásalo con spaced repetition.
+
+## Por qué el spaced repetition importa aquí
+
+El SAA-C03 tiene 43+ conceptos distintos y el examen puede preguntar por **cualquiera**. Repasar todo cada día es insostenible. Un algoritmo como [FSRS](/blog/fsrs-vs-anki-por-que-importa) te muestra solo lo que vas a olvidar hoy — reduces tiempo de estudio un 40–60% con la misma retención.
+
+## Qué NO hacer
+
+- Ver cursos en vídeo sin hacer preguntas. Retención ~15%.
+- Memorizar tamaños/límites exactos (ej. "5 TB max S3 object"). El examen casi nunca los pregunta directamente.
+- Saltar a simulacros la semana 1. Salen 40%, te desmoralizas, abandonas.
+
+## Siguiente paso
+
+Si quieres seguir este plan con preguntas generadas sobre tus puntos débiles reales en lugar de un banco estático, [Maestring es gratis hasta que decidas suscribirte](/pricing). Usa el mismo método FSRS que describe este artículo, aplicado a tus gaps específicos.

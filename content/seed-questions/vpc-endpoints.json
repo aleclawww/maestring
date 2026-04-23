@@ -1,0 +1,239 @@
+{
+  "conceptSlug": "vpc-endpoints",
+  "certificationId": "aws-saa-c03",
+  "questions": [
+    {
+      "difficulty": 0.25,
+      "tags": ["gateway-endpoint", "s3", "cost-free"],
+      "questionText": "Una instancia EC2 en una subnet privada necesita leer objetos de un bucket S3 en la misma región. El equipo quiere eliminar el NAT Gateway para reducir costes y que el tráfico no salga a internet. ¿Qué configuración es la correcta?",
+      "options": [
+        "Crear un Gateway Endpoint de S3 y asociarlo a la route table de la subnet privada",
+        "Crear un Interface Endpoint de S3 en la subnet privada y apuntar DNS privado al ENI",
+        "Crear un VPC Peering con una VPC pública que tenga acceso a S3",
+        "Habilitar S3 Transfer Acceleration y acceder por el endpoint público"
+      ],
+      "correctIndex": 0,
+      "hint": "Solo dos servicios AWS ofrecen el tipo de endpoint gratuito. S3 es uno de ellos.",
+      "explanation": "Gateway Endpoint de S3 añade una ruta a la route table que envía tráfico a S3 por la red privada de AWS sin coste horario ni por GB. Interface Endpoint para S3 existe pero cuesta, Peering no aplica a servicios AWS gestionados, y Transfer Acceleration sigue usando internet público.",
+      "explanationDeep": "Gateway Endpoints solo existen para S3 y DynamoDB — son gratuitos porque funcionan modificando la route table (prefix list `pl-xxx`) en vez de desplegar infraestructura. No hay ENI, no hay coste horario ni por GB. Cuando la instancia consulta `s3.us-east-1.amazonaws.com`, el DNS resuelve a IPs públicas de S3 pero el routing intercepta esas IPs y las dirige al backbone privado de AWS. Para S3 existe también Interface Endpoint (desde 2021) pero cuesta ~$7/mes por AZ + $0.01/GB y solo tiene sentido si necesitas acceso on-premises vía Direct Connect / VPN — no para EC2→S3 same-region, donde Gateway es óptimo.",
+      "keyInsight": "Gateway Endpoint = S3 y DynamoDB, gratis, solo route table. Todo lo demás necesita Interface Endpoint.",
+      "scenarioContext": {
+        "constraints": ["same-region", "private subnet", "no internet egress"],
+        "architecture": "EC2 (private subnet) → ??? → S3 bucket (same region)"
+      }
+    },
+    {
+      "difficulty": 0.3,
+      "tags": ["interface-endpoint", "privatelink", "kms"],
+      "questionText": "Una aplicación en subnet privada cifra datos con KMS. El equipo de seguridad exige que las llamadas a KMS NO atraviesen internet público. Actualmente usan NAT Gateway. ¿Qué cambio logra el requisito?",
+      "options": [
+        "Sustituir el NAT Gateway por un Interface Endpoint de KMS en cada AZ de la subnet",
+        "Crear un Gateway Endpoint de KMS y asociarlo a la route table",
+        "Configurar una Customer Gateway con IPsec hacia KMS",
+        "Habilitar KMS Multi-Region Keys y acceder al key ARN directamente"
+      ],
+      "correctIndex": 0,
+      "hint": "KMS no está en la lista de servicios con Gateway Endpoint. Piensa en qué deja el tráfico dentro de la VPC sin ruta a internet.",
+      "explanation": "KMS solo soporta Interface Endpoint (PrivateLink). El endpoint crea un ENI con IP privada en cada subnet seleccionada, y Private DNS hace que `kms.<region>.amazonaws.com` resuelva al ENI en lugar de la IP pública. Gateway Endpoint no existe para KMS. Customer Gateway y Multi-Region Keys no eliminan el tráfico por internet.",
+      "explanationDeep": "Interface Endpoint (PrivateLink) funciona distinto a Gateway: AWS instancia un ENI con IP privada dentro de tu subnet. Cuando activas Private DNS en el endpoint, AWS sobrescribe el DNS público del servicio para que resuelva al ENI — así las SDK calls no necesitan cambiar. Coste: ~$0.01/hora/AZ + $0.01/GB procesado. Para alta disponibilidad despliégalo en ≥2 AZ (un ENI por AZ). El Security Group del endpoint controla qué instancias pueden llamar a KMS vía ese ENI, y la Endpoint Policy restringe qué acciones (e.g., solo `kms:Decrypt` sobre ciertos KeyIds).",
+      "keyInsight": "KMS privado = Interface Endpoint con Private DNS activado + SG restrictivo + Endpoint Policy.",
+      "scenarioContext": {
+        "constraints": ["no public internet", "KMS encryption required", "existing NAT to remove"]
+      }
+    },
+    {
+      "difficulty": 0.3,
+      "tags": ["gateway-endpoint", "supported-services"],
+      "questionText": "De la siguiente lista de servicios AWS, ¿cuál par soporta Gateway Endpoint (no Interface Endpoint)?",
+      "options": [
+        "S3 y DynamoDB",
+        "S3 y RDS",
+        "DynamoDB y SQS",
+        "Lambda y API Gateway"
+      ],
+      "correctIndex": 0,
+      "hint": "Solo dos servicios nunca abandonaron el modelo original de Gateway Endpoint. Ambos son de almacenamiento.",
+      "explanation": "Gateway Endpoint se lanzó en 2015 solo para S3 y DynamoDB, y AWS no ha añadido más servicios a ese tipo desde entonces. Todo servicio nuevo con VPC endpoint privado usa Interface Endpoint (PrivateLink).",
+      "explanationDeep": "Históricamente, Gateway Endpoint se diseñó cuando PrivateLink no existía: en vez de desplegar un ENI, AWS modifica la route table para interceptar el CIDR público del servicio. Esto es barato pero restrictivo: no funciona con on-premises vía Direct Connect (el tráfico viene de fuera de la VPC y no toca la route table de la subnet), no tiene ENI que exponer al control de SG, y escala mal a cientos de servicios. Por eso a partir de 2017 AWS adoptó PrivateLink (Interface Endpoint) como modelo universal, y solo S3/DynamoDB conservan el Gateway por compatibilidad + coste.",
+      "keyInsight": "Gateway Endpoint es un legado de 2015 — solo S3 y DynamoDB. Para todo lo demás: Interface Endpoint.",
+      "scenarioContext": {}
+    },
+    {
+      "difficulty": 0.35,
+      "tags": ["pricing", "cost-optimization", "gateway-vs-interface"],
+      "questionText": "Una startup procesa 2 TB/mes desde EC2 hacia S3 en la misma región. Actualmente el tráfico pasa por un NAT Gateway ($0.045/hora + $0.045/GB). El CFO pide reducir coste. ¿Qué opción ahorra más?",
+      "options": [
+        "Reemplazar el NAT Gateway por un Gateway Endpoint de S3 (sin coste horario ni por GB)",
+        "Reemplazar el NAT Gateway por un Interface Endpoint de S3 (~$7/AZ/mes + $0.01/GB)",
+        "Mantener NAT Gateway pero activar S3 Requester Pays",
+        "Mover las instancias EC2 a una subnet pública con IP elástica"
+      ],
+      "correctIndex": 0,
+      "hint": "Haz el cálculo: ¿cuánto paga la startup al NAT por mes? ¿Qué opción tiene coste marginal cero por GB?",
+      "explanation": "Gateway Endpoint de S3 es gratuito (sin coste horario ni por GB), mientras que el NAT Gateway cobra ~$32.40/mes fijo + $90 por los 2 TB. Interface Endpoint también reduce coste pero sigue siendo de pago (~$21/mes en 3 AZ + $20 por GB). Subnet pública introduce riesgos de seguridad, y Requester Pays no aplica a buckets propios.",
+      "explanationDeep": "NAT Gateway cost = $0.045/hr × 24 × 30 + $0.045/GB × 2000 GB = $32.40 + $90 = $122.40/mes. Gateway Endpoint S3 = $0 (el único coste es inter-AZ si aplica, pero Gateway no añade saltos). Interface Endpoint S3 en 3 AZ = $21.90 hourly + $20 data = ~$42/mes. El ahorro claro es Gateway. Regla general: cuando puedas usar Gateway (solo S3/DynamoDB same-region), úsalo. Interface Endpoint para S3 solo tiene sentido si necesitas acceso vía Direct Connect desde on-prem o si Gateway no cubre tu caso (cross-region, otra cuenta compleja).",
+      "keyInsight": "Ante S3 same-region: Gateway Endpoint siempre. Solo considera Interface si el acceso viene de fuera de la VPC.",
+      "scenarioContext": {
+        "numbers": { "traffic_gb_month": 2000 },
+        "costTable": [
+          { "option": "NAT Gateway", "monthly_usd": 122.40 },
+          { "option": "Gateway Endpoint S3", "monthly_usd": 0 },
+          { "option": "Interface Endpoint S3 (3 AZ)", "monthly_usd": 42.00 }
+        ]
+      }
+    },
+    {
+      "difficulty": 0.55,
+      "tags": ["endpoint-policy", "s3", "security"],
+      "questionText": "Una empresa configura un Gateway Endpoint de S3 para una VPC de producción. Quieren que, incluso si las credenciales IAM de una instancia se filtran, ningún cliente pueda acceder a buckets que no sean los 3 buckets autorizados de la empresa — usando el endpoint. ¿Qué mecanismo aplica esta restricción?",
+      "options": [
+        "Endpoint Policy en el Gateway Endpoint que solo permita acciones sobre los 3 ARNs de bucket específicos",
+        "Bucket Policy en los 3 buckets permitiendo acceso desde el endpoint-id",
+        "Security Group del endpoint con reglas de egress limitando IPs S3",
+        "IAM Permissions Boundary aplicada a todos los roles de EC2"
+      ],
+      "correctIndex": 0,
+      "hint": "La restricción debe aplicarse al endpoint mismo, independiente del IAM de la instancia. Piensa en qué política controla 'qué se puede hacer a través de este endpoint'.",
+      "explanation": "Endpoint Policy es una resource policy adjunta al endpoint que restringe qué acciones y recursos son accesibles vía ese endpoint, sin importar qué permita IAM. Bucket Policy puede complementar pero no limita el endpoint. Security Group no aplica a Gateway Endpoint (no hay ENI). Permissions Boundary limita IAM pero no previene acceso si credenciales se filtran y el destino cambia.",
+      "explanationDeep": "Endpoint Policy es el control de capa de red en PrivateLink: dicta qué puede pasar POR el endpoint, complementando IAM. Ejemplo para restringir a 3 buckets:\n```json\n{\n  \"Statement\": [{\n    \"Effect\": \"Allow\",\n    \"Principal\": \"*\",\n    \"Action\": \"s3:*\",\n    \"Resource\": [\n      \"arn:aws:s3:::bucket-prod-1\", \"arn:aws:s3:::bucket-prod-1/*\",\n      \"arn:aws:s3:::bucket-prod-2\", \"arn:aws:s3:::bucket-prod-2/*\",\n      \"arn:aws:s3:::bucket-prod-3\", \"arn:aws:s3:::bucket-prod-3/*\"\n    ]\n  }]\n}\n```\nSi credenciales de EC2 se filtran, un atacante usándolas desde esa VPC solo puede hablar con los 3 buckets. Desde fuera de la VPC no usa el endpoint, así que Bucket Policy con condición `aws:SourceVpce` es el complemento necesario para cubrir accesos externos.",
+      "keyInsight": "Endpoint Policy controla qué pasa POR el endpoint; Bucket Policy controla qué pasa AL bucket. Úsalas juntas.",
+      "scenarioContext": {
+        "constraints": ["3 authorized buckets", "assume IAM credentials leaked", "production VPC"]
+      }
+    },
+    {
+      "difficulty": 0.6,
+      "tags": ["interface-endpoint", "dns", "private-dns"],
+      "questionText": "Un ingeniero crea un Interface Endpoint para SSM con Private DNS deshabilitado por error. Las instancias EC2 reportan timeouts llamando a SSM. ¿Cuál es la causa y la solución más limpia?",
+      "options": [
+        "Las SDK resuelven el hostname público y salen por default route; habilitar Private DNS en el endpoint",
+        "El Security Group del endpoint bloquea 443; abrir inbound desde el CIDR de la VPC",
+        "Falta crear una ruta estática en la route table hacia el ENI del endpoint",
+        "Las instancias necesitan un rol IAM con ssm:* antes de que resuelva el DNS"
+      ],
+      "correctIndex": 0,
+      "hint": "Sin Private DNS, el hostname del servicio sigue resolviendo a su IP pública. ¿Qué ruta sigue ese tráfico?",
+      "explanation": "Con Private DNS deshabilitado, `ssm.<region>.amazonaws.com` resuelve a la IP pública, por lo que EC2 intenta salir por la ruta default (0.0.0.0/0) — que en subnet privada sin NAT da timeout. Habilitar Private DNS hace que ese hostname resuelva al ENI del endpoint. SG y IAM no explican timeout (serían 403). La route table no necesita entrada manual en Interface Endpoint.",
+      "explanationDeep": "Interface Endpoint expone un ENI con IP privada y un DNS name regional propio (ej. `vpce-0abc-xyz.ssm.us-east-1.vpce.amazonaws.com`). Con Private DNS ON, AWS crea un Route 53 Private Hosted Zone en tu VPC que sobrescribe el FQDN público del servicio para que resuelva al ENI. Con Private DNS OFF, tu código tendría que conocer el DNS regional del endpoint — poco práctico. Requisitos para Private DNS: la VPC debe tener `enableDnsHostnames` y `enableDnsSupport` en true (defaults). Troubleshooting tip: `dig ssm.us-east-1.amazonaws.com` desde la instancia debería devolver una IP del CIDR de la VPC, no una IP pública. Si devuelve pública, Private DNS está off o DNS support de la VPC está mal.",
+      "keyInsight": "Interface Endpoint sin Private DNS = tráfico sigue saliendo a internet. Siempre activar Private DNS salvo caso multi-VPC avanzado.",
+      "scenarioContext": {
+        "constraints": ["Private DNS disabled", "no NAT Gateway", "timeouts on SSM calls"]
+      }
+    },
+    {
+      "difficulty": 0.6,
+      "tags": ["multi-az", "high-availability", "interface-endpoint"],
+      "questionText": "Una empresa despliega un Interface Endpoint para Secrets Manager en una VPC con subnets en us-east-1a, 1b y 1c. Durante una prueba de resiliencia, toda us-east-1a queda offline. ¿Qué configuración garantiza que las apps en 1b y 1c sigan accediendo a Secrets Manager?",
+      "options": [
+        "Asociar el endpoint a las 3 subnets de 1a/1b/1c; cada AZ crea su propio ENI",
+        "Asociar el endpoint solo a la subnet de 1a; las otras AZ lo resuelven vía cross-AZ routing",
+        "Crear 3 Gateway Endpoints separados, uno por AZ",
+        "Asociar el endpoint a 1a y usar Transit Gateway para que 1b/1c alcancen el ENI"
+      ],
+      "correctIndex": 0,
+      "hint": "Un Interface Endpoint despliega un ENI por cada subnet que selecciones. Si una AZ cae, necesitas que existan ENIs en las otras.",
+      "explanation": "Interface Endpoint crea un ENI independiente en cada subnet asociada, una por AZ. Si 1a cae, Private DNS redirige llamadas a los ENIs saludables en 1b/1c automáticamente. Asociar solo una subnet es single-AZ (no HA). Gateway Endpoint no existe para Secrets Manager. Transit Gateway no es necesario para alcanzar un ENI en la misma VPC.",
+      "explanationDeep": "Cuando asocias un Interface Endpoint a múltiples subnets, AWS despliega un ENI por subnet (y por tanto uno por AZ). Private DNS devuelve todas las IPs de los ENIs saludables en round-robin y los clientes retry sobre otra IP si una falla (las SDK AWS tienen retries exponenciales por defecto). Coste: $0.01/hora/AZ — 3 AZ = ~$21.60/mes por endpoint. Trade-off: un endpoint en 1 AZ ahorra $14/mes pero introduce dependencia de esa AZ; para workloads producción, siempre ≥2 AZ. Nota: el Data Processing Charge ($0.01/GB) se cobra una sola vez por el tráfico total, no por AZ.",
+      "keyInsight": "Interface Endpoint HA = una subnet por AZ. Private DNS hace el failover transparente al cliente.",
+      "scenarioContext": {
+        "constraints": ["3 AZ production", "tolerate full AZ failure", "Secrets Manager access required"]
+      }
+    },
+    {
+      "difficulty": 0.65,
+      "tags": ["bucket-policy", "source-vpce", "defense-in-depth"],
+      "questionText": "Una empresa tiene un bucket S3 con datos sensibles y un Gateway Endpoint de S3 en la VPC de producción. Quieren que el bucket SOLO sea accesible desde esa VPC — ni siquiera desde la consola AWS, ni desde otras VPCs, ni desde internet. ¿Qué política logra la restricción?",
+      "options": [
+        "Bucket Policy con Deny si `aws:SourceVpce` no coincide con el ID del endpoint",
+        "Endpoint Policy con Allow solo para ese bucket",
+        "Security Group del bucket permitiendo inbound solo desde el CIDR de la VPC",
+        "IAM Policy con condición `aws:SourceIp` igual al CIDR de la VPC"
+      ],
+      "correctIndex": 0,
+      "hint": "La restricción debe vivir en el bucket, no en el endpoint (el endpoint solo aplica si el tráfico llega por él). Busca la condición que identifica el endpoint como origen.",
+      "explanation": "`aws:SourceVpce` en Bucket Policy bloquea cualquier request cuyo origen no sea el endpoint especificado — incluye consola, otras VPCs, internet. Endpoint Policy solo restringe qué pasa por el endpoint, no qué pasa al bucket desde otras vías. Los buckets no tienen SG. `aws:SourceIp` falla porque el request viaja por el backbone de AWS con IPs de servicio, no las de tu VPC.",
+      "explanationDeep": "La política típica es:\n```json\n{\n  \"Statement\": [{\n    \"Effect\": \"Deny\",\n    \"Principal\": \"*\",\n    \"Action\": \"s3:*\",\n    \"Resource\": [\"arn:aws:s3:::my-sensitive-bucket\", \"arn:aws:s3:::my-sensitive-bucket/*\"],\n    \"Condition\": { \"StringNotEquals\": { \"aws:SourceVpce\": \"vpce-0abc123\" } }\n  }]\n}\n```\nEsto aplica a TODA request, incluidas las de usuarios IAM en consola (que no vienen por el endpoint → bloqueadas). Atención: una vez aplicas esto, tú mismo no puedes listar el bucket desde consola a menos que añadas una excepción (ej. `aws:PrincipalArn` de un admin). Por eso suele combinarse con `ArnNotEquals` para exempt algunos admins, o gestionarse por CLI desde una EC2 dentro de la VPC.",
+      "keyInsight": "aws:SourceVpce en Bucket Policy = perímetro S3 perfecto, pero bloquea también la consola. Prepárate para gestionar por CLI.",
+      "scenarioContext": {
+        "constraints": ["bucket accessible only from production VPC", "no console access required", "no cross-VPC"]
+      }
+    },
+    {
+      "difficulty": 0.8,
+      "tags": ["centralized-endpoints", "transit-gateway", "enterprise-network"],
+      "questionText": "Una enterprise con 40 VPCs en una Transit Gateway quiere consumir Systems Manager, KMS y Secrets Manager sin desplegar Interface Endpoints en cada VPC (coste prohibitivo: 40 × 3 endpoints × 3 AZ × $7/mes ≈ $2,520/mes). ¿Qué arquitectura reduce el coste manteniendo acceso privado?",
+      "options": [
+        "Centralizar los 3 endpoints en una VPC shared-services, desactivar Private DNS en cada uno, y usar una Route 53 Resolver inbound + outbound + Private Hosted Zones para que las 40 VPCs resuelvan al ENI compartido",
+        "Activar Private DNS en los 3 endpoints de una VPC central; las otras VPCs resuelven automáticamente vía TGW sin configuración extra",
+        "Crear un Gateway Endpoint compartido en la VPC central y rutearlo vía TGW hacia las 40 VPCs",
+        "Usar VPC Peering full-mesh entre las 40 VPCs y habilitar DNS resolution cross-peering"
+      ],
+      "correctIndex": 0,
+      "hint": "Private DNS solo funciona dentro de la VPC que tiene el endpoint. Para compartir entre VPCs via TGW necesitas otro mecanismo de resolución DNS.",
+      "explanation": "El patrón 'centralized endpoints' requiere: (1) endpoints en la VPC central sin Private DNS porque solo funciona en su VPC; (2) Route 53 Private Hosted Zones que mapeen el hostname del servicio al DNS regional del endpoint, asociadas a las 40 VPCs; (3) TGW para el traffic. Private DNS activo solo sirve dentro de la VPC que lo crea. Gateway Endpoints no soportan TGW. Peering full-mesh es inmanejable a 40 VPCs.",
+      "explanationDeep": "Patrón oficial AWS (whitepaper 'Centralized Access to VPC Interface Endpoints'):\n1. VPC central con Interface Endpoints para SSM/KMS/Secrets, Private DNS **OFF** (si estuviera ON, solo resolvería dentro de la VPC central).\n2. Por cada servicio creas una Route 53 Private Hosted Zone (ej. `ssm.us-east-1.amazonaws.com`) con un A-alias al DNS regional del endpoint (`vpce-xxx.ssm.us-east-1.vpce.amazonaws.com`).\n3. Asocias esas PHZ a las 40 VPCs spoke (via API, incluso cross-account).\n4. Las spokes resuelven el hostname al ENI de la VPC central y rutean vía TGW.\n\nCoste: 3 endpoints × 3 AZ × $7 = $63/mes + TGW attachments + data processing ($0.02/GB TGW + $0.01/GB endpoint). A 40 VPCs vs el approach naive ahorras >$2,400/mes. Trade-off: latencia extra de 1-2ms por el salto TGW y un SPOF lógico si la VPC central falla (mitigar con 2 VPCs hub activo-activo en diferentes regiones).",
+      "keyInsight": "Centralized endpoints = Private DNS OFF + Route 53 PHZ compartidas + TGW. La clave es entender que Private DNS no cruza VPC.",
+      "scenarioContext": {
+        "numbers": { "vpc_count": 40, "services": 3, "az_count": 3 },
+        "constraints": ["no public internet", "cost below $500/month for endpoints", "share across VPCs"]
+      }
+    },
+    {
+      "difficulty": 0.8,
+      "tags": ["cross-account", "resource-policy", "privatelink"],
+      "questionText": "Una SaaS vende una API interna que corre en NLB en su cuenta. Clientes enterprise quieren consumirla desde sus VPCs sin traversar internet, y el SaaS NO quiere exponer IPs públicas ni gestionar peering con cada cliente. ¿Qué patrón implementa esto?",
+      "options": [
+        "SaaS crea un VPC Endpoint Service (PrivateLink) frente al NLB; cada cliente crea un Interface Endpoint apuntando al service name",
+        "SaaS comparte el NLB vía Resource Access Manager (RAM); cliente accede directamente al DNS del NLB",
+        "SaaS y clientes configuran Transit Gateway peering cross-account y enrutan por CIDRs privados",
+        "SaaS publica la API en API Gateway privado y los clientes la consumen via CloudFront signed URL"
+      ],
+      "correctIndex": 0,
+      "hint": "PrivateLink no es solo para servicios AWS — también funciona para tu propio servicio si está detrás de un NLB o GWLB.",
+      "explanation": "VPC Endpoint Service (el lado 'provider' de PrivateLink) permite al SaaS exponer un NLB como servicio. Los clientes crean su propio Interface Endpoint al service name y aceptan la conexión. No hay peering, no hay IPs públicas, no se comparten CIDRs — cada cliente ve solo un ENI en su VPC. RAM comparte recursos, no expone NLBs a clientes externos. TGW cross-account es complejo y comparte rutas. API Gateway privado no escala a multi-tenant sin gestión compleja.",
+      "explanationDeep": "Flujo PrivateLink provider-consumer:\n1. SaaS: crea NLB (o GWLB) en su VPC, luego crea VPC Endpoint Service apuntando al NLB. Obtiene un service name como `com.amazonaws.vpce.us-east-1.vpce-svc-0abc123`.\n2. SaaS: define acceptance mode (`manual` o `auto`) y lista de Principals AWS autorizados (cuentas clientes).\n3. Cliente: crea Interface Endpoint tipo 'Find service by name' pegando el service name. AWS crea ENI en la VPC del cliente.\n4. SaaS acepta la conexión (si manual). El cliente llama al ENI local, AWS rutea a través de PrivateLink al NLB del SaaS.\n\nVentajas: CIDRs pueden ser overlapping entre SaaS y clientes (el tráfico va por AWS, no por red IP directa), cero routing compartido, cliente controla su SG local, SaaS ve el source IP de AWS (no el del cliente — si necesitas identificar al cliente, usa mTLS o tokens). Coste lo paga el cliente ($0.01/hora/AZ del lado consumer). Es el modelo oficial de marketplace SaaS AWS.",
+      "keyInsight": "PrivateLink permite exponer tu propio servicio (NLB/GWLB) a clientes externos sin peering ni IPs públicas. Base del SaaS multi-tenant privado en AWS.",
+      "scenarioContext": {
+        "constraints": ["multi-tenant SaaS", "no public IPs", "no peering per customer", "overlapping CIDRs tolerated"]
+      }
+    },
+    {
+      "difficulty": 0.85,
+      "tags": ["hybrid-cloud", "direct-connect", "on-premises"],
+      "questionText": "Una compañía con data center on-premises conectado vía Direct Connect necesita acceder a S3 en us-east-1 sin que el tráfico salga a internet. Actualmente usan Public VIF pero quieren endurecer la red privada. ¿Cuál es la arquitectura correcta?",
+      "options": [
+        "Crear Interface Endpoint de S3 en la VPC, Private VIF conectando on-prem a la VPC, configurar S3 client con el DNS regional del endpoint o con PHZ custom",
+        "Crear Gateway Endpoint de S3 en la VPC y rutear on-prem por Private VIF al Gateway Endpoint",
+        "Reemplazar Direct Connect por Site-to-Site VPN con IPsec hacia S3",
+        "Usar S3 Access Points con CIDR restringido al rango IP de on-premises"
+      ],
+      "correctIndex": 0,
+      "hint": "Gateway Endpoint no funciona desde fuera de la VPC. Tráfico on-prem → AWS entra por Private VIF y necesita un endpoint que acepte origen externo.",
+      "explanation": "Gateway Endpoint solo funciona para tráfico originado en subnets de la VPC (modifica route table local). Para acceso desde on-prem vía Direct Connect se requiere Interface Endpoint de S3 (disponible desde 2021), accesible vía Private VIF. Site-to-Site VPN no encripta hacia S3 directamente. Access Points no resuelve el problema de transport.",
+      "explanationDeep": "Este es el caso canónico donde Interface Endpoint para S3 tiene sentido (a pesar de su coste). Arquitectura:\n1. Crear Interface Endpoint de S3 en la VPC, asociado a subnets privadas en ≥2 AZ. Private DNS OFF (porque si está ON, cambia el DNS dentro de la VPC y puede romper Gateway Endpoint si coexiste).\n2. Private VIF conecta on-prem con el Direct Connect Gateway → VPC. Las rutas del Customer Gateway anuncian el CIDR on-prem, y AWS anuncia el CIDR de la VPC hacia on-prem.\n3. On-prem resuelve el DNS regional del endpoint (`*.vpce.amazonaws.com`) vía Route 53 Resolver inbound endpoint o PHZ forwarded — importante porque el cliente S3 on-prem por default resuelve el hostname público.\n4. Tráfico sigue: on-prem → DX → Private VIF → VPC → ENI del endpoint → PrivateLink backbone → S3.\n\nCoste: ~$7/AZ/mes + $0.01/GB + DX data transfer. Vs Public VIF: Public VIF da acceso a AWS public services sin pasar por internet, pero el tráfico sigue viendo los ranges públicos de AWS y algunos compliance frameworks no lo aceptan como 'private'. Interface Endpoint es auditable como tráfico 100% dentro de la red privada AWS.",
+      "keyInsight": "On-premises + S3 privado = Interface Endpoint de S3 + Private VIF + DNS resolver apuntando al DNS regional del endpoint. Gateway Endpoint NO funciona desde on-prem.",
+      "scenarioContext": {
+        "constraints": ["Direct Connect existing", "no internet path", "compliance-audited network"]
+      }
+    },
+    {
+      "difficulty": 0.9,
+      "tags": ["troubleshooting", "dns", "coexistence"],
+      "questionText": "Una VPC tiene Gateway Endpoint de S3 activo. Un equipo añade Interface Endpoint de S3 con Private DNS habilitado para servir tráfico desde un Direct Connect. Tras el despliegue, las instancias EC2 de la VPC empiezan a facturar $0.01/GB en S3 que antes era gratuito. ¿Qué ocurrió y cuál es la solución?",
+      "options": [
+        "Private DNS del Interface Endpoint sobrescribió el DNS de S3; ahora EC2 resuelve al ENI en vez del Gateway. Solución: deshabilitar Private DNS del Interface y gestionar resolución para on-prem con PHZ selectiva",
+        "El Gateway Endpoint se desactivó automáticamente al detectar el Interface Endpoint; reactivarlo en la route table",
+        "El Interface Endpoint cobra a todas las llamadas S3 de la VPC incluso si no pasan por él; eliminarlo y usar solo Gateway",
+        "La Endpoint Policy del Gateway expira cuando coexiste con Interface; renovarla manualmente"
+      ],
+      "correctIndex": 0,
+      "hint": "Private DNS es global a la VPC. ¿Qué pasa cuando el hostname de S3 resuelve al Interface Endpoint para TODAS las instancias, no solo el tráfico on-prem?",
+      "explanation": "Private DNS del Interface Endpoint crea una PHZ que hace que `s3.<region>.amazonaws.com` resuelva al ENI para toda la VPC, saltándose el Gateway Endpoint. Ahora todo el tráfico EC2→S3 pasa por el Interface (coste $0.01/GB). La solución es deshabilitar Private DNS del Interface y crear manualmente una PHZ que solo responda cuando la query venga del resolver on-prem.",
+      "explanationDeep": "Este es un foot-gun clásico de la coexistencia Gateway + Interface. Mecánica:\n- Gateway Endpoint trabaja a nivel routing: intercepta el prefix list de S3 en la route table. Transparente al DNS.\n- Interface Endpoint con Private DNS ON crea una Private Hosted Zone `s3.<region>.amazonaws.com` asociada a la VPC, con registros apuntando al ENI. Esta PHZ tiene precedencia sobre el DNS público.\n\nCuando coexisten con Private DNS ON:\n1. EC2 resuelve `s3.us-east-1.amazonaws.com` → IP privada del ENI (por la PHZ).\n2. Tráfico va al ENI, no al prefix list S3 → Interface Endpoint cobra ($0.01/GB).\n3. El Gateway Endpoint queda ignorado (nunca se activa porque nadie apunta al prefix list).\n\nSoluciones:\n- **Opción A (mejor)**: Private DNS OFF en el Interface; crear una PHZ manual asociada solo al Outbound Resolver endpoint (que atiende queries on-prem). Las EC2 siguen resolviendo al DNS público → Gateway las intercepta.\n- **Opción B**: usar el regional DNS name del Interface Endpoint explícitamente en el código que corre on-prem (no recomendado — acopla el código a infra).\n\nAWS documenta este caso en el whitepaper de PrivateLink como 'Coexistence with Gateway Endpoints'.",
+      "keyInsight": "Gateway + Interface Endpoint de S3 coexistiendo con Private DNS ON = Interface gana el DNS y cobra por todo. Private DNS OFF + PHZ selectiva es el patrón seguro.",
+      "scenarioContext": {
+        "constraints": ["Gateway Endpoint preexisting", "Interface added for Direct Connect", "unexpected billing"]
+      }
+    }
+  ]
+}
