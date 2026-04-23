@@ -15,7 +15,18 @@ export async function POST(req: NextRequest) {
 
   const outcome = await runCron("reminders", async () => {
     const supabase = createAdminClient();
-    const { data: brokenStreaks } = await supabase.rpc("get_broken_streaks_today");
+    // Mirror of the fix in cron/nudges — a silent error destructure here
+    // produced a "zero rows, zero alerts" cron run that looks identical to
+    // "nobody broke a streak today". Throw so runCron surfaces the real
+    // failure in cron_runs.status / Sentry.
+    const { data: brokenStreaks, error: listErr } = await supabase.rpc(
+      "get_broken_streaks_today"
+    );
+    if (listErr) {
+      throw new Error(
+        `get_broken_streaks_today failed: ${listErr.message ?? "unknown error"}`
+      );
+    }
 
     if (!brokenStreaks || brokenStreaks.length === 0) {
       return { status: "ok" as const, rowsAffected: 0, metadata: { total: 0 } };

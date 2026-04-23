@@ -15,7 +15,15 @@ export async function POST(req: NextRequest) {
 
   const outcome = await runCron("nudges", async () => {
     const supabase = createAdminClient();
-    const { data: users } = await supabase.rpc("get_users_needing_nudge");
+    // Previously `const { data: users } = ...` swallowed `error`, so a broken
+    // RPC (signature drift, permission regression, etc.) silently produced a
+    // cron run with `rowsAffected: 0` — indistinguishable from "no users due".
+    // Throw so runCron flips the row to status='failed' with the real error
+    // and any "zero-sends for N days" alert actually fires.
+    const { data: users, error: listErr } = await supabase.rpc("get_users_needing_nudge");
+    if (listErr) {
+      throw new Error(`get_users_needing_nudge failed: ${listErr.message ?? "unknown error"}`);
+    }
 
     if (!users || users.length === 0) {
       return { status: "ok" as const, rowsAffected: 0, metadata: { total: 0 } };
@@ -39,6 +47,16 @@ export async function POST(req: NextRequest) {
             .maybeSingle(),
         ]);
 
+        // `get_exam_readiness` is best-effort: the email should still go out
+        // even if the readiness snapshot RPC drops (old cert id, stale view,
+        // etc.). But don't eat the error — log it so operators can spot a
+        // systemic breakage showing up as "nudges with no delta" in prod.
+        if (readinessRes.error) {
+          logger.warn(
+            { err: readinessRes.error, userId: u.user_id },
+            "get_exam_readiness failed during nudge — sending without readiness delta"
+          );
+        }
         const readinessRow = Array.isArray(readinessRes.data) ? readinessRes.data[0] : null;
         const readinessNow = readinessRow?.score ?? null;
         const readinessPrev = (profileRes.data as { last_readiness_score?: number } | null)
@@ -64,8 +82,23 @@ export async function POST(req: NextRequest) {
           tags: [{ name: "type", value: "nudge" }],
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await supabase.rpc("snapshot_readiness" as any, { p_user_id: u.user_id });
+        // snapshot_readiness stamps today's score onto `profiles.last_readiness_score`
+        // so tomorrow's nudge can compute a delta. A silent drop here means
+        // tomorrow's email compares against yesterday's stale snapshot — the
+        // email still sends but the "your score moved X pts" copy is wrong.
+        // Log as a warn so the next-day-weird-delta has a log trail; don't
+        // throw because the user-visible email already went out.
+        const { error: snapErr } = await supabase.rpc(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          "snapshot_readiness" as any,
+          { p_user_id: u.user_id }
+        );
+        if (snapErr) {
+          logger.warn(
+            { err: snapErr, userId: u.user_id },
+            "snapshot_readiness failed after nudge sent — next-day delta will be stale"
+          );
+        }
 
         sent++;
       } catch (err) {

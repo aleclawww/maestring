@@ -67,10 +67,34 @@ export async function POST(req: NextRequest) {
     p_user_id: user.id,
     p_concept_id: next.conceptId,
   });
+  // If the pool RPC errored we fall through to LLM generation (fail-open —
+  // the user still gets a question). Previously this was silent, which
+  // hid schema / RLS regressions behind a mysterious spike in LLM spend.
+  // Log loudly so the "pool pick broken" signal surfaces next to the
+  // Haiku-cost graph.
+  if (poolRes.error) {
+    logger.warn(
+      { err: poolRes.error, userId: user.id, conceptId: next.conceptId },
+      "pick_pool_question failed — falling through to LLM generation"
+    );
+  }
   const pooled = Array.isArray(poolRes.data) ? poolRes.data[0] : null;
   if (pooled) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await supabase.rpc("bump_question_shown" as any, { p_question_id: pooled.id });
+    // bump_question_shown tracks which user has already seen a pool question
+    // so `pick_pool_question` filters it out next time. A silent drop here
+    // means the same question could be re-served to the same user. Log but
+    // don't throw — the question is already rendering.
+    const { error: bumpErr } = await supabase.rpc(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      "bump_question_shown" as any,
+      { p_question_id: pooled.id }
+    );
+    if (bumpErr) {
+      logger.warn(
+        { err: bumpErr, userId: user.id, questionId: pooled.id, conceptId: next.conceptId },
+        "bump_question_shown failed — pool hygiene degraded, question may re-serve"
+      );
+    }
     return NextResponse.json({
       data: {
         id: pooled.id,
@@ -112,6 +136,19 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quotaRes = await supabase.rpc("consume_llm_quota" as any, { p_user_id: user.id });
+  // If the quota RPC itself fails (RLS regression, signature drift) we
+  // previously fell through silently and generated the question WITHOUT
+  // consuming a quota slot — effectively unlimited free usage during the
+  // outage. Fail-open is still the right call (blocking all users during a
+  // DB hiccup is worse), but log loudly so the pager trips and operators
+  // can correlate "LLM spend spike with no quota rows today" to a concrete
+  // cause.
+  if (quotaRes.error) {
+    logger.error(
+      { err: quotaRes.error, userId: user.id },
+      "consume_llm_quota failed — proceeding without quota decrement (spend control degraded)"
+    );
+  }
   const quotaRow = Array.isArray(quotaRes.data) ? quotaRes.data[0] : null;
   if (quotaRow && quotaRow.allowed === false) {
     return NextResponse.json(
