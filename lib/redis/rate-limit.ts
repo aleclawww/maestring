@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { notifyRedisOutage } from "./outage-alert";
 
 let redis: Redis | null = null;
 
@@ -89,7 +90,8 @@ function getAuthLimiter(): Ratelimit | null {
 
 async function checkLimit(
   limiter: Ratelimit | null,
-  identifier: string
+  identifier: string,
+  operation: string
 ): Promise<RateLimitResult> {
   if (!limiter) return FAIL_OPEN;
   try {
@@ -99,25 +101,28 @@ async function checkLimit(
       remaining: result.remaining,
       reset: result.reset,
     };
-  } catch {
+  } catch (err) {
+    // Fail-open is intentional, but silent fail-open hides real outages.
+    // Notify Sentry so operators see when rate caps aren't being enforced.
+    notifyRedisOutage(operation, err);
     return FAIL_OPEN;
   }
 }
 
 export async function checkLlmRateLimit(userId: string): Promise<RateLimitResult> {
-  return checkLimit(getLlmLimiter(), userId);
+  return checkLimit(getLlmLimiter(), userId, "rate-limit:llm");
 }
 
 export async function checkGeneralRateLimit(identifier: string): Promise<RateLimitResult> {
-  return checkLimit(getGeneralLimiter(), identifier);
+  return checkLimit(getGeneralLimiter(), identifier, "rate-limit:general");
 }
 
 export async function checkUploadRateLimit(userId: string): Promise<RateLimitResult> {
-  return checkLimit(getUploadLimiter(), userId);
+  return checkLimit(getUploadLimiter(), userId, "rate-limit:upload");
 }
 
 export async function checkAuthRateLimit(ip: string): Promise<RateLimitResult> {
-  return checkLimit(getAuthLimiter(), ip);
+  return checkLimit(getAuthLimiter(), ip, "rate-limit:auth");
 }
 
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {
