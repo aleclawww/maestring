@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/logger'
 
 // Small typed wrappers for admin RPCs. Centralized so page files stay clean
 // and we have one spot to add error logging.
@@ -198,11 +199,29 @@ export async function recordAdminAction(opts: {
   details?: Record<string, unknown>
 }) {
   const supabase = createAdminClient()
+  // This is the audit trail for privileged admin actions. A silent swallow
+  // here means a real admin mutation (refund, plan override, etc.) happened
+  // in the DB but we have no `admin_actions` row to prove it — a compliance
+  // / after-the-fact-forensics hole. We log loudly on failure; we do NOT
+  // throw, because the caller has already performed the user-visible action
+  // and we cannot undo it. The loud log lets the operator reconstruct the
+  // missing audit row from app logs if needed.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase.from('admin_actions') as any).insert({
+  const { error } = await (supabase.from('admin_actions') as any).insert({
     admin_email: opts.adminEmail,
     action: opts.action,
     target_user_id: opts.targetUserId ?? null,
     details: opts.details ?? null,
   })
+  if (error) {
+    logger.error(
+      {
+        err: error,
+        adminEmail: opts.adminEmail,
+        action: opts.action,
+        targetUserId: opts.targetUserId ?? null,
+      },
+      'Failed to record admin_actions audit row — mutation already applied'
+    )
+  }
 }

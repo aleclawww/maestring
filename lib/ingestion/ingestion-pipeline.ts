@@ -115,9 +115,17 @@ export async function runIngestionPipeline(opts: PipelineOptions): Promise<Pipel
       );
     }
 
-    // 6. Link chunks to concepts
+    // 6. Link chunks to concepts. Previously `if (!error) conceptLinksCreated++`
+    // swallowed the error side silently — a systemic failure (RLS regression,
+    // FK constraint, etc.) would produce a doc with chunks but no concept
+    // links, which silently provides zero study value. Log each individual
+    // failure, and warn loudly at the end if we attempted links but landed
+    // zero so the operator can correlate "doc ingested but never shows up in
+    // study queue" with concrete errors.
     logger.info({ documentId }, "Linking chunks to concepts");
     let conceptLinksCreated = 0;
+    let conceptLinkFailures = 0;
+    let conceptLinkAttempts = 0;
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i]!;
@@ -126,14 +134,34 @@ export async function runIngestionPipeline(opts: PipelineOptions): Promise<Pipel
 
       const conceptLinks = await linkChunkToConcepts(chunk.content);
       for (const link of conceptLinks) {
+        conceptLinkAttempts++;
         const { error } = await supabase.from("chunk_concept_links").insert({
           chunk_id: chunkId,
           concept_id: link.conceptId,
           confidence: link.confidence,
           match_type: link.matchType,
         });
-        if (!error) conceptLinksCreated++;
+        if (error) {
+          conceptLinkFailures++;
+          logger.error(
+            { err: error, documentId, chunkId, conceptId: link.conceptId },
+            "Failed to insert chunk_concept_links row"
+          );
+        } else {
+          conceptLinksCreated++;
+        }
       }
+    }
+
+    if (conceptLinkAttempts > 0 && conceptLinksCreated === 0) {
+      // We had chunks, ran the linker, got candidate links, and not one
+      // landed. Don't throw — the chunks are still valuable for full-text
+      // retrieval — but warn loudly so the operator sees this in the log
+      // stream alongside the concrete insert errors above.
+      logger.warn(
+        { documentId, conceptLinkAttempts, conceptLinkFailures },
+        "Every chunk_concept_links insert failed — document will not surface in concept-filtered queues"
+      );
     }
 
     // 7. Mark completed. This is the must-commit path — the chunks are in the
