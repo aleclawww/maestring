@@ -1,6 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { CONCEPTS } from "@/lib/knowledge-graph/aws-saa";
 import { logger } from "@/lib/logger";
+import { recordLlmUsage } from "@/lib/llm/usage";
+
+const MODEL = "claude-haiku-4-5-20251001";
 
 type ConceptLink = {
   conceptId: string;
@@ -42,11 +45,12 @@ export async function linkChunkToConcepts(chunkContent: string): Promise<Concept
 
   // 2. AI fallback if no keyword matches
   if (links.length === 0) {
+    const t0 = Date.now();
     try {
       const client = new Anthropic({ apiKey: process.env["ANTHROPIC_API_KEY"] });
       const conceptList = CONCEPTS.map((c) => `${c.slug}: ${c.name}`).join("\n");
       const message = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
+        model: MODEL,
         max_tokens: 256,
         messages: [
           {
@@ -65,6 +69,16 @@ JSON array only:`,
         ],
       });
 
+      recordLlmUsage({
+        userId: null,
+        route: "ingestion.concept-linker",
+        model: MODEL,
+        inputTokens: message.usage.input_tokens,
+        outputTokens: message.usage.output_tokens,
+        latencyMs: Date.now() - t0,
+        success: true,
+      });
+
       const text = message.content[0]?.type === "text" ? message.content[0].text : "[]";
       const ids: string[] = JSON.parse(text.match(/\[.*\]/s)?.[0] ?? "[]");
 
@@ -75,7 +89,27 @@ JSON array only:`,
         }
       }
     } catch (err) {
-      logger.warn({ err }, "AI concept linking failed, skipping");
+      // Fallback to keyword-only (i.e. empty link set when no keywords hit)
+      // is intentional — concept linking is a soft enrichment and missing
+      // links don't break ingestion. But silent fall-through hides quota
+      // exhaustion, rate-limit spikes, and JSON drift, so we log AND record
+      // a failed usage row for dashboards/alerts (same pattern as
+      // elaborateAnswer).
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.warn(
+        { err: error.message, errorName: error.name },
+        "AI concept linking failed, skipping",
+      );
+      recordLlmUsage({
+        userId: null,
+        route: "ingestion.concept-linker",
+        model: MODEL,
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: Date.now() - t0,
+        success: false,
+        errorCode: error.name || "unknown_error",
+      });
     }
   }
 
