@@ -48,7 +48,12 @@ export async function runCron<T extends CronOutcome>(
   try {
     const result = await body()
     if (runId) {
-      await supabase
+      // Ledger update. If this fails the cron body STILL succeeded, but the
+      // `cron_runs` row stays in `status='running'`, which trips any
+      // "stuck cron" alert that watches for long-running rows. Log so the
+      // false-positive alert has context and we can correlate the orphan
+      // ledger row with an actual success.
+      const { error: ledgerErr } = await supabase
         .from('cron_runs')
         .update({
           ended_at: new Date().toISOString(),
@@ -57,13 +62,22 @@ export async function runCron<T extends CronOutcome>(
           metadata: result.metadata ?? null,
         })
         .eq('id', runId)
+      if (ledgerErr) {
+        logger.error(
+          { err: ledgerErr, name, runId, actualStatus: result.status },
+          'Failed to update cron_runs after successful run — ledger stuck on "running"'
+        )
+      }
     }
     logger.info({ name, status: result.status, ms: Date.now() - start, rowsAffected: result.rowsAffected }, 'cron finished')
     return { ok: true, id: runId, result }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (runId) {
-      await supabase
+      // Same reasoning as the success path: we must not let a ledger write
+      // failure eat the signal. captureApiException + logger.error below
+      // always fire so the real failure surfaces even if this write drops.
+      const { error: ledgerErr } = await supabase
         .from('cron_runs')
         .update({
           ended_at: new Date().toISOString(),
@@ -71,6 +85,12 @@ export async function runCron<T extends CronOutcome>(
           error: msg,
         })
         .eq('id', runId)
+      if (ledgerErr) {
+        logger.error(
+          { err: ledgerErr, name, runId, originalErr: msg },
+          'Failed to update cron_runs after failed run — ledger stuck on "running" and original error below'
+        )
+      }
     }
     captureApiException(err, { route: `cron:${name}` })
     logger.error({ err, name, ms: Date.now() - start }, 'cron failed')
