@@ -75,20 +75,19 @@ export async function POST(req: NextRequest) {
   // y no derivamos un próximo review.
   const isExploration = (session as { mode?: string } | null)?.mode === "exploration";
 
-  let nextReviewDate: string | null = null;
-  if (conceptState && !isExploration) {
-    const next = scheduleReview(conceptState as never, rating);
-    const updates = next.nextState as Record<string, unknown>;
-    nextReviewDate = (updates["next_review_date"] as string) ?? null;
-    await supabase
-      .from("user_concept_states")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update({ ...updates, last_rating: rating, updated_at: new Date().toISOString() } as any)
-      .eq("user_id", user.id)
-      .eq("concept_id", conceptId);
-  }
-
-  await supabase
+  // --------------------------------------------------------------------------
+  // Idempotency boundary.
+  //
+  // The migration 032 UNIQUE (session_id, question_id) lets us use the
+  // question_attempts row as the idempotency token. We insert first:
+  //   * race-winner: insert succeeds, we proceed with the FSRS schedule +
+  //     session counter updates exactly once.
+  //   * race-loser (double-click, retry after network blip): insert fails
+  //     with 23505; we read the winner's attempt back and return the same
+  //     evaluation — no double-update of user_concept_states (which would
+  //     drift the schedule) and no double-increment of questions_answered.
+  // --------------------------------------------------------------------------
+  const { error: insertErr } = await supabase
     .from("question_attempts")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .insert({
@@ -105,6 +104,51 @@ export async function POST(req: NextRequest) {
         first_attempt_correct: firstAttemptCorrect,
       },
     } as any);
+
+  if (insertErr) {
+    if ((insertErr as { code?: string }).code === "23505") {
+      // Duplicate submission — replay the canonical evaluation we already
+      // stored, without re-advancing FSRS state or session counters.
+      const { data: existing } = await supabase
+        .from("question_attempts")
+        .select("evaluation_result, is_correct")
+        .eq("session_id", sessionId)
+        .eq("question_id", questionId)
+        .maybeSingle();
+
+      const existingEval =
+        (existing?.evaluation_result as Record<string, unknown> | null) ?? null;
+      logger.info(
+        { userId: user.id, sessionId, questionId },
+        "Duplicate evaluate request — returning cached attempt"
+      );
+      return NextResponse.json({
+        data: {
+          evaluation: existingEval ?? evaluation,
+          rating: (existingEval?.["fsrs_rating"] as number | undefined) ?? rating,
+          nextReviewDate: null,
+          exploration: isExploration,
+          duplicate: true,
+        },
+      });
+    }
+    logger.error({ err: insertErr, userId: user.id, sessionId, questionId }, "Failed to record question attempt");
+    return NextResponse.json({ error: "Failed to record attempt" }, { status: 500 });
+  }
+
+  // Winner path: advance FSRS + bump session counters exactly once.
+  let nextReviewDate: string | null = null;
+  if (conceptState && !isExploration) {
+    const next = scheduleReview(conceptState as never, rating);
+    const updates = next.nextState as Record<string, unknown>;
+    nextReviewDate = (updates["next_review_date"] as string) ?? null;
+    await supabase
+      .from("user_concept_states")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ ...updates, last_rating: rating, updated_at: new Date().toISOString() } as any)
+      .eq("user_id", user.id)
+      .eq("concept_id", conceptId);
+  }
 
   await supabase
     .from("study_sessions")
