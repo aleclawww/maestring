@@ -14,12 +14,12 @@ export function NotificationSettings({ studyMinutesPerDay: initial }: Notificati
   return (
     <section>
       <h2 className="text-sm font-semibold text-text-primary mb-4 pb-2 border-b border-border">
-        Notificaciones y Estudio
+        Notifications and study
       </h2>
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium text-text-secondary mb-2 block">
-            Minutos de estudio al día: <span className="text-text-primary font-bold">{mins}</span>
+            Study minutes per day: <span className="text-text-primary font-bold">{mins}</span>
           </label>
           <input
             type="range"
@@ -32,7 +32,7 @@ export function NotificationSettings({ studyMinutesPerDay: initial }: Notificati
           />
           <div className="flex justify-between text-xs text-text-muted mt-1">
             <span>10 min</span>
-            <span>2 horas</span>
+            <span>2 hours</span>
           </div>
         </div>
         <label className="flex items-center gap-3 cursor-pointer">
@@ -43,9 +43,9 @@ export function NotificationSettings({ studyMinutesPerDay: initial }: Notificati
             className="h-4 w-4 rounded border-border text-primary accent-primary"
           />
           <div>
-            <p className="text-sm font-medium text-text-primary">Recordatorios por email</p>
+            <p className="text-sm font-medium text-text-primary">Email reminders</p>
             <p className="text-xs text-text-muted">
-              Recibirás un email cuando tengas conceptos vencidos y no hayas estudiado hoy.
+              You'll get an email when you have overdue concepts and haven't studied today.
             </p>
           </div>
         </label>

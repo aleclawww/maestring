@@ -34,6 +34,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action: string
+          admin_email: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_email?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_email?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       chunk_concept_links: {
         Row: {
           chunk_id: string
@@ -177,6 +204,39 @@ export type Database = {
           },
         ]
       }
+      cron_runs: {
+        Row: {
+          ended_at: string | null
+          error: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          rows_affected: number | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          ended_at?: string | null
+          error?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          rows_affected?: number | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          ended_at?: string | null
+          error?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          rows_affected?: number | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       daily_llm_usage: {
         Row: {
           count: number
@@ -227,6 +287,102 @@ export type Database = {
           },
         ]
       }
+      exam_session_items: {
+        Row: {
+          answered_at: string | null
+          flagged: boolean
+          id: string
+          is_correct: boolean | null
+          position: number
+          question_id: string
+          session_id: string
+          user_answer_index: number | null
+        }
+        Insert: {
+          answered_at?: string | null
+          flagged?: boolean
+          id?: string
+          is_correct?: boolean | null
+          position: number
+          question_id: string
+          session_id: string
+          user_answer_index?: number | null
+        }
+        Update: {
+          answered_at?: string | null
+          flagged?: boolean
+          id?: string
+          is_correct?: boolean | null
+          position?: number
+          question_id?: string
+          session_id?: string
+          user_answer_index?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_session_items_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_session_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_sessions: {
+        Row: {
+          by_domain: Json | null
+          certification_id: string
+          correct_count: number | null
+          created_at: string
+          deadline_at: string
+          id: string
+          passed: boolean | null
+          scaled_score: number | null
+          started_at: string
+          status: Database["public"]["Enums"]["exam_session_status"]
+          submitted_at: string | null
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          by_domain?: Json | null
+          certification_id?: string
+          correct_count?: number | null
+          created_at?: string
+          deadline_at: string
+          id?: string
+          passed?: boolean | null
+          scaled_score?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["exam_session_status"]
+          submitted_at?: string | null
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          by_domain?: Json | null
+          certification_id?: string
+          correct_count?: number | null
+          created_at?: string
+          deadline_at?: string
+          id?: string
+          passed?: boolean | null
+          scaled_score?: number | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["exam_session_status"]
+          submitted_at?: string | null
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       knowledge_domains: {
         Row: {
           certification_id: string
@@ -263,6 +419,54 @@ export type Database = {
           name?: string
           slug?: string
           sort_order?: number
+        }
+        Relationships: []
+      }
+      llm_usage: {
+        Row: {
+          cached_input_tokens: number
+          cost_usd: number
+          created_at: string
+          error_code: string | null
+          id: string
+          input_tokens: number
+          latency_ms: number | null
+          metadata: Json | null
+          model: string
+          output_tokens: number
+          route: string
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          cached_input_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          metadata?: Json | null
+          model: string
+          output_tokens?: number
+          route: string
+          success?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          cached_input_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          metadata?: Json | null
+          model?: string
+          output_tokens?: number
+          route?: string
+          success?: boolean
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -370,10 +574,13 @@ export type Database = {
           onboarding_completed: boolean
           referral_code: string
           referred_by: string | null
+          streak_freezes_available: number
+          streak_freezes_last_grant: string | null
           study_minutes_per_day: number
           timezone: string
           total_xp: number
           updated_at: string
+          welcome_email_sent_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -395,10 +602,13 @@ export type Database = {
           onboarding_completed?: boolean
           referral_code?: string
           referred_by?: string | null
+          streak_freezes_available?: number
+          streak_freezes_last_grant?: string | null
           study_minutes_per_day?: number
           timezone?: string
           total_xp?: number
           updated_at?: string
+          welcome_email_sent_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -420,10 +630,13 @@ export type Database = {
           onboarding_completed?: boolean
           referral_code?: string
           referred_by?: string | null
+          streak_freezes_available?: number
+          streak_freezes_last_grant?: string | null
           study_minutes_per_day?: number
           timezone?: string
           total_xp?: number
           updated_at?: string
+          welcome_email_sent_at?: string | null
         }
         Relationships: [
           {
@@ -538,12 +751,21 @@ export type Database = {
           created_at: string
           difficulty: number
           explanation: string
+          explanation_deep: string | null
+          hint: string | null
           id: string
           is_active: boolean
+          key_insight: string | null
           options: Json
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
+          reject_reason: string | null
+          review_status: Database["public"]["Enums"]["question_review_status"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scenario_context: Json | null
           source: string
+          tags: string[]
           times_correct: number
           times_shown: number
         }
@@ -553,12 +775,21 @@ export type Database = {
           created_at?: string
           difficulty?: number
           explanation: string
+          explanation_deep?: string | null
+          hint?: string | null
           id?: string
           is_active?: boolean
+          key_insight?: string | null
           options: Json
           question_text: string
           question_type?: Database["public"]["Enums"]["question_type"]
+          reject_reason?: string | null
+          review_status?: Database["public"]["Enums"]["question_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scenario_context?: Json | null
           source?: string
+          tags?: string[]
           times_correct?: number
           times_shown?: number
         }
@@ -568,12 +799,21 @@ export type Database = {
           created_at?: string
           difficulty?: number
           explanation?: string
+          explanation_deep?: string | null
+          hint?: string | null
           id?: string
           is_active?: boolean
+          key_insight?: string | null
           options?: Json
           question_text?: string
           question_type?: Database["public"]["Enums"]["question_type"]
+          reject_reason?: string | null
+          review_status?: Database["public"]["Enums"]["question_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scenario_context?: Json | null
           source?: string
+          tags?: string[]
           times_correct?: number
           times_shown?: number
         }
@@ -586,6 +826,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      readiness_history: {
+        Row: {
+          by_domain: Json | null
+          pass_probability: number | null
+          score: number
+          snapshot_date: string
+          studied_concepts: number
+          user_id: string
+        }
+        Insert: {
+          by_domain?: Json | null
+          pass_probability?: number | null
+          score: number
+          snapshot_date?: string
+          studied_concepts?: number
+          user_id: string
+        }
+        Update: {
+          by_domain?: Json | null
+          pass_probability?: number | null
+          score?: number
+          snapshot_date?: string
+          studied_concepts?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       referrals: {
         Row: {
@@ -614,6 +881,51 @@ export type Database = {
           id?: string
           referred_id?: string
           referrer_id?: string
+        }
+        Relationships: []
+      }
+      streak_freeze_log: {
+        Row: {
+          id: string
+          missed_date: string
+          spent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          missed_date: string
+          spent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          missed_date?: string
+          spent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      stripe_events: {
+        Row: {
+          error: string | null
+          id: string
+          processed_at: string | null
+          received_at: string
+          type: string
+        }
+        Insert: {
+          error?: string | null
+          id: string
+          processed_at?: string | null
+          received_at?: string
+          type: string
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          processed_at?: string | null
+          received_at?: string
+          type?: string
         }
         Relationships: []
       }
@@ -752,6 +1064,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      testimonials: {
+        Row: {
+          content: string
+          created_at: string
+          display_name: string
+          exam_passed: boolean | null
+          featured: boolean
+          id: string
+          reject_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role: string | null
+          scaled_score: number | null
+          stars: number
+          status: Database["public"]["Enums"]["testimonial_status"]
+          submitted_at: string
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          display_name: string
+          exam_passed?: boolean | null
+          featured?: boolean
+          id?: string
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role?: string | null
+          scaled_score?: number | null
+          stars?: number
+          status?: Database["public"]["Enums"]["testimonial_status"]
+          submitted_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          display_name?: string
+          exam_passed?: boolean | null
+          featured?: boolean
+          id?: string
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role?: string | null
+          scaled_score?: number | null
+          stars?: number
+          status?: Database["public"]["Enums"]["testimonial_status"]
+          submitted_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_concept_states: {
         Row: {
@@ -899,6 +1265,95 @@ export type Database = {
       }
     }
     Functions: {
+      _plan_monthly_price_usd: { Args: { p_plan: string }; Returns: number }
+      _readiness_pass_probability: {
+        Args: { p_score: number; p_studied: number; p_total: number }
+        Returns: number
+      }
+      admin_failed_documents: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          email: string
+          error_message: string
+          file_size: number
+          filename: string
+          id: string
+          processing_status: string
+          user_id: string
+        }[]
+      }
+      admin_grant_pro: {
+        Args: { p_days?: number; p_reason?: string; p_user_id: string }
+        Returns: undefined
+      }
+      admin_list_testimonials: {
+        Args: {
+          p_limit?: number
+          p_status?: Database["public"]["Enums"]["testimonial_status"]
+        }
+        Returns: {
+          content: string
+          display_name: string
+          exam_passed: boolean
+          featured: boolean
+          id: string
+          reviewed_at: string
+          role: string
+          scaled_score: number
+          stars: number
+          status: Database["public"]["Enums"]["testimonial_status"]
+          submitted_at: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_list_users: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_plan?: string
+          p_search?: string
+        }
+        Returns: {
+          created_at: string
+          current_streak: number
+          email: string
+          exam_outcome: string
+          exam_target_date: string
+          full_name: string
+          id: string
+          journey_phase: string
+          last_readiness_score: number
+          last_session_at: string
+          llm_spend_30d: number
+          onboarding_completed: boolean
+          plan: string
+          total_xp: number
+        }[]
+      }
+      admin_llm_usage: { Args: { p_days?: number }; Returns: Json }
+      admin_outcomes_summary: { Args: never; Returns: Json }
+      admin_overview: { Args: { p_days?: number }; Returns: Json }
+      admin_recent_actions: {
+        Args: { p_limit?: number }
+        Returns: {
+          action: string
+          admin_email: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          target_user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_actions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_unit_economics: { Args: { p_days?: number }; Returns: Json }
+      admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
       bump_question_shown: {
         Args: { p_question_id: string }
         Returns: undefined
@@ -965,6 +1420,25 @@ export type Database = {
           weakest_domain: string
         }[]
       }
+      get_exam_readiness_v2: {
+        Args: { p_certification_id?: string; p_user_id: string }
+        Returns: {
+          at_risk_count: number
+          by_domain: Json
+          confidence_high: number
+          confidence_low: number
+          eta_ready_date: string
+          history: Json
+          pass_probability: number
+          score: number
+          studied_concepts: number
+          total_concepts: number
+          velocity_per_week: number
+          weakest_concepts: Json
+          weakest_domain: string
+          weakest_domain_id: string
+        }[]
+      }
       get_study_heatmap: {
         Args: { p_days?: number; p_user_id: string }
         Returns: {
@@ -987,6 +1461,31 @@ export type Database = {
           total_xp: number
         }[]
       }
+      get_users_for_weekly_digest: {
+        Args: never
+        Returns: {
+          accuracy_week: number
+          best_exam_passed: boolean
+          best_exam_scaled: number
+          correct_week: number
+          current_streak: number
+          days_until_exam: number
+          due_next_7d: number
+          email: string
+          first_name: string
+          minutes_week: number
+          pass_probability: number
+          questions_week: number
+          readiness_7d_ago: number
+          readiness_delta: number
+          readiness_now: number
+          sessions_week: number
+          user_id: string
+          weakest_domain_accuracy: number
+          weakest_domain_name: string
+          weakest_domain_slug: string
+        }[]
+      }
       get_users_needing_nudge: {
         Args: never
         Returns: {
@@ -998,6 +1497,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      llm_cost_today: { Args: { p_user_id?: string }; Returns: number }
+      llm_top_spenders_24h: {
+        Args: { p_limit?: number }
+        Returns: {
+          call_count: number
+          cost_usd: number
+          user_id: string
+        }[]
+      }
       nanoid: { Args: { size?: number }; Returns: string }
       needs_outcome_capture: { Args: { p_user_id: string }; Returns: boolean }
       pick_pool_question: {
@@ -1006,11 +1514,25 @@ export type Database = {
           correct_index: number
           difficulty: number
           explanation: string
+          explanation_deep: string
+          hint: string
           id: string
+          key_insight: string
           options: Json
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
+          scenario_context: Json
         }[]
+      }
+      record_exam_answer: {
+        Args: {
+          p_answer_index: number
+          p_flagged?: boolean
+          p_position: number
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       search_content_chunks: {
         Args: {
@@ -1037,8 +1559,23 @@ export type Database = {
         Returns: number
       }
       snapshot_readiness: { Args: { p_user_id: string }; Returns: number }
+      snapshot_readiness_batch: { Args: never; Returns: number }
+      start_exam_session: {
+        Args: {
+          p_certification_id?: string
+          p_duration_minutes?: number
+          p_total?: number
+          p_user_id: string
+        }
+        Returns: string
+      }
+      submit_exam_session: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
+      }
     }
     Enums: {
+      exam_session_status: "in_progress" | "submitted" | "abandoned"
       journey_phase:
         | "pre_study"
         | "active_prep"
@@ -1046,6 +1583,7 @@ export type Database = {
         | "post_cert"
         | "maintenance"
       processing_status: "pending" | "processing" | "completed" | "failed"
+      question_review_status: "pending" | "approved" | "rejected"
       question_type: "multiple_choice" | "scenario" | "drag_drop"
       study_mode:
         | "discovery"
@@ -1060,6 +1598,7 @@ export type Database = {
         | "past_due"
         | "canceled"
         | "incomplete"
+      testimonial_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1190,6 +1729,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      exam_session_status: ["in_progress", "submitted", "abandoned"],
       journey_phase: [
         "pre_study",
         "active_prep",
@@ -1198,6 +1738,7 @@ export const Constants = {
         "maintenance",
       ],
       processing_status: ["pending", "processing", "completed", "failed"],
+      question_review_status: ["pending", "approved", "rejected"],
       question_type: ["multiple_choice", "scenario", "drag_drop"],
       study_mode: [
         "discovery",
@@ -1214,6 +1755,7 @@ export const Constants = {
         "canceled",
         "incomplete",
       ],
+      testimonial_status: ["pending", "approved", "rejected"],
     },
   },
 } as const

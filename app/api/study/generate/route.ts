@@ -84,6 +84,11 @@ export async function POST(req: NextRequest) {
         explanation: pooled.explanation,
         difficulty: pooled.difficulty,
         questionType: pooled.question_type,
+        hint: pooled.hint ?? null,
+        explanationDeep: pooled.explanation_deep ?? null,
+        keyInsight: pooled.key_insight ?? null,
+        scenarioContext: pooled.scenario_context ?? null,
+        tags: pooled.tags ?? [],
       },
       metadata: {
         conceptId: next.conceptId,

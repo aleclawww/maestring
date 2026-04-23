@@ -1,0 +1,177 @@
+{
+  "conceptSlug": "elb-types",
+  "certificationId": "aws-saa-c03",
+  "questions": [
+    {
+      "difficulty": 0.25,
+      "tags": ["alb", "l7", "path-routing"],
+      "questionText": "Un monolito se divide en microservicios. Se necesita un único endpoint público que enrute `/api/users/*` al servicio users y `/api/orders/*` al servicio orders. ¿Qué load balancer usas?",
+      "options": [
+        "Application Load Balancer (ALB) — soporta path-based routing a target groups distintos",
+        "Network Load Balancer (NLB) — redirige TCP por puertos diferentes según path",
+        "Gateway Load Balancer (GWLB) — inspecciona el path HTTP en nivel L3",
+        "Classic Load Balancer (CLB) — es la única opción con routing por URL"
+      ],
+      "correctIndex": 0,
+      "hint": "L7 (HTTP) routing por path requiere un LB que entienda HTTP headers y URL.",
+      "explanation": "ALB opera en L7 (HTTP/HTTPS) con reglas que pueden rutear por path, host header, HTTP method, query string, source IP y headers. NLB es L4 (TCP/UDP) — no ve URLs. GWLB es para network appliances (firewalls), no para routing web.",
+      "explanationDeep": "ALB listener rules: hasta 100 reglas por listener, cada una evalúa condiciones (path-pattern, host-header, http-header, http-request-method, query-string, source-ip) y ejecuta una acción (forward a target group, redirect HTTP→HTTPS, fixed-response, authenticate via Cognito/OIDC). Target groups pueden apuntar a EC2, IP, Lambda, ALB (encadenado). Reglas tienen prioridad — primera match gana. Casos de uso típicos: path-based routing (microservicios), host-based routing (multi-tenant SaaS), canary deployments con weighted target groups, auth en el edge con Cognito.",
+      "keyInsight": "ALB = L7, entiende HTTP. Para routing por path/host/header/method, ALB es el único ELB que aplica.",
+      "scenarioContext": {
+        "architecture": "Client → ALB → /api/users → users-tg / /api/orders → orders-tg"
+      }
+    },
+    {
+      "difficulty": 0.3,
+      "tags": ["nlb", "static-ip", "ultra-low-latency"],
+      "questionText": "Un cliente de trading necesita exponer un servicio TCP con latencia <1ms y una IP estática (para whitelist en firewalls de clientes). ¿Qué LB usas?",
+      "options": [
+        "Network Load Balancer (NLB) — L4 TCP, latencia sub-ms, Elastic IP estática por AZ",
+        "Application Load Balancer (ALB) — soporta TCP con --enable-tcp flag",
+        "Gateway Load Balancer (GWLB) — solo este ofrece IP estática",
+        "CloudFront delante de un ALB"
+      ],
+      "correctIndex": 0,
+      "hint": "Dos requisitos: TCP puro + IP estática. Solo un LB combina ambas.",
+      "explanation": "NLB opera en L4 (TCP/UDP/TLS passthrough) con latencia típica <1ms (ALB ~10ms). Soporta Elastic IPs estáticas por AZ — perfecto para whitelisting en firewalls de clientes que exigen IPs fijas. ALB no da IP estática (cambia con el tiempo).",
+      "explanationDeep": "NLB características: (1) preserva la IP origen del cliente (ALB reescribe source IP a la del LB — requiere X-Forwarded-For); (2) soporta TCP, UDP, TCP_UDP, TLS listeners; (3) una IP estática por AZ — puedes asignar EIP propia en setup; (4) sin SG en el NLB (hasta 2023; ahora sí hay SG opcional), las SGs van en los targets; (5) preserves source IP even through target groups type=instance. Casos ideales: gaming (UDP), VoIP, MQTT (TCP persistente), financial trading, any app que necesite IP estática (whitelist), any app ultra-sensible a latencia. ALB no aplica cuando el protocolo no es HTTP/gRPC o cuando necesitas IP estática.",
+      "keyInsight": "NLB = L4 con IP estática, latencia <1ms, preserva source IP. Casos: TCP/UDP, whitelist, gaming, trading.",
+      "scenarioContext": {
+        "constraints": ["TCP", "static IP for whitelisting", "ultra-low latency"]
+      }
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["gwlb", "network-appliance", "firewall"],
+      "questionText": "Un equipo de seguridad quiere inspeccionar TODO el tráfico de salida de las VPCs con un firewall de terceros (Palo Alto, Check Point) desplegado como EC2 en una VPC de seguridad. ¿Qué servicio encadena las VPCs al firewall de forma transparente?",
+      "options": [
+        "Gateway Load Balancer (GWLB) — balancea y enruta tráfico L3 a appliances vía GENEVE protocol",
+        "Transit Gateway con firewall en medio — pero hay que gestionar routing manualmente",
+        "VPC Peering entre cada VPC y la VPC firewall — no escala",
+        "CloudFront con WAF en lugar de firewall"
+      ],
+      "correctIndex": 0,
+      "hint": "GWLB es el único ELB diseñado específicamente para insertar appliances L3 (firewalls, IDS/IPS) de forma transparente.",
+      "explanation": "GWLB escucha en L3 (todo el tráfico IP) y enruta vía GENEVE (puerto 6081) a una flota de appliances (firewalls, IDS). Actúa como bump-in-the-wire: el tráfico entra por GWLB Endpoint en la VPC cliente, va al appliance para inspección, vuelve por GWLB, y sigue su ruta — sin cambiar IPs origen/destino visibles a la app.",
+      "explanationDeep": "GWLB arquitectura: (1) GWLB en la VPC de seguridad con target group de appliances (EC2/Auto Scaling Group); (2) GWLB Endpoint Service (PrivateLink) que expone el GWLB; (3) GWLB Endpoints en las VPCs cliente (uno por AZ); (4) Route tables en VPCs cliente apuntan 0.0.0.0/0 al GWLB Endpoint en vez de al IGW. GENEVE encapsula el paquete original preservando headers, el appliance inspecciona y decide drop/forward. Ventajas vs alternativas: centraliza inspección en una sola flota de appliances compartida por muchas VPCs, auto-scales los appliances, health checks gestionados. Combínalo con Transit Gateway para topologías hub-and-spoke de seguridad. Casos ideales: appliances de terceros (Palo Alto VM-Series, Fortinet, Check Point CloudGuard), IDS/IPS, DLP, compliance que exige appliances específicos.",
+      "keyInsight": "GWLB = insertar firewalls/IDS L3 como bump-in-the-wire con GENEVE. Centraliza inspección cross-VPC.",
+      "scenarioContext": {
+        "architecture": "VPC(app) → GWLB Endpoint → GWLB → Firewall fleet → return → egress"
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["alb-vs-nlb", "websocket", "http2"],
+      "questionText": "Una app chat usa WebSocket sobre TLS y gRPC entre microservicios. ¿Qué LB es idóneo?",
+      "options": [
+        "ALB — soporta WebSocket y gRPC nativamente (HTTP/2 obligatorio para gRPC)",
+        "NLB siempre — TCP passthrough funciona para todo",
+        "Classic Load Balancer — único con WebSocket",
+        "GWLB — diseñado para tráfico bidireccional"
+      ],
+      "correctIndex": 0,
+      "hint": "WebSocket y gRPC son ambos HTTP-based (gRPC usa HTTP/2). Necesitas un L7 que los entienda.",
+      "explanation": "ALB soporta WebSocket nativamente (upgrade de HTTP) y gRPC (requiere HTTP/2, que ALB habilita). gRPC target groups en ALB permiten health checks gRPC con status codes específicos (0-16). NLB funcionaría como passthrough pero perderías las features L7 (routing por path, auth, etc.).",
+      "explanationDeep": "ALB HTTP/2 y gRPC: desde 2020 ALB soporta gRPC completo como target group protocol. Health checks gRPC pueden configurarse para códigos específicos (0=OK, 14=unavailable, etc.). WebSocket upgrade (HTTP 101 Switching Protocols) es transparente — el cliente envía `Upgrade: websocket` y ALB lo pasa al target preservando la conexión. Alternativas: NLB con TLS passthrough para máxima simplicidad pero sin routing inteligente; API Gateway WebSocket APIs para serverless. gRPC client-side load balancing (sin ALB) es otra opción pero pierdes managed features.",
+      "keyInsight": "WebSocket + gRPC = ALB (HTTP/2 + upgrades). NLB vale como passthrough pero sin features L7.",
+      "scenarioContext": {
+        "constraints": ["WebSocket TLS", "gRPC HTTP/2"]
+      }
+    },
+    {
+      "difficulty": 0.45,
+      "tags": ["cross-zone-lb", "cost", "distribution"],
+      "questionText": "Un ALB en 3 AZ tiene 10 instancias: 6 en AZ-a, 2 en AZ-b, 2 en AZ-c. El tráfico llega distribuido uniformemente entre las AZs. ¿Qué proporción de requests recibe cada instancia si Cross-Zone Load Balancing está OFF?",
+      "options": [
+        "AZ-a: cada instancia recibe 33%/6=5.5%; AZ-b y AZ-c: cada una 33%/2=16.7%",
+        "Todas las instancias reciben 10% cada una",
+        "AZ-a al completo recibe 60%, AZ-b 20%, AZ-c 20%",
+        "Cross-zone OFF no es una opción válida en ALB"
+      ],
+      "correctIndex": 0,
+      "hint": "Sin cross-zone, cada AZ del LB distribuye solo entre SUS targets. Los clientes se reparten equitativamente entre AZs pero dentro de cada AZ el tráfico se reparte local.",
+      "explanation": "Sin cross-zone, cada nodo del LB envía solo a targets de su propia AZ. Si el tráfico llega balanceado al LB por AZ (33% cada una), pero las instancias NO están balanceadas (6/2/2), las 2 instancias en AZ-b y AZ-c reciben 3x más carga que las de AZ-a. Desbalance severo — por eso ALB tiene cross-zone ON por default.",
+      "explanationDeep": "Cross-zone load balancing: ON = cualquier nodo del LB puede enrutar a cualquier target en cualquier AZ; OFF = cada nodo solo enruta a sus AZ-locales. Defaults: ALB ON (y no cobra data transfer cross-AZ entre LB nodes y targets), NLB OFF por default (habilitar cobra $0.01/GB cross-AZ), CLB OFF. Best practice: ON siempre salvo que el tráfico entre LB nodes y targets sea tan alto que el coste cross-AZ dominar (escenarios raros). Con ON, el balanceo es uniforme por target independiente de la distribución por AZ — crítico cuando tienes ASG con instancias desiguales por AZ durante scale events o tras incidentes.",
+      "keyInsight": "Cross-zone OFF con instancias desiguales por AZ = desbalance severo. ALB ON by default, NLB OFF (activar cobra cross-AZ).",
+      "scenarioContext": {
+        "numbers": { "az_a_instances": 6, "az_b_instances": 2, "az_c_instances": 2 }
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["sticky-sessions", "session-affinity"],
+      "questionText": "Una app legacy guarda sesión en memoria local de cada instancia. Usuarios ven errores intermitentes porque el ALB envía requests del mismo usuario a instancias distintas. ¿Qué feature soluciona sin reescribir la app?",
+      "options": [
+        "Sticky sessions (session affinity) en el target group del ALB con cookie AWSALB",
+        "Multi-AZ de RDS",
+        "S3 Object Lock",
+        "Cambiar el ALB a NLB — NLB tiene sticky por default"
+      ],
+      "correctIndex": 0,
+      "hint": "Sticky sessions hace que el LB recuerde a qué instancia envió a un usuario y siga enviándole ahí.",
+      "explanation": "Sticky sessions (session affinity) hace que el ALB inserte una cookie (AWSALB por default, o app-specific) que identifica a qué target enviar los siguientes requests del mismo cliente. Duración configurable. Resuelve el síntoma sin reescribir, aunque la solución correcta a medio plazo es mover sesiones a ElastiCache/DynamoDB (stateless app).",
+      "explanationDeep": "Sticky options en ALB: (1) lb_cookie: ALB genera cookie AWSALB, TTL configurable 1s-7d; (2) app_cookie: ALB usa una cookie que la app genera (debes indicar el nombre). NLB sticky: basado en source IP hash, duration up to 7 días, no usa cookies. Trade-offs de stickiness: reduce tolerancia a fallos (si la instancia pegada muere, el usuario pierde sesión), desbalancea carga (Pareto: algunos usuarios generan mucho tráfico y cargan instancias específicas), complica deployments (drain connections). Mejor práctica moderna: stateless app + session store en Redis/DynamoDB, ahí stickiness no es necesaria.",
+      "keyInsight": "Sticky sessions = fix rápido para apps con estado local. Solución correcta: session store externo (Redis) y app stateless.",
+      "scenarioContext": {
+        "constraints": ["legacy in-memory session", "no rewrite", "intermittent errors"]
+      }
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["target-type", "ip-targets", "lambda-target"],
+      "questionText": "Tu ALB debe enrutar `/legacy/*` a un servidor on-premises accesible vía Direct Connect por IP 10.50.1.100, y `/api/*` a una Lambda. ¿Es posible con un solo ALB?",
+      "options": [
+        "Sí — target group type=IP para el servidor on-prem (si está en RFC1918 accesible vía DX/VPN) y target group type=Lambda para la función",
+        "No — ALB solo acepta targets EC2 en la misma VPC",
+        "Sí, pero solo con NLB, no con ALB",
+        "Sí, pero ambos deben estar en la misma subnet del ALB"
+      ],
+      "correctIndex": 0,
+      "hint": "ALB soporta cuatro tipos de target: instance, IP, Lambda, ALB (nested). IP permite routear a cualquier IP alcanzable desde la VPC.",
+      "explanation": "ALB target group type=IP acepta IPs privadas (RFC1918) incluyendo on-prem vía Direct Connect o VPN. Target type=Lambda invoca la función como target (ALB le pasa el request HTTP). Combinar ambos en un ALB con reglas de path-based routing es un patrón clásico de strangler migration.",
+      "explanationDeep": "ALB target types: (1) instance: EC2 in VPC, source IP se preserva solo si usas type=IP; (2) IP: cualquier IP privada (en VPC, peered VPC, Direct Connect, VPN) — permite targets on-prem o en VPCs remotas; (3) Lambda: la función recibe event format específico de ALB, response también formateado; (4) ALB: encadenar ALBs (útil para jerarquías). Reglas importantes: un target group solo acepta UN tipo; target type=IP requiere que la IP sea enrutable desde las subnets del ALB; Lambda target tiene timeout 30s (vs 60s en API Gateway). Strangler pattern: mantener monolito on-prem + nuevas features como Lambda, ambos bajo el mismo ALB con routing gradual.",
+      "keyInsight": "ALB target types: instance / IP (on-prem via DX/VPN) / Lambda / ALB. Mezclables en un mismo LB para migraciones híbridas.",
+      "scenarioContext": {
+        "architecture": "ALB → /legacy/* → IP target (10.50.1.100 via DX) + /api/* → Lambda target"
+      }
+    },
+    {
+      "difficulty": 0.55,
+      "tags": ["connection-draining", "deregistration-delay"],
+      "questionText": "Durante un deployment rolling, el ASG desregistra instancias del target group del ALB y las termina. Algunos requests en vuelo fallan con 504. ¿Cómo evitas esto?",
+      "options": [
+        "Configurar deregistration delay (connection draining) a un valor >= timeout máximo de requests (ej. 60-120s)",
+        "Desactivar health checks durante deployments",
+        "Usar NLB — no tiene este problema",
+        "Terminar las instancias sin desregistrar primero"
+      ],
+      "correctIndex": 0,
+      "hint": "Connection draining hace que el LB deje de enviar requests nuevos a una instancia pero le da tiempo a terminar los en vuelo.",
+      "explanation": "Deregistration delay (antes 'connection draining', ELB Classic) es el tiempo que el ALB mantiene abiertas las conexiones a una instancia desregistrándose pero sin enviarle requests nuevos. Default 300s. Bien configurado, termina requests en vuelo limpiamente antes de que el ASG mate la instancia. Ajústalo al p99 del tiempo de request + margen.",
+      "explanationDeep": "Secuencia completa en rolling deployment: (1) ASG marca instancia como going-away; (2) ALB la pone en estado `draining`; (3) ALB deja de enviar requests nuevos a esa instancia pero deja abiertas las existentes durante deregistration_delay (default 300s); (4) ASG espera lifecycle hook timeout antes de terminar; (5) instancia ejecuta shutdown hooks de la app (SIGTERM). Misconfigs comunes: deregistration delay < tiempo request → 504 en vuelo; deregistration delay demasiado alto → deployments lentísimos; ASG termina antes que ELB drene → configurar lifecycle hook con suficiente timeout. Con Spot Instances o ECS, usar lifecycle hooks para dar aviso a la app de shutdown inminente.",
+      "keyInsight": "Deregistration delay ≥ p99 de request + margen. Ajusta junto con lifecycle hooks del ASG/ECS para rolling deploys sin errores.",
+      "scenarioContext": {
+        "constraints": ["rolling deployment", "in-flight requests", "504 errors"]
+      }
+    },
+    {
+      "difficulty": 0.45,
+      "tags": ["tls-termination", "cert-management", "acm"],
+      "questionText": "Tienes 8 dominios HTTPS distintos apuntando al mismo ALB (multi-tenant). ¿Cómo gestionas los certificados?",
+      "options": [
+        "ACM certificates + SNI — asocia múltiples certificados al listener HTTPS, ALB elige el correcto según el Server Name Indication del cliente",
+        "Un certificado wildcard debe cubrir todos los dominios — si son distintos, usar 8 ALBs separados",
+        "Subir certificados a S3 y referenciarlos en las Listener rules",
+        "TLS solo se puede terminar en CloudFront, no en ALB"
+      ],
+      "correctIndex": 0,
+      "hint": "SNI (Server Name Indication) permite a un LB presentar certificados distintos según el hostname del cliente.",
+      "explanation": "ALB soporta SNI: puedes asociar hasta 25 certificados por listener HTTPS. El cliente envía el hostname en el TLS ClientHello (SNI extension), y ALB responde con el certificado que coincide. ACM gestiona renovación automática. Para cada dominio: validar en ACM (DNS o email) → asociar al listener. Un ALB único cubre múltiples dominios sin wildcard.",
+      "explanationDeep": "ACM (AWS Certificate Manager): (1) emite certificados gratis para uso en AWS (ALB, CloudFront, API Gateway); (2) validación DNS recomendada (automática, renueva sin intervención) vs email (manual); (3) renovación automática 60 días antes de expiración; (4) soporta wildcard `*.example.com`; (5) regional — certs para ALB deben estar en la misma región; para CloudFront deben estar en us-east-1. SNI permite hasta 25 certs por listener (default cert + 24 adicionales). Sin SNI (clientes antiguos pre-2015) el ALB devuelve el default cert — pocos clientes modernos no soportan SNI. Importar certs externos también es posible (certs de DigiCert, etc.) pero sin renovación automática.",
+      "keyInsight": "Multi-dominio en un ALB = ACM + SNI (hasta 25 certs por listener). DNS validation para renovación automática.",
+      "scenarioContext": {
+        "numbers": { "domains": 8 }
+      }
+    }
+  ]
+}

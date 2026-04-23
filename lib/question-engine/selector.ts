@@ -9,6 +9,43 @@ import type { StudyMode, Tables } from '@/types/database'
 type UserConceptState = Tables<'user_concept_states'>
 
 const REVIEW_RATIO = 0.7
+const MAX_CONSECUTIVE_SAME_DOMAIN = 2
+
+// A3.3 — Interleaving hardening: after session shaping, enforce a hard cap of
+// N consecutive items from the same domain. We rely on domain metadata stored
+// per-item (added via enrichWithDomain below). If a run of same-domain items
+// exceeds the cap, swap the offending item with the nearest item from a
+// different domain later in the queue. Pure reorder — never changes WHICH
+// items are in the session.
+export function enforceInterleaving(
+  items: Array<StudyQueueItem & { domainId?: string | null }>,
+  maxRun: number
+): StudyQueueItem[] {
+  if (items.length <= maxRun) return items
+  const out = [...items]
+  for (let i = maxRun; i < out.length; i++) {
+    const window = out.slice(i - maxRun, i + 1)
+    const first = window[0]?.domainId
+    if (!first) continue
+    const sameRun = window.every(w => w.domainId === first)
+    if (!sameRun) continue
+    // Find nearest later item from a different domain to swap in.
+    let swapIdx = -1
+    for (let j = i + 1; j < out.length; j++) {
+      if (out[j]?.domainId && out[j]?.domainId !== first) {
+        swapIdx = j
+        break
+      }
+    }
+    if (swapIdx !== -1) {
+      const tmp = out[i]!
+      out[i] = out[swapIdx]!
+      out[swapIdx] = tmp
+    }
+    // If no swap found, the queue has no alternatives — accept the run.
+  }
+  return out
+}
 
 /**
  * Pilar 4 — Optimización de Carga Cognitiva: warm-up → pico → cooldown.
@@ -18,7 +55,7 @@ const REVIEW_RATIO = 0.7
  * Operates on items already chosen by FSRS — does not change WHAT is studied,
  * only the ORDER.
  */
-function applySessionShape(
+export function applySessionShape(
   items: StudyQueueItem[],
   states: Map<string, { stability: number; difficulty: number; lapses: number }>
 ): StudyQueueItem[] {
@@ -157,7 +194,19 @@ export async function buildStudyQueue(
       { stability: s.stability, difficulty: s.difficulty, lapses: s.lapses },
     ])
   )
-  return applySessionShape(interleaved, stateMap)
+  const shaped = applySessionShape(interleaved, stateMap)
+
+  // Build a conceptId → domainId map from both existingStates and newConcepts
+  // so the interleaver can enforce the max-consecutive-domain rule.
+  const domainByConcept = new Map<string, string>()
+  existingStates.forEach(s => {
+    if (s.concepts?.domain_id) domainByConcept.set(s.concept_id, s.concepts.domain_id)
+  })
+  ;(allConcepts ?? []).forEach(c => {
+    if (c.domain_id) domainByConcept.set(c.id, c.domain_id)
+  })
+  const enriched = shaped.map(it => ({ ...it, domainId: domainByConcept.get(it.conceptId) }))
+  return enforceInterleaving(enriched, MAX_CONSECUTIVE_SAME_DOMAIN)
 }
 
 export async function ensureConceptStatesExist(

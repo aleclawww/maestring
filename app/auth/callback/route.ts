@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { sendEmail } from '@/lib/email'
+import { WelcomeEmail } from '@/lib/email/templates/WelcomeEmail'
+import { logger } from '@/lib/logger'
+import { captureApiException } from '@/lib/sentry/capture'
 
 const ALLOWED_NEXT_PREFIXES = [
   '/dashboard',
@@ -31,12 +35,49 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      // Check onboarding status
+      // Fetch onboarding + welcome-email state in one round trip.
       const { data: profile } = await supabase
         .from('profiles')
-        .select('onboarding_completed')
+        .select('onboarding_completed, welcome_email_sent_at, full_name, exam_date')
         .eq('id', data.user.id)
         .single()
+
+      // Fire welcome email exactly once. The UPDATE uses `is('welcome_email_sent_at', null)`
+      // so two concurrent callbacks won't both send — whichever wins the write sends.
+      if (profile && !profile.welcome_email_sent_at && data.user.email) {
+        const { data: claimed } = await supabase
+          .from('profiles')
+          .update({ welcome_email_sent_at: new Date().toISOString() })
+          .eq('id', data.user.id)
+          .is('welcome_email_sent_at', null)
+          .select('id')
+          .maybeSingle()
+
+        if (claimed) {
+          const firstName = profile.full_name?.trim().split(/\s+/)[0] ?? 'there'
+          const studyUrl = `${origin}/onboarding`
+          try {
+            await sendEmail({
+              to: data.user.email,
+              subject: 'Welcome to Maestring 🚀',
+              react: WelcomeEmail({
+                firstName,
+                studyUrl,
+                examDate: profile.exam_date ?? undefined,
+              }),
+              tags: [{ name: 'type', value: 'welcome' }],
+            })
+          } catch (err) {
+            // Roll back the claim so the next login retries.
+            await supabase
+              .from('profiles')
+              .update({ welcome_email_sent_at: null })
+              .eq('id', data.user.id)
+            captureApiException(err, { route: '/auth/callback', userId: data.user.id })
+            logger.error({ err, userId: data.user.id }, 'Welcome email send failed')
+          }
+        }
+      }
 
       if (profile && !profile.onboarding_completed && safeNext !== '/onboarding') {
         return NextResponse.redirect(`${origin}/onboarding`)

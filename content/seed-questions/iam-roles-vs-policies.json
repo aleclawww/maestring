@@ -1,0 +1,192 @@
+{
+  "conceptSlug": "iam-roles-vs-policies",
+  "certificationId": "aws-saa-c03",
+  "questions": [
+    {
+      "difficulty": 0.25,
+      "tags": ["iam-role", "ec2", "instance-profile"],
+      "questionText": "Una aplicación en EC2 necesita leer objetos de S3. El desarrollador ha hardcodeado un access key + secret en el código para que funcione. ¿Cuál es la forma correcta y segura de darle acceso?",
+      "options": [
+        "Crear un IAM Role con la policy necesaria y asociarlo a la instancia EC2 vía instance profile",
+        "Crear un IAM User dedicado, generar access keys y guardarlas en Parameter Store",
+        "Usar el access key del root account pero cifrarlo con KMS antes de pegarlo en el código",
+        "Configurar el bucket S3 como público y confiar en que nadie descubra la URL"
+      ],
+      "correctIndex": 0,
+      "hint": "Nunca se guardan credenciales de larga duración en una instancia. ¿Qué mecanismo entrega credenciales temporales automáticamente?",
+      "explanation": "Un IAM Role asociado a EC2 vía instance profile entrega credenciales temporales (rotadas cada pocas horas) al SDK a través del Instance Metadata Service. Sin secretos en el código, sin rotación manual. Los access keys estáticos son el antipatrón clásico.",
+      "explanationDeep": "Cuando asocias un IAM Role a EC2, AWS crea automáticamente un instance profile (contenedor del role) y lo adjunta a la instancia. El SDK llama a IMDSv2 (http://169.254.169.254/latest/meta-data/iam/security-credentials/<role-name>) y recibe un AccessKey + SecretKey + SessionToken temporal con TTL ~6 horas. AWS rota el token antes de que expire, transparente para la app. Ventajas: (1) cero secretos en disco o código, (2) auditable en CloudTrail con sts:AssumeRole events, (3) si la instancia se compromete los atacantes obtienen un token de corta vida, no credenciales permanentes. Usa siempre IMDSv2 (requiere PUT + token) para evitar SSRF.",
+      "keyInsight": "EC2 + AWS SDK → IAM Role vía instance profile. Nunca access keys en la instancia.",
+      "scenarioContext": {
+        "constraints": ["no hardcoded credentials", "least privilege", "auto-rotation"]
+      }
+    },
+    {
+      "difficulty": 0.3,
+      "tags": ["policy-types", "identity-based", "resource-based"],
+      "questionText": "¿Cuál es la diferencia fundamental entre una identity-based policy y una resource-based policy?",
+      "options": [
+        "Identity-based se adjunta a un principal (user/role); resource-based se adjunta al recurso y especifica quién puede acceder",
+        "Identity-based es más segura; resource-based está deprecada desde 2019",
+        "Identity-based funciona solo en S3; resource-based en todos los servicios",
+        "No hay diferencia práctica, son sinónimos en la documentación"
+      ],
+      "correctIndex": 0,
+      "hint": "¿Dónde está escrita la política — en el 'quién' o en el 'qué'?",
+      "explanation": "Identity-based policies se adjuntan a IAM users, groups o roles y dicen 'este principal puede hacer X'. Resource-based policies se adjuntan al recurso (bucket S3, cola SQS, KMS key) y dicen 'estos principals pueden hacer X sobre mí', incluyendo principals de otras cuentas sin necesidad de role assumption.",
+      "explanationDeep": "La distinción es clave para cross-account: con solo identity-based policies, el principal externo necesita asumir un role en tu cuenta (sts:AssumeRole → nuevas credenciales). Con resource-based, el principal usa SUS credenciales y accede directamente a tu recurso si la policy lo permite. Ejemplos de resource-based: S3 bucket policy, SQS queue policy, SNS topic policy, KMS key policy, Lambda function policy, API Gateway resource policy. La resource-based también permite el patrón 'Principal: *' con conditions (muy común en buckets con aws:SourceVpce). Para que el acceso funcione cross-account, AMBAS políticas (identity en la cuenta del principal + resource en la cuenta del recurso) deben permitirlo.",
+      "keyInsight": "Identity-based en el principal, resource-based en el recurso. Cross-account directo solo funciona con resource-based.",
+      "scenarioContext": {}
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["policy-evaluation", "explicit-deny", "permission-boundary"],
+      "questionText": "Un usuario tiene una identity policy que permite s3:* y pertenece a un grupo cuya policy también permite s3:*. Sin embargo, su permission boundary solo permite s3:GetObject. La SCP de la organización permite todo. ¿Qué puede hacer el usuario?",
+      "options": [
+        "Solo s3:GetObject — el permission boundary actúa como techo máximo de permisos efectivos",
+        "Todo s3:* — la identity policy gana al ser la más específica",
+        "Nada — las policies entran en conflicto y AWS deniega por defecto",
+        "Todo s3:* pero debe pasar un MFA check antes"
+      ],
+      "correctIndex": 0,
+      "hint": "El permission boundary NO otorga permisos, los limita. Piensa en él como un techo.",
+      "explanation": "Los permisos efectivos son la intersección de: SCP ∩ Permission Boundary ∩ (Identity Policies ∪ Group Policies ∪ Session Policies). Aunque la identity policy permita s3:*, el permission boundary (techo) reduce el resultado a s3:GetObject. Un explicit Deny en cualquier capa gana siempre.",
+      "explanationDeep": "Orden de evaluación IAM (simplificado): (1) Si hay explicit Deny en cualquier policy aplicable → DENY. (2) Si la SCP de la Organization no permite la acción → DENY. (3) Si hay permission boundary en el principal y no permite la acción → DENY. (4) Si hay session policy (STS) que no permite → DENY. (5) Si NINGUNA identity o resource policy permite la acción → DENY (deny por defecto). (6) Si alguna permite y nada niega → ALLOW. El permission boundary NO da permisos solo, necesita que una identity policy también permita. Caso de uso típico: dar a developers autonomía para crear roles, pero con boundary que impide escalada (ej. prohibir iam:* fuera de ciertas paths).",
+      "keyInsight": "Permisos efectivos = intersección de todos los 'techos' (SCP, boundary) ∩ unión de identity/resource grants. Explicit Deny gana siempre.",
+      "scenarioContext": {
+        "architecture": "User → Identity Policy (s3:*) + Group Policy (s3:*) + Permission Boundary (s3:GetObject) + SCP (*)"
+      }
+    },
+    {
+      "difficulty": 0.35,
+      "tags": ["cross-account", "assume-role", "trust-policy"],
+      "questionText": "La cuenta A (ID 111111) necesita leer objetos de un bucket en la cuenta B (ID 222222). ¿Cuál es la configuración mínima correcta?",
+      "options": [
+        "En cuenta B crear un role con s3:GetObject sobre el bucket y trust policy que permita a cuenta A asumirlo; en cuenta A dar a los principals permiso sts:AssumeRole sobre ese role",
+        "En cuenta A crear un user con s3:GetObject; AWS detectará automáticamente el acceso cross-account",
+        "Configurar VPC Peering entre ambas cuentas y asignar routing al bucket",
+        "Mover el bucket a una tercera cuenta neutral"
+      ],
+      "correctIndex": 0,
+      "hint": "Cross-account IAM siempre requiere dos piezas: un role en la cuenta del recurso y permiso de assume en la cuenta origen.",
+      "explanation": "El patrón cross-account estándar: la cuenta dueña del recurso (B) crea un role con los permisos necesarios y un trust policy que lista a la cuenta A como Principal. La cuenta A da a sus users/roles el permiso sts:AssumeRole sobre el ARN del role. Al asumir, el principal recibe credenciales temporales de la cuenta B.",
+      "explanationDeep": "Hay dos patrones cross-account válidos: (1) AssumeRole: principal en A llama sts:AssumeRole → recibe credenciales temporales del role de B → las usa para llamar a S3. Requiere trust policy en B + sts:AssumeRole en A. CloudTrail lo registra en ambas cuentas. (2) Resource-based policy directa: el bucket policy en B lista el principal de A como permitido; el principal usa SUS credenciales directamente. No requiere AssumeRole, pero solo funciona con servicios que soportan resource policies (S3, SQS, SNS, KMS, Lambda). Para S3 a menudo se combinan ambos: role assumption para pipelines complejos, bucket policy para accesos simples.",
+      "keyInsight": "Cross-account = role en cuenta dueña (con trust policy) + sts:AssumeRole en cuenta consumidora. O resource policy directa si el servicio la soporta.",
+      "scenarioContext": {
+        "architecture": "Account A principal → sts:AssumeRole → Account B role → s3:GetObject → Account B bucket"
+      }
+    },
+    {
+      "difficulty": 0.45,
+      "tags": ["condition-keys", "aws-sourceip", "aws-mfa"],
+      "questionText": "Equipo de seguridad exige que una policy solo permita s3:DeleteObject si (1) la llamada viene de la IP corporativa 203.0.113.0/24 Y (2) el usuario autenticó con MFA hace menos de una hora. ¿Qué bloque de Condition es correcto?",
+      "options": [
+        "\"Condition\": {\"IpAddress\": {\"aws:SourceIp\": \"203.0.113.0/24\"}, \"NumericLessThan\": {\"aws:MultiFactorAuthAge\": \"3600\"}, \"Bool\": {\"aws:MultiFactorAuthPresent\": \"true\"}}",
+        "\"Condition\": {\"StringEquals\": {\"aws:SourceIp\": \"203.0.113.0/24\", \"aws:MFA\": \"true\"}}",
+        "\"Condition\": {\"IpRange\": \"203.0.113.0/24\", \"MFAMaxAge\": 3600}",
+        "No se pueden combinar condiciones de IP y MFA en la misma policy"
+      ],
+      "correctIndex": 0,
+      "hint": "Cada condition operator debe matchear el tipo del key: IP usa IpAddress, edad MFA es numérica, presencia MFA es boolean.",
+      "explanation": "Las conditions usan operadores tipados: `IpAddress` para CIDR, `NumericLessThan` para comparar edad en segundos, `Bool` para aws:MultiFactorAuthPresent. Todos los operators dentro del bloque Condition deben evaluar a true (AND implícito) para que la statement aplique.",
+      "explanationDeep": "Condition keys importantes para SAA: `aws:SourceIp` (IP origen, NO funciona desde VPC Endpoints — usa `aws:SourceVpce` o `aws:SourceVpc` ahí), `aws:MultiFactorAuthPresent` (boolean), `aws:MultiFactorAuthAge` (segundos desde MFA), `aws:SecureTransport` (TLS), `aws:PrincipalOrgID` (restringe a la misma Organization), `aws:RequestedRegion` (limita regiones), `s3:prefix` (limita listado de prefijos en S3). Dentro de un bloque Condition, múltiples operators = AND, múltiples valores dentro del mismo operator = OR. Para OR entre operators distintos necesitas múltiples Statements.",
+      "keyInsight": "Condition operators son tipados (IpAddress/NumericLessThan/Bool/StringEquals). Múltiples operators = AND.",
+      "scenarioContext": {
+        "constraints": ["corporate IP only", "MFA <1h", "destructive action"]
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["service-role", "trust-policy", "lambda"],
+      "questionText": "Creas un role para que Lambda lo asuma. Al asociarlo en la consola recibes el error 'InvalidParameterValueException: The role defined for the function cannot be assumed by Lambda'. ¿Qué falta?",
+      "options": [
+        "El trust policy del role debe permitir a lambda.amazonaws.com asumir el role (Service principal)",
+        "Adjuntar la policy AdministratorAccess al role",
+        "Habilitar AWS CloudTrail en la región",
+        "Crear un Instance Profile con el mismo nombre que el role"
+      ],
+      "correctIndex": 0,
+      "hint": "El error dice 'cannot be assumed by Lambda'. ¿Dónde se define quién puede asumir un role?",
+      "explanation": "Todo service role necesita un trust policy que nombre al servicio como principal: `\"Principal\": {\"Service\": \"lambda.amazonaws.com\"}` con `\"Action\": \"sts:AssumeRole\"`. Sin esto, Lambda no puede obtener credenciales temporales del role.",
+      "explanationDeep": "Un IAM role tiene dos policies clave: (1) trust policy (quién puede asumir el role) — va embebida en el objeto role, campo AssumeRolePolicyDocument; (2) permissions policies (qué puede hacer una vez asumido). Los service principals comunes: `lambda.amazonaws.com`, `ec2.amazonaws.com`, `ecs-tasks.amazonaws.com`, `states.amazonaws.com` (Step Functions), `events.amazonaws.com` (EventBridge), `s3.amazonaws.com` (para replication). Instance Profile es un contenedor wrapper que solo EC2 necesita — se crea automáticamente en consola pero requiere creación explícita vía CLI/IaC. Para Lambda NO hay instance profile, se asocia el role directamente.",
+      "keyInsight": "Service roles requieren trust policy con el Service principal correcto. Lambda = lambda.amazonaws.com.",
+      "scenarioContext": {}
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["sts", "session-policy", "federation"],
+      "questionText": "Un pipeline CI/CD asume un role con permisos s3:*, pero quieres que el job SOLO pueda escribir en `s3://artifacts/build-${BUILD_ID}/*` para ese run específico. Cambiar el role no es opción (lo comparten muchos jobs). ¿Qué mecanismo aplicas?",
+      "options": [
+        "Pasar una session policy en la llamada sts:AssumeRole que restrinja a ese prefijo",
+        "Crear un nuevo role por cada build — IAM tiene cuota suficiente",
+        "Usar un bucket policy con Condition aws:BuildId",
+        "Habilitar S3 Object Lock sobre el bucket entero"
+      ],
+      "correctIndex": 0,
+      "hint": "STS acepta una policy JSON en el momento de assume que actúa como restricción adicional, efímera, solo para esa session.",
+      "explanation": "Session policies se pasan en sts:AssumeRole (parámetro Policy) y actúan como filtro adicional: los permisos efectivos son la intersección de la role policy y la session policy. Son efímeras (solo para esa session de credenciales temporales), ideales para least-privilege dinámico por run sin multiplicar roles.",
+      "explanationDeep": "Session policies permiten scoped-down access patterns muy útiles: un pipeline asume un role genérico pero pasa una policy dinámica que restringe a los recursos del run. Límite: 2048 caracteres inline o 10 managed policies via PolicyArns. Casos de uso: (1) Jenkins/GitHub Actions asumen role de deploy pero con session policy que limita a la rama/PR actual, (2) un servicio multi-tenant asume un role y aplica session policy con tenant_id en prefijos S3, (3) AWS SSO / Identity Center usa session policies para delegar permisos por sesión. Importante: session policy NO puede AMPLIAR los permisos del role, solo reducirlos.",
+      "keyInsight": "sts:AssumeRole con session policy = least-privilege dinámico por sesión. Permisos = role ∩ session.",
+      "scenarioContext": {
+        "constraints": ["shared role", "per-run isolation", "no role proliferation"]
+      }
+    },
+    {
+      "difficulty": 0.55,
+      "tags": ["confused-deputy", "external-id", "third-party"],
+      "questionText": "Un SaaS de monitoring de terceros te pide crear un role con trust policy que permita a su AWS account ID 444444 asumirlo, con AdministratorAccess. ¿Qué debes exigir además de limitar los permisos, para prevenir el 'confused deputy problem'?",
+      "options": [
+        "Un ExternalId único que tu organización controla y que el SaaS debe incluir en cada sts:AssumeRole",
+        "Cambiar el region endpoint a uno privado",
+        "Habilitar MFA en el root account del SaaS",
+        "Pedir al SaaS que firme el trust policy con PGP"
+      ],
+      "correctIndex": 0,
+      "hint": "Sin ExternalId, si otro cliente del SaaS descubre tu Account ID puede hacerse pasar por ti. El ExternalId es el secret compartido que rompe ese ataque.",
+      "explanation": "El ExternalId es un valor que TÚ eliges y pones en el trust policy (`Condition: StringEquals: sts:ExternalId`). El SaaS debe incluirlo al asumir el role. Así, aunque otro cliente del SaaS conozca tu Account ID + role ARN, no puede asumirlo sin tu ExternalId. Previene el confused deputy: que el SaaS asuma por error tu role en nombre de otro cliente.",
+      "explanationDeep": "Confused deputy problem: el SaaS es un agente privilegiado que puede asumir roles en muchas cuentas. Si un cliente malicioso le pide 'asume el role arn:aws:iam::TU_CUENTA:role/monitor', el SaaS lo haría creyendo que es del cliente que lo pide. ExternalId rompe el ataque: AWS recomienda que sea ≥20 caracteres, único por cliente, y generado por el SaaS (así el cliente malicioso no puede adivinar el tuyo). Best practices: (1) limitar la policy al mínimo necesario (nunca AdministratorAccess para monitoring read-only), (2) usar aws:PrincipalOrgID si el SaaS ejecuta desde una Organization conocida, (3) revisar CloudTrail regularmente para invocations inesperadas del role.",
+      "keyInsight": "Cross-account con terceros = ExternalId obligatorio + permisos mínimos. Previene confused deputy.",
+      "scenarioContext": {
+        "constraints": ["third-party SaaS", "cross-account trust", "prevent confused deputy"]
+      }
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["scp", "organizations", "guardrails"],
+      "questionText": "Tu Organization aplica una SCP que deniega ec2:RunInstances fuera de eu-west-1. Un administrador de una cuenta miembro tiene IAM policy AdministratorAccess pero no puede lanzar instancias en us-east-1. ¿Por qué?",
+      "options": [
+        "Las SCPs son un techo máximo organizacional; ningún principal en la cuenta (incluido AdministratorAccess) puede superar ese límite",
+        "Es un bug conocido de IAM — se resuelve reiniciando la cuenta",
+        "AdministratorAccess solo cubre regiones us-*; hay que añadir europe-specific-admin",
+        "Las SCPs solo aplican a users, no a roles"
+      ],
+      "correctIndex": 0,
+      "hint": "Las SCPs son parte de Organizations y actúan ANTES que las identity policies. Son límites, no permisos.",
+      "explanation": "Service Control Policies (SCPs) se evalúan antes que cualquier identity policy. Actúan como guardrails organizacionales: restringen el conjunto máximo de acciones permitidas para cualquier principal en la cuenta, incluido el root. AdministratorAccess solo concede todo DENTRO de lo que la SCP permite.",
+      "explanationDeep": "SCP características clave: (1) aplica a todos los principals de la cuenta EXCEPTO el management account (no afecta a master), (2) se adjunta a OUs o cuentas individuales — se heredan por jerarquía, (3) NO otorga permisos, solo filtra; un usuario necesita identity policy + SCP permisiva, (4) usa las mismas sintaxis que IAM policies pero con Resource/Action/Condition. Patrones comunes: DENY acciones destructivas a todas las cuentas salvo a breakglass-admin; DENY regiones no aprobadas; DENY modificación de CloudTrail/Config; require tagging. SCPs se evalúan en la cuenta miembro, no centralizadamente — el fallo se ve como AccessDenied sin más detalle (debug con cloudtrail + aws:userIdentity).",
+      "keyInsight": "SCPs son guardrails de Organizations: definen el techo, ninguna identity policy puede superarlo. AdministratorAccess sigue limitado por SCP.",
+      "scenarioContext": {
+        "architecture": "Organization → OU → Account → User(AdministratorAccess) — SCP denies ec2:RunInstances outside eu-west-1"
+      }
+    },
+    {
+      "difficulty": 0.45,
+      "tags": ["web-identity", "cognito", "federation"],
+      "questionText": "Una app móvil necesita que usuarios autenticados con Google/Apple puedan subir fotos a sus propios prefijos en S3 (`s3://uploads/${user_id}/*`) sin que el servidor intermedia cada upload. ¿Cuál es la arquitectura correcta?",
+      "options": [
+        "Cognito Identity Pool con role mapping + policy que usa `${cognito-identity.amazonaws.com:sub}` en el Resource para aislar por usuario",
+        "Hardcodear un IAM User en la app con s3:PutObject a todo el bucket",
+        "Generar un pre-signed URL por cada upload desde el servidor — es la única opción segura",
+        "Dar acceso público de escritura al bucket con ACL 'authenticated-users'"
+      ],
+      "correctIndex": 0,
+      "hint": "Cognito Identity Pool cambia tokens de IdP externos (Google/Apple) por credenciales temporales AWS. La policy puede usar variables del token.",
+      "explanation": "Cognito Identity Pool (no User Pool) intercambia el token del IdP por credenciales STS temporales asociadas a un IAM role. En la policy del role, el prefijo `${cognito-identity.amazonaws.com:sub}` se sustituye en runtime por el sub del usuario, aislando automáticamente los uploads al prefijo del propio usuario.",
+      "explanationDeep": "Cognito tiene dos componentes separables: User Pool (directorio de usuarios, login/signup, MFA, JWT propio) e Identity Pool (exchange de tokens → credenciales AWS). Para este caso solo necesitas Identity Pool, que acepta tokens de Google, Apple, Facebook, SAML, OIDC, y también del User Pool. Variables disponibles en la policy: `cognito-identity.amazonaws.com:sub` (user id estable), `cognito-identity.amazonaws.com:aud` (identity pool), `cognito-identity.amazonaws.com:amr` (métodos de auth). Con estas, puedes escribir policies genéricas tipo `\"Resource\": \"arn:aws:s3:::uploads/${cognito-identity.amazonaws.com:sub}/*\"` — cada usuario accede solo a su carpeta. Alternativa (pre-signed URLs) funciona pero requiere servidor en el camino, añadiendo latencia y coste.",
+      "keyInsight": "Mobile → S3 directo = Cognito Identity Pool + policy con variable ${cognito-identity.amazonaws.com:sub}.",
+      "scenarioContext": {
+        "constraints": ["no backend proxy", "per-user isolation", "federated IdP"]
+      }
+    }
+  ]
+}

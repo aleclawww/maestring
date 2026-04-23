@@ -20,9 +20,32 @@ updates:
           - "eslint*"
           - "typescript*"
           - "@typescript-eslint/*"
+      ai-sdks:
+        patterns:
+          - "@anthropic-ai/*"
+          - "openai"
+          - "tiktoken"
+      billing:
+        patterns:
+          - "stripe"
+      observability:
+        patterns:
+          - "@sentry/*"
+          - "posthog*"
+          - "pino*"
+      testing:
+        patterns:
+          - "@playwright/*"
+          - "playwright"
+          - "vitest"
+          - "@vitest/*"
     ignore:
+      # Majors arrive as individual PRs so breaking changes get human review;
+      # minor + patch ship grouped. Security updates bypass this ignore by
+      # design (GitHub schedules them regardless).
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 10
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

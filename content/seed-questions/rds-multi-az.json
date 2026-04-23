@@ -1,0 +1,174 @@
+{
+  "conceptSlug": "rds-multi-az",
+  "certificationId": "aws-saa-c03",
+  "questions": [
+    {
+      "difficulty": 0.25,
+      "tags": ["multi-az", "ha", "sync-replication"],
+      "questionText": "Una aplicación crítica usa RDS MySQL single-AZ. El equipo de SRE exige failover automático ante caída de AZ sin pérdida de datos. ¿Qué activas?",
+      "options": [
+        "Multi-AZ deployment — añade un standby síncrono en otra AZ y hace CNAME flip automático",
+        "Read Replica en otra AZ — se promueve manualmente si falla el primary",
+        "Backup diario + restore manual ante incidente",
+        "Aurora Serverless v1 con multi-region"
+      ],
+      "correctIndex": 0,
+      "hint": "'Sin pérdida de datos' implica replicación síncrona. 'Automático' implica failover gestionado.",
+      "explanation": "Multi-AZ replica síncronamente al standby en otra AZ. Ante fallo del primary (hardware, AZ, maintenance), RDS promueve el standby y actualiza el CNAME del endpoint — típicamente 60-120s. Zero RPO. Read Replicas son asíncronas (hay lag) y no tienen failover automático.",
+      "explanationDeep": "Multi-AZ en RDS engines (MySQL/PostgreSQL/MariaDB/Oracle/SQL Server) usa replicación a nivel de storage/log shipping síncrono. El standby no es accesible para lecturas — su único propósito es HA. Detección de fallo: RDS monitoriza el primary y dispara failover cuando detecta (a) fallo del host, (b) AZ impaired, (c) reboot with failover, (d) storage/network issue. El CNAME DNS TTL es bajo (5-15s) y los clientes con connection pooling mal configurado pueden mantener conexiones stale — las apps deben reintentar en error. Aurora Multi-AZ funciona diferente: un solo cluster volume compartido entre 3 AZ, failover <30s porque las réplicas ya están disponibles para lectura.",
+      "keyInsight": "Multi-AZ = standby síncrono, failover automático 1-2 min, zero RPO. NO sirve lecturas.",
+      "scenarioContext": {
+        "constraints": ["automatic failover", "zero data loss", "cross-AZ"]
+      }
+    },
+    {
+      "difficulty": 0.35,
+      "tags": ["multi-az-vs-read-replica", "common-confusion"],
+      "questionText": "¿Cuál es la diferencia principal entre Multi-AZ y Read Replica en RDS?",
+      "options": [
+        "Multi-AZ es replicación síncrona para HA (standby no accesible); Read Replica es asíncrona para escalar lecturas (sí accesible)",
+        "Son sinónimos — AWS usa los dos términos indistintamente",
+        "Multi-AZ replica solo dentro de una AZ; Read Replica replica entre AZs",
+        "Read Replica solo existe en Aurora, Multi-AZ solo en RDS clásico"
+      ],
+      "correctIndex": 0,
+      "hint": "Piensa en el propósito: disponibilidad vs escalabilidad de lecturas.",
+      "explanation": "Multi-AZ → propósito HA/failover, replicación síncrona, standby oculto. Read Replica → propósito escalar lecturas, replicación asíncrona (lag), endpoints accesibles independientes. Se pueden combinar: Multi-AZ primary + múltiples Read Replicas.",
+      "explanationDeep": "Confusión típica en el examen: el stem describe un escenario ambiguo y debes identificar el INTENT. Señales que apuntan a Multi-AZ: 'automatic failover', 'high availability', 'zero RPO', 'survive AZ failure'. Señales que apuntan a Read Replica: 'scale reads', 'offload reporting', 'reduce load on primary', 'cross-region DR con lag aceptable'. Combinación: Multi-AZ + 5 Read Replicas es común en producción — HA + scale reads. Nuevo en 2022: Multi-AZ Cluster (3 nodos) donde 2 réplicas son readable y síncronas — borra parte de la distinción tradicional, pero solo para MySQL/PostgreSQL con hardware específico.",
+      "keyInsight": "Multi-AZ = HA síncrona (standby oculto). Read Replica = scale de lecturas asíncronas (endpoints accesibles).",
+      "scenarioContext": {}
+    },
+    {
+      "difficulty": 0.45,
+      "tags": ["failover-time", "rto", "maintenance"],
+      "questionText": "Durante una maintenance window, RDS Multi-AZ aplica un patch. ¿Qué ocurre con la disponibilidad de la app?",
+      "options": [
+        "Patch se aplica primero al standby; luego failover → patch al ex-primary. Downtime ≈ 60-120s (failover)",
+        "Cero downtime — RDS Multi-AZ es completamente transparente incluso para patches",
+        "30 minutos de downtime mientras se aplica el patch al primary",
+        "La app se debe parar manualmente antes del patch"
+      ],
+      "correctIndex": 0,
+      "hint": "Multi-AZ aprovecha el standby para minimizar downtime durante maintenance — pero no lo elimina totalmente.",
+      "explanation": "RDS aplica el patch al standby primero (sin afectar tráfico), luego hace failover y aplica al ex-primary. La app experimenta el tiempo del failover (~60-120s + reconexión). Sin Multi-AZ el downtime serían los minutos del patch + reboot completo del primary.",
+      "explanationDeep": "Tipos de maintenance en RDS: (1) OS patching — usualmente sin downtime en Multi-AZ; (2) DB engine minor version — failover (60-120s); (3) Instance class change — failover; (4) Storage scaling — online para gp3/io1, pocos minutos sin failover. Maintenance windows: 30 minutos semanales, configurables. Apply Immediately: aplica ahora vs esperar ventana (útil para testing, peligroso en producción). Pending modifications: acumuladas hasta la ventana. Best practice: monitorea `aws.rds.pending_modifications` en CloudWatch para saber qué hay en cola.",
+      "keyInsight": "Multi-AZ hace patches con ~60-120s downtime (failover), no cero downtime. Planifica ventana fuera de hora pico.",
+      "scenarioContext": {
+        "constraints": ["maintenance window", "minimize downtime"]
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["multi-az-cluster", "readable-standby"],
+      "questionText": "Un cliente quiere HA para su RDS PostgreSQL Y poder servir algunas queries de lectura desde la infraestructura de HA (sin Read Replicas separadas). ¿Qué opción moderna cubre ambos?",
+      "options": [
+        "Multi-AZ DB Cluster (3 nodos: 1 writer + 2 readable standbys con replicación semi-síncrona)",
+        "Multi-AZ tradicional — el standby es readable si habilitas Enhanced Monitoring",
+        "RDS no permite esto — usa Aurora obligatoriamente",
+        "Single-AZ con failover manual a snapshot"
+      ],
+      "correctIndex": 0,
+      "hint": "Hay una modalidad de Multi-AZ más reciente (2022) específica para MySQL/PostgreSQL que hace los standbys readable.",
+      "explanation": "Multi-AZ DB Cluster (no confundir con Multi-AZ DB Instance) despliega 1 writer + 2 readable standbys en 3 AZs. Las standbys son accesibles vía un reader endpoint y usan replicación de log semi-síncrona (write confirma cuando al menos 1 de 2 confirma). Failover <35s, RPO cercano a 0.",
+      "explanationDeep": "Multi-AZ DB Cluster diferencias vs tradicional: (1) 2 standbys readable, no 1 oculto; (2) replicación semi-síncrona (confirma con 1 de 2) reduce latencia de writes vs la síncrona clásica; (3) failover más rápido (<35s vs 60-120s); (4) endpoints separados: writer endpoint + reader endpoint + 3 instance endpoints. Limitaciones: solo MySQL 8.0.28+ y PostgreSQL 13.4+, solo instance classes m6gd/r6gd (Graviton con NVMe local), más caro que tradicional (3 instancias vs 2), no soporta todos los parameter groups. Cuándo usarlo vs Aurora: Aurora tiene storage compartido (más escalable, hasta 128 TB) pero solo MySQL/PostgreSQL compatibility flavors. Multi-AZ Cluster mantiene RDS engines estándar, útil si dependes de features específicas del engine comunitario.",
+      "keyInsight": "Multi-AZ DB Cluster = 3 nodos con 2 standbys readable. Para RDS puro con HA + lecturas sin Aurora.",
+      "scenarioContext": {
+        "constraints": ["HA required", "readable standbys", "keep RDS (not Aurora)"]
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["failover-causes", "connection-handling"],
+      "questionText": "Tras un failover de RDS Multi-AZ, la app sigue fallando durante 5 minutos adicionales. El endpoint DNS ya apunta al nuevo primary. ¿Cuál es la causa más probable?",
+      "options": [
+        "Connection pool de la app cachea DNS con TTL largo o conexiones TCP stale al ex-primary — hay que configurar TTL bajo y manejar reconexión",
+        "RDS tarda 5 minutos en crear un nuevo standby tras failover y la app no puede escribir hasta entonces",
+        "El driver JDBC no soporta failover automático — hay que migrar a driver MySQL 8.4",
+        "AWS facturación bloquea la instancia hasta pagar manualmente el failover"
+      ],
+      "correctIndex": 0,
+      "hint": "El problema no es RDS — el DNS ya cambió. ¿Qué hacen los clientes con DNS caché o conexiones TCP abiertas?",
+      "explanation": "Tras failover, el endpoint DNS apunta al nuevo host (~1-2s). Pero apps con JVM/Node caché DNS con TTL largo (default JVM: infinito para InetAddress), o con connection pools que mantienen sockets TCP al ex-primary, siguen intentando contra la IP vieja. Fix: bajar TTL a 10s en el driver/app, y manejar reconexión con retry exponencial.",
+      "explanationDeep": "Problemas típicos tras failover: (1) JVM `networkaddress.cache.ttl` default -1 (cache forever) — forzar a 5-10s; (2) connection pool (HikariCP, DBCP) mantiene conexiones TCP abiertas al ex-primary — configurar `maxLifetime` bajo o usar `keepalive` tests con query simple; (3) drivers antiguos sin support de CNAME flip — actualizar; (4) code path que no reintenta: DB errors transientes deben retriarse con exponential backoff. AWS recomienda RDS Proxy: capa serverless delante de RDS que multiplexa conexiones, maneja failover transparently (failover transparent time cae de minutos a <30s), y además da IAM auth y connection pooling centralizado. Para apps que abren muchas conexiones (Lambda especialmente), RDS Proxy es casi obligatorio.",
+      "keyInsight": "Post-failover lag = DNS cache + TCP conns stale. Fix: bajar TTL del cliente, reintento exponencial, o RDS Proxy.",
+      "scenarioContext": {
+        "constraints": ["failover completed", "DNS updated", "app still failing"]
+      }
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["aurora-vs-rds", "choice-criteria"],
+      "questionText": "Un cliente evalúa Aurora vs RDS Multi-AZ para una nueva carga PostgreSQL con 15 TB de datos y picos de 50.000 read QPS. ¿Qué argumento favorece Aurora?",
+      "options": [
+        "Aurora soporta hasta 15 réplicas de lectura con storage compartido (no replicación log) y failover <30s",
+        "Aurora es gratis en todas las regiones",
+        "RDS Multi-AZ no soporta PostgreSQL",
+        "Aurora usa la misma tecnología que RDS Multi-AZ pero más cara sin beneficios"
+      ],
+      "correctIndex": 0,
+      "hint": "Aurora tiene storage compartido entre 3 AZ, 15 réplicas de lectura, y failover más rápido. Son las diferencias clave.",
+      "explanation": "Aurora separa compute y storage: el cluster comparte un volumen distribuido en 6 copias en 3 AZ. Las réplicas (hasta 15) leen directamente del mismo storage — sin replicación log tradicional, sin lag perceptible, failover en <30s (vs 60-120s en RDS Multi-AZ). Para 50K QPS y 15 TB, esta arquitectura es significativamente superior.",
+      "explanationDeep": "Aurora PostgreSQL vs RDS PostgreSQL: (1) Storage: Aurora 128 TB auto-scaling en volúmenes compartidos, 6 copias en 3 AZ (2 por AZ), quorum 4/6 write / 3/6 read; RDS clásico usa EBS con límite 64 TB y replicación log al standby. (2) Throughput: Aurora ~5x MySQL, ~3x PostgreSQL vs equivalente RDS. (3) Réplicas: Aurora hasta 15 con lag <100ms; RDS hasta 5 con lag típicamente mayor. (4) Backup: Aurora continuous backtrack / PITR sin impacto; RDS snapshots con pequeño impacto. (5) Coste: Aurora ~20% más caro en instance pricing + storage IO-based. (6) Compatibility: Aurora PostgreSQL compatible con versiones específicas (no todas las minor). Decisión: si la carga justifica el precio extra (muchas réplicas, >10 TB, throughput alto), Aurora. Para workloads moderados, RDS Multi-AZ sigue siendo perfectamente válido.",
+      "keyInsight": "Aurora vs RDS Multi-AZ: Aurora gana en cargas con muchas réplicas, gran volumen, y failover rápido. RDS es más barato para cargas moderadas.",
+      "scenarioContext": {
+        "numbers": { "data_tb": 15, "read_qps_peak": 50000 }
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["backup", "pitr", "multi-az"],
+      "questionText": "En RDS Multi-AZ, ¿desde dónde se toman los backups automatizados y qué impacto tiene en el primary?",
+      "options": [
+        "Del standby — el primary no sufre pausa de I/O ni latencia durante el backup",
+        "Del primary, con una pausa de I/O de hasta 30s",
+        "Es imposible hacer backup en Multi-AZ — hay que deshabilitarlo primero",
+        "Del backup server dedicado que AWS despliega en eu-north-1"
+      ],
+      "correctIndex": 0,
+      "hint": "Una ventaja operativa clave de Multi-AZ: el standby existe y está idle, así que AWS lo usa para backups sin molestar al primary.",
+      "explanation": "En Multi-AZ, AWS aprovecha el standby (que no sirve tráfico) para tomar el backup completo diario. Esto elimina la pausa breve de I/O que ocurriría en single-AZ. Los logs transaccionales siguen tomándose continuamente para PITR (point-in-time recovery) con granularidad de 5 minutos.",
+      "explanationDeep": "RDS backup details: (1) Automated backups: snapshot diario + transaction logs cada 5 min; retention 0-35 días. (2) Manual snapshots: on-demand, retention ilimitada hasta que los borres. (3) PITR: restaura a cualquier segundo dentro de la retention window (copia logs desde snapshot base). (4) Snapshots son incrementales (solo deltas) pero para restaurar se hidrata un volumen completo — el restore crea una NUEVA instancia, no reemplaza la existente. (5) Cross-region backup copy es posible (manual snapshot → copy to region). (6) Export to S3: extrae snapshot a Parquet en S3 para analytics con Athena/Redshift — sin impacto en DB.",
+      "keyInsight": "Multi-AZ toma backups del standby → cero impacto en el primary. Single-AZ tiene pausa breve de I/O.",
+      "scenarioContext": {}
+    },
+    {
+      "difficulty": 0.5,
+      "tags": ["cross-region", "dr", "rpo-rto"],
+      "questionText": "Requisito: RPO 5 minutos y RTO 15 minutos ante desastre total de la región. RDS PostgreSQL 10 TB. ¿Qué arquitectura cumple al mínimo coste?",
+      "options": [
+        "Cross-Region Read Replica en la región de DR; ante desastre, promoverla a standalone (RPO = lag típico <1min, RTO = promoción <15min)",
+        "Multi-AZ en region primary; ante desastre, esperar a que AWS restaure la región",
+        "Snapshot manual diario + copy a otra región; ante desastre, restore desde snapshot",
+        "Aurora Global Database"
+      ],
+      "correctIndex": 0,
+      "hint": "Multi-AZ solo protege AZ, no región. Aurora Global cubre pero es más caro. Cross-Region Read Replica es el punto dulce de coste/DR.",
+      "explanation": "Cross-Region Read Replica mantiene una copia asíncrona en la región de DR con lag típico <1 min. Ante desastre, `promote-read-replica` la convierte en primary standalone (~5-15 min). Aurora Global es mejor en RPO/RTO pero ~3-4x más caro. Snapshots diarios tienen RPO 24h — no cumple.",
+      "explanationDeep": "Comparativa DR para RDS: (1) Snapshots cross-region: RPO = frecuencia del snapshot (24h automatic, configurable manual), RTO = tiempo de restore (proporcional al tamaño, ~40 min/TB). Coste: solo storage del snapshot. (2) Cross-Region Read Replica: RPO = lag replicación (seg-min), RTO = tiempo promoción (~5-15 min). Coste: instancia completa en la otra región + data transfer cross-region. (3) Aurora Global Database: RPO <1s, RTO <1 min con managed failover. Coste: instancia headless mínima en secondary + replicación storage cross-region. Elegir según presupuesto y criticidad. Extra: RDS Snapshots pueden cifrarse con KMS multi-region key para simplificar cross-region copy sin re-encrypt.",
+      "keyInsight": "Cross-Region Read Replica es el equilibrio coste/DR: RPO <1min, RTO ~15min, ~1x coste extra vs snapshots (RPO 24h) o Aurora Global (coste alto).",
+      "scenarioContext": {
+        "numbers": { "rpo_min": 5, "rto_min": 15, "data_tb": 10 }
+      }
+    },
+    {
+      "difficulty": 0.45,
+      "tags": ["rds-proxy", "connection-storm", "lambda"],
+      "questionText": "Una app Lambda con 3.000 conc llama a RDS Multi-AZ. Cada invocación abre una conexión. La DB entra en 'too many connections' y CPU 100%. ¿Qué servicio resuelve?",
+      "options": [
+        "RDS Proxy — pool de conexiones gestionado + failover transparente + IAM auth",
+        "Aumentar el instance class del primary 10x",
+        "Deshabilitar Multi-AZ para ahorrar overhead",
+        "Usar HTTP keep-alive entre Lambda y RDS"
+      ],
+      "correctIndex": 0,
+      "hint": "Lambda no puede mantener pool entre invocaciones porque los containers son efímeros. ¿Quién sí puede mantener un pool entre Lambda y DB?",
+      "explanation": "RDS Proxy es un pool de conexiones gestionado y escalable que se sitúa entre Lambda y RDS. Maneja hasta 100K+ conexiones cliente con un pool acotado contra la DB. Añade IAM auth, failover transparente (<30s vs 60-120s) y Secrets Manager integration. Es el fix canónico para 'connection storms' de Lambda.",
+      "explanationDeep": "RDS Proxy features: (1) Connection pooling y multiplexación — reduce conexiones efectivas a la DB a un orden de magnitud menos; (2) Failover awareness — detecta failover de Multi-AZ y re-enruta sin cerrar conexiones cliente (<30s vs 60-120s del endpoint directo); (3) IAM authentication — token temporal por sesión en lugar de password estática; (4) Secrets Manager integration para rotación automática; (5) TLS obligatorio desde/hasta Proxy. Limitaciones: latencia añadida (~5-10ms), coste extra (~$0.015/vCPU/hora), no soporta features session-specific como prepared statements globales. Alternativas para reducir conexiones sin Proxy: (a) connection pooling en cada Lambda con `provisioned concurrency` (el pool sobrevive entre warm invocations), (b) serverless databases como Aurora Serverless v2 que escala compute, (c) DynamoDB si el modelo de datos lo permite.",
+      "keyInsight": "Lambda + RDS = connection storm. RDS Proxy pool + IAM + failover transparente = fix canónico.",
+      "scenarioContext": {
+        "numbers": { "lambda_concurrency": 3000 },
+        "constraints": ["too many connections", "Multi-AZ", "serverless frontend"]
+      }
+    }
+  ]
+}

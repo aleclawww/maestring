@@ -10,12 +10,12 @@ import type { SubscriptionPlan } from '@/types/database'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '🏠' },
-  { href: '/study', label: 'Estudiar', icon: '📖' },
-  { href: '/exam', label: 'Simulacro', icon: '📝' },
-  { href: '/progress', label: 'Progreso', icon: '📊' },
-  { href: '/documents', label: 'Documentos', icon: '📄' },
-  { href: '/referrals', label: 'Referidos', icon: '👥' },
-  { href: '/settings', label: 'Configuración', icon: '⚙️' },
+  { href: '/study', label: 'Study', icon: '📖' },
+  { href: '/exam', label: 'Exam', icon: '📝' },
+  { href: '/progress', label: 'Progress', icon: '📊' },
+  { href: '/documents', label: 'Documents', icon: '📄' },
+  { href: '/referrals', label: 'Referrals', icon: '👥' },
+  { href: '/settings', label: 'Settings', icon: '⚙️' },
 ]
 
 interface SidebarProps {
@@ -57,7 +57,7 @@ export function Sidebar({ userName, userAvatar, plan = 'free' }: SidebarProps) {
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="ml-auto rounded-lg p-1 text-text-muted hover:bg-surface-2 hover:text-text-primary transition-colors"
-          aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+          aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
         >
           <svg
             className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')}
@@ -103,7 +103,7 @@ export function Sidebar({ userName, userAvatar, plan = 'free' }: SidebarProps) {
         {!collapsed && plan !== 'free' && (
           <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2">
             <p className="text-xs font-semibold text-primary">
-              ✨ Plan {plan === 'pro_annual' ? 'Pro Anual' : plan === 'enterprise' ? 'Enterprise' : 'Pro'}
+              ✨ {plan === 'pro_annual' ? 'Pro Annual' : plan === 'enterprise' ? 'Enterprise' : 'Pro'} Plan
             </p>
           </div>
         )}
@@ -125,7 +125,7 @@ export function Sidebar({ userName, userAvatar, plan = 'free' }: SidebarProps) {
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-text-primary truncate">
-                {userName ?? 'Usuario'}
+                {userName ?? 'User'}
               </p>
               <p className="text-xs text-text-muted capitalize">{plan}</p>
             </div>
@@ -135,7 +135,7 @@ export function Sidebar({ userName, userAvatar, plan = 'free' }: SidebarProps) {
         {/* Sign out */}
         <button
           onClick={handleSignOut}
-          title={collapsed ? 'Cerrar sesión' : undefined}
+          title={collapsed ? 'Sign out' : undefined}
           className={cn(
             'flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-danger transition-colors',
             collapsed ? 'justify-center' : 'gap-3'
@@ -144,7 +144,7 @@ export function Sidebar({ userName, userAvatar, plan = 'free' }: SidebarProps) {
           <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
           </svg>
-          {!collapsed && 'Cerrar sesión'}
+          {!collapsed && 'Sign out'}
         </button>
       </div>
     </aside>

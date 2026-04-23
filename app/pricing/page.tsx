@@ -64,7 +64,7 @@ export default function PricingPage() {
         </div>
         <p className="text-zinc-600 text-sm mt-8">
           Payments processed securely by Stripe. By subscribing you agree to our{" "}
-          <Link href="/legal/terms" className="text-indigo-400 hover:underline">Terms of Service</Link>{" "}y{" "}<Link href="/legal/privacy" className="text-indigo-400 hover:underline">Privacy Policy</Link>.
+          <Link href="/legal/terms" className="text-indigo-400 hover:underline">Terms of Service</Link> and <Link href="/legal/privacy" className="text-indigo-400 hover:underline">Privacy Policy</Link>.
         </p>
       </div>
     </div>

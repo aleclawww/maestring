@@ -23,11 +23,11 @@ export default function DocumentsPage() {
 
   async function handleFileUpload(file: File) {
     if (!file.type.includes('pdf')) {
-      setUploadError('Solo se aceptan archivos PDF.')
+      setUploadError('Only PDF files are accepted.')
       return
     }
     if (file.size > 100 * 1024 * 1024) {
-      setUploadError('El archivo no puede superar 100MB.')
+      setUploadError("File can't exceed 100MB.")
       return
     }
 
@@ -47,7 +47,7 @@ export default function DocumentsPage() {
       const { data } = await res.json()
       setDocuments(prev => [data, ...prev])
     } catch {
-      setUploadError('Error al subir el archivo. Inténtalo de nuevo.')
+      setUploadError('Error uploading the file. Try again.')
     } finally {
       setUploading(false)
     }
@@ -61,9 +61,9 @@ export default function DocumentsPage() {
 
   const statusBadge = (status: Document['processing_status']) => {
     const map = {
-      pending: { variant: 'outline' as const, label: 'Pendiente' },
-      processing: { variant: 'warning' as const, label: 'Procesando...' },
-      completed: { variant: 'success' as const, label: 'Listo' },
+      pending: { variant: 'outline' as const, label: 'Pending' },
+      processing: { variant: 'warning' as const, label: 'Processing...' },
+      completed: { variant: 'success' as const, label: 'Ready' },
       failed: { variant: 'danger' as const, label: 'Error' },
     }
     const { variant, label } = map[status]
@@ -73,9 +73,9 @@ export default function DocumentsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-text-primary mb-1">Documentos</h1>
+        <h1 className="text-xl font-bold text-text-primary mb-1">Documents</h1>
         <p className="text-sm text-text-secondary">
-          Sube tus PDFs de estudio y los convertimos en preguntas personalizadas.
+          Upload your study PDFs and we'll turn them into personalized questions.
         </p>
       </div>
 
@@ -88,9 +88,9 @@ export default function DocumentsPage() {
       >
         <div className="text-4xl mb-3">{uploading ? '⏳' : '📤'}</div>
         <p className="text-sm font-medium text-text-primary mb-1">
-          {uploading ? 'Subiendo...' : 'Arrastra tu PDF aquí o haz clic'}
+          {uploading ? 'Uploading...' : 'Drag your PDF here or click to browse'}
         </p>
-        <p className="text-xs text-text-muted">PDF hasta 100MB</p>
+        <p className="text-xs text-text-muted">PDF up to 100MB</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -124,7 +124,7 @@ export default function DocumentsPage() {
                     <p className="text-sm font-medium text-text-primary truncate">{doc.filename}</p>
                     <p className="text-xs text-text-muted">
                       {formatBytes(doc.file_size)} · {formatRelativeTime(doc.created_at)}
-                      {doc.chunk_count > 0 && ` · ${doc.chunk_count} fragmentos`}
+                      {doc.chunk_count > 0 && ` · ${doc.chunk_count} chunks`}
                     </p>
                     {doc.error_message && (
                       <p className="text-xs text-danger mt-0.5">{doc.error_message}</p>
@@ -142,9 +142,9 @@ export default function DocumentsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <div className="text-4xl mb-3">📂</div>
-            <p className="text-text-secondary">No has subido documentos aún.</p>
+            <p className="text-text-secondary">You haven't uploaded any documents yet.</p>
             <p className="text-xs text-text-muted mt-1">
-              Sube notas, whitepapers o guías de estudio para generar preguntas personalizadas.
+              Upload notes, whitepapers, or study guides to generate personalized questions.
             </p>
           </CardContent>
         </Card>

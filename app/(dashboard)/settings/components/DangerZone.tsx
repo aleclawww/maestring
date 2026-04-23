@@ -33,37 +33,37 @@ export function DangerZone({ email }: DangerZoneProps) {
     // Trigger GDPR export
     const res = await fetch('/api/account/export', { method: 'POST' })
     const { message } = await res.json()
-    alert(message ?? 'Recibirás tu datos por email en 24-48 horas.')
+    alert(message ?? 'You will receive your data by email within 24-48 hours.')
   }
 
   return (
     <section>
       <h2 className="text-sm font-semibold text-danger mb-4 pb-2 border-b border-danger/30">
-        Zona de Peligro
+        Danger zone
       </h2>
       <div className="space-y-4">
         <div className="rounded-xl border border-border bg-surface-2 p-4">
-          <p className="text-sm font-medium text-text-primary mb-1">Exportar mis datos</p>
+          <p className="text-sm font-medium text-text-primary mb-1">Export my data</p>
           <p className="text-xs text-text-muted mb-3">
-            Descarga todos tus datos en formato JSON (GDPR Art. 20).
+            Download all your data in JSON format (GDPR Art. 20).
           </p>
           <Button variant="outline" size="sm" onClick={handleExportData}>
-            Exportar datos
+            Export data
           </Button>
         </div>
 
         <div className="rounded-xl border border-danger/30 bg-danger/5 p-4">
-          <p className="text-sm font-medium text-danger mb-1">Eliminar cuenta</p>
+          <p className="text-sm font-medium text-danger mb-1">Delete account</p>
           <p className="text-xs text-danger/80 mb-3">
-            Esta acción es permanente e irreversible. Se eliminarán todos tus datos.
+            This action is permanent and irreversible. All your data will be deleted.
           </p>
           {!showConfirm ? (
             <Button variant="danger" size="sm" onClick={() => setShowConfirm(true)}>
-              Eliminar mi cuenta
+              Delete my account
             </Button>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-danger">Escribe tu email para confirmar:</p>
+              <p className="text-xs text-danger">Type your email to confirm:</p>
               <input
                 type="email"
                 value={confirmEmail}
@@ -78,12 +78,12 @@ export function DangerZone({ email }: DangerZoneProps) {
                   onClick={handleDelete}
                   disabled={confirmEmail !== email || deleting}
                   loading={deleting}
-                  loadingText="Eliminando..."
+                  loadingText="Deleting..."
                 >
-                  Confirmar eliminación
+                  Confirm deletion
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)}>
-                  Cancelar
+                  Cancel
                 </Button>
               </div>
             </div>

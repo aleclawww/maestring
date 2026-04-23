@@ -1,0 +1,167 @@
+{
+  "conceptSlug": "s3-storage-classes",
+  "certificationId": "aws-saa-c03",
+  "questions": [
+    {
+      "difficulty": 0.25,
+      "tags": ["standard-ia", "minimum-duration"],
+      "questionText": "Un equipo mueve 10 TB de logs de 7 días de antigüedad desde S3 Standard a S3 Standard-IA para ahorrar. A los 20 días, las políticas de retención los eliminan. La factura S3 sube en vez de bajar. ¿Qué ocurrió?",
+      "options": [
+        "Standard-IA cobra un mínimo de 30 días de storage por objeto aunque se borren antes",
+        "Los objetos se replicaron automáticamente de vuelta a Standard por falta de uso",
+        "El retrieval fee de Standard-IA aplica al eliminar objetos antes de 30 días",
+        "Cross-region replication se activó al cambiar la storage class"
+      ],
+      "correctIndex": 0,
+      "hint": "Todas las clases de bajo coste tienen un período mínimo facturable. Comprueba cuál.",
+      "explanation": "Standard-IA, One Zone-IA y Glacier Instant facturan 30 días como mínimo por objeto. Si eliminas antes, te cobran los días restantes como si el objeto siguiera allí. Para logs con retención <30 días, Standard sigue siendo más barato.",
+      "explanationDeep": "Minimum storage duration por clase:\n- Standard: sin mínimo\n- Standard-IA, One Zone-IA, Glacier Instant: 30 días\n- Glacier Flexible: 90 días\n- Glacier Deep Archive: 180 días\n\nSi borras o transicionas un objeto antes del mínimo, AWS factura los días faltantes. Esto mata el caso de uso 'rotar logs cortos a IA' — una trampa clásica del examen. Regla: si la retención del objeto es menor que el mínimo de la clase, quédate en Standard o usa Intelligent-Tiering (sin mínimo en tiers frequent/infrequent, aunque sí en los archive).",
+      "keyInsight": "Minimum storage duration convierte Standard-IA en más caro que Standard si borras antes de 30 días.",
+      "scenarioContext": {
+        "numbers": { "dataset_tb": 10, "log_retention_days": 20, "min_duration_standard_ia_days": 30 },
+        "constraints": ["logs deleted after 20 days", "want cheaper than Standard"]
+      }
+    },
+    {
+      "difficulty": 0.3,
+      "tags": ["one-zone-ia", "durability"],
+      "questionText": "Una empresa genera thumbnails derivados de originales ya almacenados en S3 Standard. El proceso puede regenerar cualquier thumbnail en segundos. Buscan la clase más barata sin comprometer funcionalidad. ¿Cuál es?",
+      "options": [
+        "One Zone-IA — 20% más barato que Standard-IA; datos reproducibles toleran la pérdida de 1 AZ",
+        "Standard-IA — garantiza 3 AZ y es más seguro para cualquier dato",
+        "Glacier Instant — retrieval instantáneo al mismo coste que One Zone-IA",
+        "Reduced Redundancy Storage (RRS) — legacy pero barato"
+      ],
+      "correctIndex": 0,
+      "hint": "Si los datos se pueden regenerar, ¿necesitas multi-AZ?",
+      "explanation": "One Zone-IA guarda en 1 sola AZ y cuesta ~20% menos que Standard-IA. El único riesgo es perder los objetos si esa AZ falla — aceptable si puedes regenerar. Standard-IA es seguro pero más caro innecesariamente. Glacier Instant sale caro en este use case. RRS está deprecated.",
+      "explanationDeep": "One Zone-IA vs Standard-IA:\n- Availability: 99.5% vs 99.9%\n- Durability: 99.999999999% (11 nueves) — AMBAS. La diferencia es resiliencia a desastres de AZ, no durabilidad dentro de esa AZ.\n- Precio: ~20% menos en One Zone\n\nCasos canónicos para One Zone-IA:\n1. Thumbnails/transcodes regenerables\n2. Copias secundarias de datos primarios en otra región\n3. Resultados intermedios de pipelines ML que pueden recomputarse\n\nNO usar para: datos originales del usuario, backups únicos, datos de cumplimiento. Si pierdes la AZ, necesitas poder recrear.",
+      "keyInsight": "One Zone-IA = ahorras 20% a cambio de aceptar que una AZ caída borra tus datos. Solo para datos reproducibles.",
+      "scenarioContext": {
+        "constraints": ["derivable data", "can regenerate in seconds", "minimize cost"]
+      }
+    },
+    {
+      "difficulty": 0.35,
+      "tags": ["glacier-deep-archive", "compliance", "vault-lock"],
+      "questionText": "Un banco debe conservar registros de transacciones por 7 años cumpliendo SOX. El acceso esperado es casi nulo; cuando se requieren los datos, 12-24 horas es aceptable. ¿Qué combinación implementa el requisito al mínimo coste?",
+      "options": [
+        "S3 Glacier Deep Archive con Vault Lock + política WORM",
+        "S3 Standard con Object Lock en modo Governance",
+        "S3 Glacier Flexible con MFA Delete",
+        "S3 Intelligent-Tiering con auto-tiering a Deep Archive"
+      ],
+      "correctIndex": 0,
+      "hint": "Dos palabras: compliance inmutable + barato. ¿Qué combinación aparece como pareja en la documentación oficial de AWS para SOX/FINRA?",
+      "explanation": "Deep Archive es la clase más barata con retrieval 12-48h — coincide con la tolerancia. Vault Lock aplica políticas inmutables (WORM) que cumplen SOX/FINRA. Standard es ~30x más caro. Glacier Flexible es más caro que Deep Archive. Intelligent-Tiering cobra monitoreo y tarda hasta 180 días en llegar a archive.",
+      "explanationDeep": "Arquitectura canónica 'write-once, read-rarely, compliance':\n1. Bucket con Object Lock habilitado (solo al crear; no activable después).\n2. Storage class Glacier Deep Archive vía Lifecycle policy.\n3. Vault Lock policy bloqueada (policy shipped y sellada — ni root puede modificarla).\n4. Object Lock mode: Compliance (el más estricto — nadie, ni root, puede borrar antes del retention).\n\nCoste ~$0.00099/GB/mes vs Standard ~$0.023/GB — 23x menos. Retrieval Bulk (12h) gratis hasta x GB/mes, Standard (3-5h) y Expedited (<15min) tienen fee. Minimum storage: 180 días (relevante aquí porque retención es 7 años).\n\nIntelligent-Tiering NO es óptimo para este caso: cobra $0.0025 por cada 1000 objetos por mes solo por monitorear accesos. Para millones de objetos frios, eso es más caro que la diferencia entre tiers.",
+      "keyInsight": "Compliance + 7 años + ultra-barato = Deep Archive + Vault Lock en modo Compliance. Intelligent-Tiering cobra monitoreo que mata el ahorro en frío masivo.",
+      "scenarioContext": {
+        "constraints": ["7-year retention", "SOX compliance", "24h retrieval acceptable", "minimize cost"]
+      }
+    },
+    {
+      "difficulty": 0.4,
+      "tags": ["intelligent-tiering", "access-pattern"],
+      "questionText": "Un data lake tiene 500 TB con patrón de acceso impredecible: algunos objetos se leen diariamente, otros pasan meses sin uso. El equipo no quiere gestionar lifecycle rules manualmente. ¿Qué opción automatiza el coste?",
+      "options": [
+        "S3 Intelligent-Tiering — mueve objetos entre tiers según acceso sin retrieval fee",
+        "Lifecycle rule escalando Standard → Standard-IA → Glacier cada 30/90 días",
+        "S3 Analytics para generar recomendaciones y aplicarlas via Lambda mensualmente",
+        "S3 Storage Lens con alertas manuales cuando un objeto lleva 90 días sin acceso"
+      ],
+      "correctIndex": 0,
+      "hint": "Una sola clase resuelve 'no quiero gestionar lifecycle y el acceso es errático'. ¿Cuál?",
+      "explanation": "Intelligent-Tiering mueve objetos entre Frequent Access, Infrequent Access y tiers Archive sin retrieval fees (excepto Deep Archive) y sin lifecycle rules. Lifecycle rules manuales son rígidas y cobran retrieval en IA. S3 Analytics y Storage Lens generan insights pero no mueven datos automáticamente.",
+      "explanationDeep": "Intelligent-Tiering tiers (2024+):\n- Frequent Access (default)\n- Infrequent Access (30 días sin acceso) — mismo precio que Standard-IA pero sin retrieval fee\n- Archive Instant Access (90 días) — como Glacier Instant\n- Archive Access (opt-in, 90-730 días) — como Glacier Flexible\n- Deep Archive Access (opt-in, 180-730 días)\n\nCoste de monitoreo: $0.0025 por 1,000 objetos/mes. Objetos <128KB no se tierizan (se quedan en Frequent). Si tu data lake tiene millones de objetos <128KB, el monitoreo puede ser caro — alternativa: Standard con lifecycle agrupando por prefix.\n\nRegla rápida: pattern impredecible + objetos grandes = Intelligent-Tiering. Pattern conocido y estable = lifecycle manual es más barato.",
+      "keyInsight": "Intelligent-Tiering = el único tier que mueve automáticamente sin retrieval fee. Paga un pequeño coste de monitoreo pero elimina el riesgo de elegir la clase equivocada.",
+      "scenarioContext": {
+        "numbers": { "dataset_tb": 500, "access_pattern": "unpredictable" },
+        "constraints": ["no manual lifecycle rules", "mixed access patterns", "data lake"]
+      }
+    },
+    {
+      "difficulty": 0.55,
+      "tags": ["glacier-retrieval-tiers", "cost-retrieval"],
+      "questionText": "Un equipo legal necesita recuperar 2 TB de documentos archivados en Glacier Flexible para una auditoría en 48 horas. Quieren minimizar coste de retrieval. ¿Qué tier eligen?",
+      "options": [
+        "Bulk retrieval — entrega en 5-12 horas, el más barato ($0.0025/GB)",
+        "Standard retrieval — entrega en 3-5 horas, precio intermedio ($0.01/GB)",
+        "Expedited retrieval — entrega en 1-5 minutos, el más rápido pero caro ($0.03/GB)",
+        "Provisioned capacity — compra upfront para latencia garantizada"
+      ],
+      "correctIndex": 0,
+      "hint": "Tienes 48 horas de margen y quieres mínimo coste. ¿Qué retrieval tier encaja con ambos?",
+      "explanation": "Bulk retrieval entrega en 5-12 horas y cuesta ~$0.0025/GB (~$5 por 2TB) — muy por debajo del plazo de 48h y el más barato. Standard y Expedited son más rápidos pero innecesarios y más caros. Provisioned capacity solo tiene sentido para cargas continuas de Expedited.",
+      "explanationDeep": "Glacier Flexible retrieval tiers:\n| Tier | Tiempo | Coste/GB | Caso |\n|------|--------|----------|------|\n| Expedited | 1-5 min | ~$0.03 | Recuperación crítica pequeña |\n| Standard | 3-5 h | ~$0.01 | Default razonable |\n| Bulk | 5-12 h | ~$0.0025 | Grandes volúmenes sin urgencia |\n\nA 2TB:\n- Expedited: $60 + riesgo de throttling\n- Standard: $20\n- Bulk: $5\n\nAdemás: el retrieval en Glacier Instant es instantáneo pero el storage cuesta más (~$0.004/GB/mes vs Flexible ~$0.0036). La elección entre Glacier Instant y Flexible depende de si prefieres pagar más por storage (Instant) o más por retrieval (Flexible) — depende de frecuencia de acceso.\n\nDeep Archive tiene solo Standard (12h) y Bulk (48h), sin Expedited.",
+      "keyInsight": "Glacier retrieval: Bulk es 12x más barato que Expedited. Si tienes >5h de margen, siempre Bulk.",
+      "scenarioContext": {
+        "numbers": { "data_tb": 2, "deadline_hours": 48 },
+        "costTable": [
+          { "tier": "Expedited (1-5 min)", "cost_usd": 60 },
+          { "tier": "Standard (3-5 h)", "cost_usd": 20 },
+          { "tier": "Bulk (5-12 h)", "cost_usd": 5 }
+        ]
+      }
+    },
+    {
+      "difficulty": 0.6,
+      "tags": ["lifecycle-transitions", "cost-planning"],
+      "questionText": "Un equipo diseña lifecycle: objetos nuevos en Standard, tras 30 días a Standard-IA, tras 90 a Glacier Flexible, tras 365 a Deep Archive. Al revisar la factura, notan que las transiciones a IA cuestan casi tanto como el ahorro del primer mes. ¿Qué está pasando?",
+      "options": [
+        "Cada transición de objeto cobra ~$0.01 por 1,000 PUT; con millones de objetos pequeños, los cargos de transition superan el ahorro",
+        "Standard-IA cobra retrieval fee durante los primeros 30 días post-transición",
+        "Las transiciones entre storage classes duplican el storage temporalmente por 24h",
+        "Los tags se pierden al transicionar y se recalculan los costes desde cero"
+      ],
+      "correctIndex": 0,
+      "hint": "¿Qué cobra AWS por cada objeto que cambia de storage class, independiente de su tamaño?",
+      "explanation": "Lifecycle transitions tienen coste por objeto (~$0.01 por 1K requests para IA). Con millones de objetos pequeños, los fees de transición eclipsan el ahorro de storage. Objetos <128KB ni siquiera deberían transicionarse a IA — Standard es más barato considerando mínimo + transition fee.",
+      "explanationDeep": "Transition request costs (us-east-1 aprox):\n- Standard → Standard-IA: $0.01 / 1,000 objetos\n- Standard → Glacier Instant: $0.02 / 1,000\n- Standard → Glacier Flexible: $0.05 / 1,000\n- Standard → Deep Archive: $0.05 / 1,000\n\nEjemplo: 100M objetos de 50KB cada uno (~5 TB total):\n- Storage Standard: ~$115/mes\n- Storage Standard-IA: ~$60/mes (ahorro $55)\n- Transition cost: 100M / 1K × $0.01 = $1,000 ONE-TIME\n- Break-even: ~18 meses\n\nReglas:\n1. No transiciones objetos <128KB a IA/Glacier — no ahorras.\n2. Agrega objetos pequeños (S3 Batch, o concatenar en archives) antes de archivar.\n3. Haz el cálculo con el TCO a 12-24 meses, no con el delta mensual.\n4. Intelligent-Tiering es mejor cuando hay muchos objetos pequeños con acceso errático — evita el fee de transition manual.",
+      "keyInsight": "Lifecycle cobra por cada transición. Con millones de objetos pequeños, el transition fee se come el ahorro — Intelligent-Tiering o 'no muevas nada' puede ser más barato.",
+      "scenarioContext": {
+        "constraints": ["millions of small objects", "transitions seem expensive", "lifecycle active"]
+      }
+    },
+    {
+      "difficulty": 0.7,
+      "tags": ["cross-region", "mrap", "multi-region-access-point"],
+      "questionText": "Una app global lee/escribe S3 desde 5 regiones. Quieren latencia baja en todas, consistencia strong-read-after-write por región, y que los writes se propaguen a las otras regiones automáticamente. ¿Qué arquitectura lo implementa?",
+      "options": [
+        "Multi-Region Access Point (MRAP) + buckets en las 5 regiones + Cross-Region Replication bi-direccional",
+        "Un solo bucket multi-region con CloudFront como cache global",
+        "Un bucket por región sin replicación, con una Lambda@Edge que decide dónde escribir",
+        "S3 Transfer Acceleration apuntando a un único bucket en us-east-1"
+      ],
+      "correctIndex": 0,
+      "hint": "AWS lanzó un feature específico para 'un endpoint, múltiples buckets regionales, routing automático'. ¿Cuál?",
+      "explanation": "MRAP expone un global endpoint que rutea requests a la región más cercana con un bucket registrado. Combinado con CRR bi-direccional, los writes se propagan entre regiones. Un bucket 'multi-region' no existe — S3 es regional. CloudFront cachea reads pero no escribe. Transfer Acceleration solo acelera uploads a un bucket único.",
+      "explanationDeep": "Multi-Region Access Point:\n- Endpoint: `mrap-id.accesspoint.s3-global.amazonaws.com`.\n- Hasta 17 regiones.\n- Routing: basado en latencia + failover si una región falla.\n- Active-active: reads/writes en cualquier región, CRR propaga.\n\nConsistency: S3 siempre ofrece strong read-after-write POR BUCKET desde 2020. A través de regiones vía MRAP, reads en región A pueden no ver writes recientes de región B hasta que CRR termine (asíncrono, minutos). Si necesitas strong global consistency, S3 no lo da — usa DynamoDB Global Tables o Aurora Global DB.\n\nCoste MRAP: $0.0033 por 10K requests + data transfer MRAP $0.0025/GB.\n\nLimits: el bucket name en la región origen aparece en el URL del response — para abstraer por completo, combina con ALB/API Gateway frente al MRAP.",
+      "keyInsight": "MRAP = un endpoint global, buckets regionales, CRR como plano de replicación. Strong consistency solo dentro de cada región, no cross-region.",
+      "scenarioContext": {
+        "numbers": { "regions": 5 },
+        "constraints": ["global low latency", "cross-region consistency eventual OK", "auto-propagate writes"]
+      }
+    },
+    {
+      "difficulty": 0.75,
+      "tags": ["requester-pays", "data-sharing"],
+      "questionText": "Un equipo publica un dataset de 50 TB en S3 para que investigadores externos lo descarguen. No quieren pagar el egress de cada descarga — cada investigador debe cubrir su coste. ¿Qué configuración lo permite?",
+      "options": [
+        "Habilitar Requester Pays en el bucket — el solicitante autenticado paga el request y data transfer",
+        "Habilitar CloudFront con origin access identity y signed URLs pagadas por el usuario",
+        "Mover el dataset a un bucket público; AWS no cobra egress de buckets públicos",
+        "Usar S3 Transfer Acceleration con billing al downloader vía AWS Marketplace"
+      ],
+      "correctIndex": 0,
+      "hint": "AWS tiene una feature específica para 'yo pongo los datos, tú pagas la descarga'.",
+      "explanation": "Requester Pays transfiere el coste de request + data transfer a la cuenta del solicitante (que debe autenticarse con credenciales AWS). Buckets públicos cobran egress al dueño del bucket. CloudFront no transfiere facturación al usuario final. Transfer Acceleration no cambia quién paga.",
+      "explanationDeep": "Requester Pays:\n1. Activas la feature en el bucket (config o API).\n2. Cada request debe incluir el header `x-amz-request-payer: requester` (o `--request-payer` en CLI).\n3. El solicitante debe ser usuario AWS autenticado (no funciona con anonymous).\n4. AWS factura al solicitante: GET requests ($0.0004/1K) + data transfer ($0.09/GB out).\n\nCombinable con:\n- Bucket Policy: puedes restringir a ciertas cuentas autorizadas.\n- S3 Batch: para workflows de procesamiento que el consumer paga.\n\nNo combinable con:\n- Buckets públicos anónimos (requiere identidad AWS).\n- Static website hosting (el website endpoint no envía el header).\n- CloudFront (no propaga el header correctamente — rompe).\n\nCasos: datasets científicos (AWS Open Data), registros públicos, marketplaces de datos B2B.",
+      "keyInsight": "Requester Pays = el downloader autenticado paga egress. No funciona con acceso anónimo ni con CloudFront/website hosting.",
+      "scenarioContext": {
+        "numbers": { "dataset_tb": 50 },
+        "constraints": ["external researchers", "authenticated downloaders", "don't pay egress"]
+      }
+    }
+  ]
+}

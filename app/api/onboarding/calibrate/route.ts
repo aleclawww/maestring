@@ -12,7 +12,27 @@ const Schema = z.object({
   studyMinutesPerDay: z.number().int().min(5).max(240),
   background: Background,
   selfLevels: z.record(z.string(), z.number().int().min(0).max(4)),
+  diagnosticResults: z
+    .array(z.object({ domainSlug: z.string(), isCorrect: z.boolean() }))
+    .optional()
+    .default([]),
 })
+
+// Diagnostic signal beats self-perception. Each correct bumps the domain's
+// self_level +1; each wrong drops it -1. Clamped to [0,4]. Domains without a
+// diagnostic hit keep their self-reported value unchanged.
+function adjustSelfLevels(
+  selfLevels: Record<string, number>,
+  diagnostic: Array<{ domainSlug: string; isCorrect: boolean }>
+): Record<string, number> {
+  const out = { ...selfLevels }
+  for (const r of diagnostic) {
+    const current = out[r.domainSlug]
+    if (current === undefined) continue
+    out[r.domainSlug] = Math.max(0, Math.min(4, current + (r.isCorrect ? 1 : -1)))
+  }
+  return out
+}
 
 function derivePace(examTargetDate: string | null): 'sprint' | 'cruise' | 'unknown' {
   if (!examTargetDate) return 'unknown'
@@ -34,12 +54,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request', details: parsed.error.format() }, { status: 400 })
   }
 
-  const { certificationId, examTargetDate, studyMinutesPerDay, background, selfLevels } = parsed.data
+  const { certificationId, examTargetDate, studyMinutesPerDay, background, selfLevels, diagnosticResults } = parsed.data
   const supabase = createAdminClient()
+
+  const effectiveSelfLevels = adjustSelfLevels(selfLevels, diagnosticResults)
 
   const fingerprint = {
     background,
-    self_level_by_domain: selfLevels,
+    self_level_by_domain: effectiveSelfLevels,
+    self_level_self_reported: selfLevels,
+    diagnostic_results: diagnosticResults,
     study_pace: derivePace(examTargetDate),
     explanation_depth: deriveExplanationDepth(background),
     avg_session_length_min: studyMinutesPerDay,
@@ -66,7 +90,7 @@ export async function POST(req: NextRequest) {
   const { error: seedErr } = await supabase.rpc('seed_concept_states_from_self_rating' as any, {
     p_user_id: user.id,
     p_certification_id: certificationId,
-    p_self_levels: selfLevels,
+    p_self_levels: effectiveSelfLevels,
     p_concepts_per_domain: 5,
   })
 

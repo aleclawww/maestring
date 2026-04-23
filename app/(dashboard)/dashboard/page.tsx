@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('full_name, current_streak, total_xp, exam_target_date, onboarding_completed, exam_outcome')
+      .select('full_name, current_streak, total_xp, exam_target_date, onboarding_completed, exam_outcome, streak_freezes_available')
       .eq('id', user.id)
       .single(),
     supabase.rpc('get_user_stats', { p_user_id: user.id }),
@@ -39,8 +39,18 @@ export default async function DashboardPage() {
       .select('state, reps, lapses, concept_id, next_review_date')
       .eq('user_id', user.id),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    supabase.rpc('get_exam_readiness' as any, { p_user_id: user.id }),
+    supabase.rpc('get_exam_readiness_v2' as any, { p_user_id: user.id }),
   ])
+
+  // Auto-used freezes in the last 7 days — for the "saved your streak" toast.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: recentFreezes } = await supabase
+    .from('streak_freeze_log')
+    .select('missed_date, spent_at')
+    .eq('user_id', user.id)
+    .gte('spent_at', sevenDaysAgo)
+    .order('spent_at', { ascending: false })
+    .limit(3)
 
   const readiness = (readinessRows as ReadinessData[] | null)?.[0] ?? null
 
@@ -56,7 +66,7 @@ export default async function DashboardPage() {
       )
     : null
 
-  const firstName = profile?.full_name?.split(' ')[0] ?? 'Estudiante'
+  const firstName = profile?.full_name?.split(' ')[0] ?? 'Learner'
 
   // Pilar 7 — outcome capture: fecha de examen pasó y todavía no sabemos cómo
   // fue. Mostrar el banner por encima de todo (la decisión de hoy es esa).
@@ -72,12 +82,12 @@ export default async function DashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-text-primary">
-          Hola, {firstName} 👋
+          Hi, {firstName} 👋
         </h1>
         <p className="text-text-secondary mt-1">
           {daysToExam !== null && daysToExam > 0
-            ? `${daysToExam} días para tu examen. ¡Vamos con todo!`
-            : 'Continúa tu preparación para AWS SAA-C03.'}
+            ? `${daysToExam} days until your exam. Let's go!`
+            : 'Continue your AWS SAA-C03 prep.'}
         </p>
       </div>
 
@@ -94,17 +104,17 @@ export default async function DashboardPage() {
         <CardContent className="flex items-center justify-between">
           <div>
             <p className="text-sm text-text-muted mb-1">
-              {dueCount > 0 ? `${dueCount} conceptos listos para repasar` : 'No hay repasos pendientes'}
+              {dueCount > 0 ? `${dueCount} concepts ready to review` : 'No pending reviews'}
             </p>
             <h2 className="text-lg font-bold text-text-primary">
-              {dueCount > 0 ? '¿Listo para estudiar?' : '¡Al día con tus repasos!'}
+              {dueCount > 0 ? 'Ready to study?' : 'All caught up!'}
             </h2>
           </div>
           <Link
             href="/study"
             className="btn-primary"
           >
-            {dueCount > 0 ? `Estudiar (${dueCount})` : 'Explorar más'}
+            {dueCount > 0 ? `Study (${dueCount})` : 'Explore more'}
           </Link>
         </CardContent>
       </Card>
@@ -113,25 +123,26 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           {
-            label: 'Racha actual',
-            value: `${profile?.current_streak ?? 0} días`,
+            label: 'Current streak',
+            value: `${profile?.current_streak ?? 0} days`,
             icon: '🔥',
             color: 'text-warning',
+            subtitle: `🧊 ${profile?.streak_freezes_available ?? 0} freezes`,
           },
           {
-            label: 'XP Total',
+            label: 'Total XP',
             value: (profile?.total_xp ?? 0).toLocaleString(),
             icon: '⭐',
             color: 'text-primary',
           },
           {
-            label: 'Precisión',
+            label: 'Accuracy',
             value: `${Math.round((statsRow?.avg_accuracy ?? 0) * 100)}%`,
             icon: '🎯',
             color: 'text-success',
           },
           {
-            label: 'Conceptos dominados',
+            label: 'Concepts mastered',
             value: (statsRow?.concepts_mastered ?? 0).toString(),
             icon: '🏆',
             color: 'text-success',
@@ -144,18 +155,41 @@ export default async function DashboardPage() {
                 <span className={`text-xl font-bold ${stat.color}`}>{stat.value}</span>
               </div>
               <p className="text-xs text-text-muted">{stat.label}</p>
+              {'subtitle' in stat && stat.subtitle && (
+                <p className="text-[11px] text-text-muted mt-0.5">{stat.subtitle}</p>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {recentFreezes && recentFreezes.length > 0 && (
+        <Card className="border-sky-500/30 bg-sky-500/5">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">🧊</span>
+              <div>
+                <p className="text-sm font-semibold text-sky-400">
+                  A freeze saved your streak
+                </p>
+                <p className="text-xs text-text-muted mt-0.5">
+                  {recentFreezes.length === 1
+                    ? `We covered ${new Date(recentFreezes[0]!.missed_date).toLocaleDateString()} automatically.`
+                    : `We covered ${recentFreezes.length} days you missed. You have ${profile?.streak_freezes_available ?? 0} freezes left.`}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Sessions */}
       {recentSessions && recentSessions.length > 0 && (
         <Card>
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
-            <h2 className="text-sm font-semibold text-text-primary">Sesiones recientes</h2>
+            <h2 className="text-sm font-semibold text-text-primary">Recent sessions</h2>
             <Link href="/progress" className="text-xs text-primary hover:underline">
-              Ver todas
+              View all
             </Link>
           </div>
           <div className="divide-y divide-border">
@@ -169,12 +203,12 @@ export default async function DashboardPage() {
                   <div>
                     <p className="text-sm font-medium text-text-primary capitalize">
                       {session.mode === 'discovery'
-                        ? 'Descubrimiento'
+                        ? 'Discovery'
                         : session.mode === 'review'
-                        ? 'Repaso'
+                        ? 'Review'
                         : session.mode === 'intensive'
-                        ? 'Intensivo'
-                        : 'Mantenimiento'}
+                        ? 'Intensive'
+                        : 'Maintenance'}
                     </p>
                     <p className="text-xs text-text-muted">
                       {formatRelativeTime(session.created_at)}
@@ -185,7 +219,7 @@ export default async function DashboardPage() {
                       {accuracy}%
                     </Badge>
                     <span className="text-xs text-text-muted">
-                      {session.concepts_studied} preguntas
+                      {session.concepts_studied} questions
                     </span>
                   </div>
                 </div>
@@ -195,12 +229,35 @@ export default async function DashboardPage() {
         </Card>
       )}
 
+      {/* Referral nudge — only shown once the user has completed at least
+          one session, so brand-new signups aren't asked to share yet. */}
+      {(recentSessions?.length ?? 0) > 0 && (
+        <Link href="/referrals">
+          <Card hover className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardContent className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎁</span>
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">
+                    Invite a friend — you both get 7 days of Pro
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    Your unique link is waiting in Referrals.
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs text-primary">View →</span>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {[
-          { href: '/study', label: 'Sesión rápida', desc: 'Repasa conceptos vencidos', icon: '⚡' },
-          { href: '/exam', label: 'Simulacro', desc: '65 preguntas, 130 min', icon: '📝' },
-          { href: '/documents', label: 'Subir PDF', desc: 'Convierte tus notas en preguntas', icon: '📤' },
+          { href: '/study', label: 'Quick session', desc: 'Review due concepts', icon: '⚡' },
+          { href: '/exam', label: 'Mock exam', desc: '65 questions, 130 min', icon: '📝' },
+          { href: '/documents', label: 'Upload PDF', desc: 'Turn your notes into questions', icon: '📤' },
         ].map(action => (
           <Link key={action.href} href={action.href}>
             <Card hover className="h-full">

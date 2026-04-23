@@ -4,8 +4,8 @@ import LoginForm from './LoginForm'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Iniciar Sesión',
-  description: 'Accede a Maestring para continuar tu preparación para AWS.',
+  title: 'Sign in',
+  description: 'Sign in to Maestring to continue your AWS prep.',
 }
 
 export default async function LoginPage({
@@ -23,14 +23,14 @@ export default async function LoginPage({
   }
 
   const errorMessages: Record<string, string> = {
-    'invalid_credentials': 'Email o contraseña incorrectos.',
-    'email_not_confirmed': 'Confirma tu email antes de iniciar sesión.',
-    'too_many_requests': 'Demasiados intentos. Espera unos minutos.',
-    'user_not_found': 'No existe una cuenta con ese email.',
+    'invalid_credentials': 'Incorrect email or password.',
+    'email_not_confirmed': 'Please confirm your email before signing in.',
+    'too_many_requests': 'Too many attempts. Try again in a few minutes.',
+    'user_not_found': 'No account exists for that email.',
   }
 
   const errorMessage = searchParams.error
-    ? (errorMessages[searchParams.error] ?? 'Error al iniciar sesión. Inténtalo de nuevo.')
+    ? (errorMessages[searchParams.error] ?? 'Sign-in error. Please try again.')
     : null
 
   return (
@@ -41,9 +41,9 @@ export default async function LoginPage({
           <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
             <span className="text-2xl">🎓</span>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary">Bienvenido de vuelta</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Welcome back</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Continúa tu preparación para AWS
+            Continue your AWS prep
           </p>
         </div>
 
@@ -64,9 +64,9 @@ export default async function LoginPage({
         <LoginForm nextUrl={searchParams.next} />
 
         <p className="mt-6 text-center text-sm text-text-muted">
-          ¿No tienes cuenta?{' '}
+          Don't have an account?{' '}
           <a href="/signup" className="text-primary hover:underline">
-            Regístrate gratis
+            Sign up free
           </a>
         </p>
       </div>

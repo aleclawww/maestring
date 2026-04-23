@@ -56,9 +56,10 @@ sender_name = "Maestring"
 enable_signup = false
 
 [auth.external.google]
-enabled = false
-client_id = ""
-secret = ""
+enabled = true
+client_id = "913873717891-v3tuj4qgnc92b87soe4im6gq1lp2d14q.apps.googleusercontent.com"
+secret = "env(GOOGLE_OAUTH_CLIENT_SECRET)"
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
 
 [analytics]
 enabled = false
