@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { notifyRedisOutage } from "./outage-alert";
 
 let redis: Redis | null = null;
 
@@ -30,7 +31,8 @@ export async function cacheGetOrSet<T>(
     const fresh = await fetcher();
     await r.setex(key, ttlSeconds, JSON.stringify(fresh));
     return fresh;
-  } catch {
+  } catch (err) {
+    notifyRedisOutage("cache:getOrSet", err, { key });
     return fetcher();
   }
 }
@@ -40,7 +42,8 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   if (!r) return null;
   try {
     return await r.get<T>(key);
-  } catch {
+  } catch (err) {
+    notifyRedisOutage("cache:get", err, { key });
     return null;
   }
 }
@@ -50,8 +53,8 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds = 300): P
   if (!r) return;
   try {
     await r.setex(key, ttlSeconds, JSON.stringify(value));
-  } catch {
-    // fail silently
+  } catch (err) {
+    notifyRedisOutage("cache:set", err, { key });
   }
 }
 
@@ -60,8 +63,8 @@ export async function cacheDelete(key: string): Promise<void> {
   if (!r) return;
   try {
     await r.del(key);
-  } catch {
-    // fail silently
+  } catch (err) {
+    notifyRedisOutage("cache:del", err, { key });
   }
 }
 
@@ -77,7 +80,7 @@ export async function cacheDeletePattern(pattern: string): Promise<void> {
         await r.del(...keys);
       }
     } while (cursor !== 0);
-  } catch {
-    // fail silently
+  } catch (err) {
+    notifyRedisOutage("cache:delPattern", err, { pattern });
   }
 }
