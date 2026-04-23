@@ -8,18 +8,12 @@ vi.mock('@/lib/supabase/admin', () => ({
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), info: vi.fn() } }))
 
 type ChainState = {
-  existing: { id: string } | null
-  insertError: { message: string } | null
+  insertError: { message: string; code?: string } | null
 }
 
 function mountSupabase(state: ChainState) {
   mockFrom.mockImplementation(() => {
     return {
-      select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({ data: state.existing, error: null }),
-        }),
-      }),
       insert: async () => ({ data: null, error: state.insertError }),
     }
   })
@@ -33,7 +27,7 @@ beforeEach(() => {
 
 describe('lib/magic-links — createMagicLink + verifyMagicLink', () => {
   it('round-trips a valid token', async () => {
-    mountSupabase({ existing: null, insertError: null })
+    mountSupabase({ insertError: null })
     const { createMagicLink, verifyMagicLink } = await import('@/lib/magic-links')
     const url = await createMagicLink('user-1', 'a@b.com', 'resume')
     expect(url).toMatch(/^https:\/\/example\.test\/api\/magic\?token=/)
@@ -45,8 +39,10 @@ describe('lib/magic-links — createMagicLink + verifyMagicLink', () => {
     expect(payload.jti).toMatch(/[0-9a-f-]{36}/)
   })
 
-  it('rejects reused JTI', async () => {
-    mountSupabase({ existing: { id: 'prev' }, insertError: null })
+  it('rejects reused JTI — surfaced as 23505 unique violation on insert', async () => {
+    mountSupabase({
+      insertError: { message: 'duplicate key value violates unique constraint', code: '23505' },
+    })
     const { createMagicLink, verifyMagicLink } = await import('@/lib/magic-links')
     const url = await createMagicLink('user-1', 'a@b.com')
     const token = url.split('token=')[1]!
@@ -54,7 +50,7 @@ describe('lib/magic-links — createMagicLink + verifyMagicLink', () => {
   })
 
   it('rejects tampered token', async () => {
-    mountSupabase({ existing: null, insertError: null })
+    mountSupabase({ insertError: null })
     const { createMagicLink, verifyMagicLink } = await import('@/lib/magic-links')
     const url = await createMagicLink('user-1', 'a@b.com')
     const token = url.split('token=')[1]!
@@ -62,11 +58,24 @@ describe('lib/magic-links — createMagicLink + verifyMagicLink', () => {
     await expect(verifyMagicLink(tampered)).rejects.toThrow()
   })
 
-  it('bubbles up insert failure', async () => {
-    mountSupabase({ existing: null, insertError: { message: 'db down' } })
+  it('bubbles up non-23505 insert failures as "validate token" error', async () => {
+    mountSupabase({ insertError: { message: 'db down', code: '08006' } })
     const { createMagicLink, verifyMagicLink } = await import('@/lib/magic-links')
     const url = await createMagicLink('user-1', 'a@b.com')
     const token = url.split('token=')[1]!
     await expect(verifyMagicLink(token)).rejects.toThrow(/validate token/i)
+  })
+
+  it('does not pre-select magic_link_uses — relies on DB unique constraint', async () => {
+    // Regression guard: the old check-then-insert pattern had a race window
+    // between the select and the insert. If someone adds the pre-select
+    // back, the mock below has no select() method and the call will throw
+    // "mockFrom(...).select is not a function" — surfacing it in tests.
+    mountSupabase({ insertError: null })
+    const { createMagicLink, verifyMagicLink } = await import('@/lib/magic-links')
+    const url = await createMagicLink('user-1', 'a@b.com')
+    const token = url.split('token=')[1]!
+    const payload = await verifyMagicLink(token)
+    expect(payload.userId).toBe('user-1')
   })
 })

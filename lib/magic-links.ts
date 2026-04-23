@@ -46,21 +46,21 @@ export async function verifyMagicLink(token: string): Promise<MagicLinkPayload> 
     throw new Error("Invalid token payload");
   }
 
-  // Deduplicate: check if JTI already used
+  // Deduplicate via insert-first against the DB unique constraint on jti
+  // (migration 005). The previous check-then-insert had a narrow race where
+  // two concurrent verifies of the same token both passed the pre-select
+  // and then one of them saw a 23505 unique-violation — which surfaced as
+  // the generic "Failed to validate token" rather than "already used".
+  //
+  // Now we skip the pre-select entirely: the DB is the source of truth, and
+  // the race loser gets translated to the correct "Token already used".
   const supabase = createAdminClient();
-  const { data: existing } = await supabase
-    .from("magic_link_uses")
-    .select("id")
-    .eq("jti", jti)
-    .maybeSingle();
-
-  if (existing) {
-    throw new Error("Token already used");
-  }
-
-  // Mark as used
   const { error } = await supabase.from("magic_link_uses").insert({ jti, user_id: userId });
   if (error) {
+    if ((error as { code?: string }).code === "23505") {
+      // Unique-violation → JTI was already consumed by a prior call.
+      throw new Error("Token already used");
+    }
     logger.error({ error, jti }, "Failed to record magic link use");
     throw new Error("Failed to validate token");
   }
