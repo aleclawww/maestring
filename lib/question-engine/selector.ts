@@ -104,10 +104,21 @@ export async function buildStudyQueue(
   const supabase = createClient()
   const admin = createAdminClient()
 
-  const { data: states } = await supabase
+  const { data: states, error: statesErr } = await supabase
     .from('user_concept_states')
     .select('*, concepts!inner(id, slug, name, domain_id, difficulty)')
     .eq('user_id', userId)
+
+  if (statesErr) {
+    // Failing open to [] silently mis-classifies the user as brand new: FSRS
+    // picks zero review items, maintenance mode returns empty, hybrid mode
+    // collapses to discovery-only. Logging warn lets us attribute spikes in
+    // "new-user-looking" sessions to auth/RLS issues instead of real signups.
+    logger.warn(
+      { err: statesErr, userId, mode, certificationId },
+      'Failed to load user_concept_states — selector falling back to empty state (review slots will be empty)'
+    )
+  }
 
   const existingStates = (states ?? []) as Array<UserConceptState & {
     concepts: { id: string; slug: string; name: string; domain_id: string; difficulty: number }
@@ -122,7 +133,19 @@ export async function buildStudyQueue(
     .eq('certification_id', certificationId)
     .eq('is_active', true)
   if (domainId) conceptsQuery = conceptsQuery.eq('domain_id', domainId)
-  const { data: allConcepts } = await conceptsQuery
+  const { data: allConcepts, error: conceptsErr } = await conceptsQuery
+
+  if (conceptsErr) {
+    // Same failure mode as states above, but for the new-concept pool:
+    // discovery mode returns [], hybrid mode drops its discovery slots, and
+    // the domain interleaver has no enrichment data. The caller sees a
+    // shorter-than-expected queue rather than a 500, so we need the log
+    // trail.
+    logger.warn(
+      { err: conceptsErr, userId, mode, certificationId, domainId },
+      'Failed to load concepts pool — discovery/hybrid slots will be empty'
+    )
+  }
 
   const newConcepts = (allConcepts ?? []).filter(c => !existingConceptIds.has(c.id))
 
