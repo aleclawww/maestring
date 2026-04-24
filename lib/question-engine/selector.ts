@@ -306,13 +306,26 @@ export async function ensureConceptStatesExist(
 
 export async function getRecentMistakes(userId: string, limit = 5): Promise<string[]> {
   const supabase = createClient()
-  const { data } = await supabase
+  // Silent failure here collapsed into "no recent mistakes" — the question
+  // prompt builder (lib/question-engine/prompts.ts formatQuestionPrompt) got
+  // an empty list and generated without any mistake-aware personalization.
+  // Across a session that's a measurable quality hit: the LLM stops
+  // steering away from the user's known weak spots. Log warn so
+  // personalization regressions can be correlated with DB/RLS incidents
+  // rather than blamed on prompt drift.
+  const { data, error } = await supabase
     .from('question_attempts')
     .select('concept_id, concepts!inner(name)')
     .eq('user_id', userId)
     .eq('is_correct', false)
     .order('created_at', { ascending: false })
     .limit(limit)
+  if (error) {
+    logger.warn(
+      { err: error, userId, limit },
+      'getRecentMistakes: failed to read question_attempts — personalization degraded (prompts will skip recent-mistakes steering)'
+    )
+  }
 
   return ((data ?? []) as unknown as Array<{ concepts: { name: string } | Array<{ name: string }> | null }>)
     .map(a => Array.isArray(a.concepts) ? a.concepts[0]?.name : a.concepts?.name)
