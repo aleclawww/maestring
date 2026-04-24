@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Section, Table, Stat, formatDateTime } from '@/components/admin/Stat'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,13 +31,35 @@ export default async function AdminCronRunsPage({
   if (searchParams?.status) query = query.eq('status', searchParams.status)
   if (searchParams?.name) query = query.eq('name', searchParams.name)
 
-  const { data: rows } = await query
+  // This page IS the cron ops ledger. Silent failure here collapses an
+  // RLS/DB read error into the same "No cron runs yet." empty state as a
+  // legitimately empty ledger — operators then can't tell a broken query
+  // from a real outage, and the very dashboard built to catch silent cron
+  // failures itself fails silently. Log warn so the failure mode leaves a
+  // trail outside this page.
+  const { data: rows, error: rowsErr } = await query
+  if (rowsErr) {
+    logger.warn(
+      { err: rowsErr, filterStatus: searchParams?.status, filterName: searchParams?.name },
+      'admin/cron: failed to read cron_runs list — ledger will render empty, ops can\'t distinguish from a real no-runs state'
+    )
+  }
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: summary } = await supabase
+  // Summary powers the headline Stat cards (Last 7d OK/Failed/Skipped) and
+  // the per-cron chips. A silent failure here shows 0/0/0 across the top
+  // bar, which reads as "cron hasn't run in 7 days" — exactly the alarm
+  // shape that would trigger a false pager call.
+  const { data: summary, error: summaryErr } = await supabase
     .from('cron_runs')
     .select('name, status')
     .gte('started_at', sevenDaysAgo)
+  if (summaryErr) {
+    logger.warn(
+      { err: summaryErr },
+      'admin/cron: failed to read 7d summary — Stat cards will show 0s, looks like cron is silent when it may not be'
+    )
+  }
 
   const byStatus = { ok: 0, failed: 0, skipped: 0, running: 0 }
   const byName: Record<string, { ok: number; failed: number }> = {}
