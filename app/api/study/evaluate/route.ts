@@ -32,12 +32,16 @@ export async function POST(req: NextRequest) {
   const { sessionId, questionId, conceptId, selectedIndex, timeTakenMs, firstAttemptCorrect } = parsed.data;
   const supabase = createAdminClient();
 
-  const [
-    { data: session },
-    { data: question },
-    { data: conceptState },
-    { data: concept },
-  ] = await Promise.all([
+  // All four reads were collapsing `{ data, error }` into just `{ data }`, so
+  // an RLS/DB read error on `session` or `question` fell through to the
+  // `if (!X)` guards below and returned a 404 that LIED about the cause:
+  // the client got "Session not found" / "Question not found" when the
+  // real issue was a transient read failure. On retry the client hits the
+  // same failure, and any "my study session is broken" ticket is
+  // untraceable from logs. Fix by capturing the full result objects,
+  // distinguishing read errors (500 with a truthful error code) from
+  // genuinely-missing rows (404 as before), and logging loudly.
+  const [sessionRes, questionRes, conceptStateRes, conceptRes] = await Promise.all([
     supabase
       .from("study_sessions")
       .select("id, questions_answered, correct_answers, mode")
@@ -52,6 +56,44 @@ export async function POST(req: NextRequest) {
     supabase.from("user_concept_states").select("*").eq("user_id", user.id).eq("concept_id", conceptId).maybeSingle(),
     supabase.from("concepts").select("id, name, difficulty").eq("id", conceptId).maybeSingle(),
   ]);
+
+  if (sessionRes.error) {
+    logger.error(
+      { err: sessionRes.error, userId: user.id, sessionId },
+      "evaluate: study_sessions read failed — returning 500 (was previously collapsed to a misleading 404 'Session not found')"
+    );
+    return NextResponse.json({ error: "session_read_failed" }, { status: 500 });
+  }
+  if (questionRes.error) {
+    logger.error(
+      { err: questionRes.error, userId: user.id, questionId },
+      "evaluate: questions read failed — returning 500 (was previously collapsed to a misleading 404 'Question not found')"
+    );
+    return NextResponse.json({ error: "question_read_failed" }, { status: 500 });
+  }
+  // These two are soft degrades: the evaluate path tolerates missing
+  // conceptState (skips FSRS advance) and missing concept (difficulty
+  // defaults to 0.5 in answerToRating). Silent failure used to make a
+  // broken read look like a first-attempt-on-new-concept, which quietly
+  // shifted FSRS behavior. Warn so a spike in these matters to ops but
+  // doesn't 500 the user's answer.
+  if (conceptStateRes.error) {
+    logger.warn(
+      { err: conceptStateRes.error, userId: user.id, conceptId, sessionId },
+      "evaluate: user_concept_states read failed — FSRS advance will be skipped for this attempt, schedule may drift"
+    );
+  }
+  if (conceptRes.error) {
+    logger.warn(
+      { err: conceptRes.error, userId: user.id, conceptId },
+      "evaluate: concepts read failed — difficulty defaults to 0.5, FSRS rating slightly miscalibrated for this attempt"
+    );
+  }
+
+  const session = sessionRes.data;
+  const question = questionRes.data;
+  const conceptState = conceptStateRes.data;
+  const concept = conceptRes.data;
 
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
   if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
