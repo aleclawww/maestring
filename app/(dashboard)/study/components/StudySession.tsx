@@ -96,13 +96,37 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
     modeRef.current = mode
 
     try {
-      // Create session
+      // Create session.
+      //
+      // Previously `const { data: session } = await sessionRes.json()` skipped
+      // the `res.ok` check entirely, so a 429 (rate limit) or 500 (DB write
+      // failed, RLS drift) from /api/study/session produced `session = undefined`.
+      // The next line `sessionIdRef.current = session.id` threw TypeError into
+      // the outer `catch { dispatch({ type: 'RESET' }) }` → user was dumped
+      // back to setup with no clue why the Start button "did nothing". Log the
+      // real status + body so ops can tell transient infra from a repeatable
+      // bug, and keep the RESET so the UI doesn't hang.
       const sessionRes = await fetch('/api/study/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode }),
       })
+      if (!sessionRes.ok) {
+        const j = (await sessionRes.json().catch(() => ({}))) as { error?: string; message?: string }
+        console.error('StudySession startSession failed', {
+          status: sessionRes.status,
+          msg: j.message ?? j.error ?? `HTTP ${sessionRes.status}`,
+          mode,
+        })
+        dispatch({ type: 'RESET' })
+        return
+      }
       const { data: session } = await sessionRes.json()
+      if (!session?.id) {
+        console.error('StudySession startSession returned malformed body', { mode })
+        dispatch({ type: 'RESET' })
+        return
+      }
       sessionIdRef.current = session.id
       answersRef.current = []
       track({ name: 'study_session_started', properties: { mode, session_id: session.id } })
@@ -140,7 +164,36 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
         dispatch({ type: 'QUOTA_EXCEEDED', used, quota })
         return
       }
+      // Previously only the 402 quota branch was handled; every other non-2xx
+      // (429 rate limit, 500 LLM/generator failure, 502/504 platform blips)
+      // fell through to `const { data: question } = await res.json()`, which
+      // either destructured `question = undefined` and downstream reducers
+      // shoved `undefined` into the QuestionCard (blank options, no text) or
+      // threw JSON.parse on a non-JSON error page and RESET via the catch
+      // with no diagnostics. Users saw "the session just stopped" or a broken
+      // question card. Surface the real status + body.
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        console.error('StudySession loadNextQuestion failed', {
+          status: res.status,
+          msg: j.message ?? j.error ?? `HTTP ${res.status}`,
+          mode,
+          questionNumber,
+          sessionId: sessionIdRef.current,
+        })
+        dispatch({ type: 'RESET' })
+        return
+      }
       const { data: question } = await res.json()
+      if (!question?.id || !Array.isArray(question.options)) {
+        console.error('StudySession loadNextQuestion returned malformed body', {
+          mode,
+          questionNumber,
+          sessionId: sessionIdRef.current,
+        })
+        dispatch({ type: 'RESET' })
+        return
+      }
       dispatch({ type: 'QUESTION_LOADED', question, questionNumber, total: SESSION_LENGTH })
     } catch (err) {
       console.error('Failed to load question', err)
