@@ -12,11 +12,27 @@ export async function DELETE() {
 
   // 1. Cancel Stripe subscription if any (so we don't keep billing)
   try {
-    const { data: sub } = await admin
+    // PostgREST returns { data, error } on DB failures rather than throwing,
+    // so the surrounding try/catch only catches true exceptions. Without
+    // destructuring the error, a silent failure on this lookup masks the
+    // subscription row and we skip the Stripe cancel entirely — user
+    // deletes the account but Stripe keeps charging the card on file every
+    // renewal. THIS is the PR #34 money-leak: raise subErr so the log trail
+    // ties missed cancels back to real DB failures. We don't throw, because
+    // after a successful GDPR delete we must not 5xx; best we can do is
+    // surface the signal.
+    const { data: sub, error: subErr } = await admin
       .from("subscriptions")
       .select("stripe_subscription_id, stripe_customer_id")
       .eq("user_id", userId)
       .single();
+
+    if (subErr) {
+      logger.error(
+        { err: subErr, userId },
+        "Failed to look up subscription on account delete — Stripe cancel may be skipped; manual reconciliation required"
+      );
+    }
 
     if (sub?.stripe_subscription_id) {
       const stripe = getStripe();

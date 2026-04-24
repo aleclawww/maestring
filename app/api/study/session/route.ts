@@ -109,11 +109,24 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Calculate stats
-  const { data: attempts } = await supabase
+  const { data: attempts, error: attemptsErr } = await supabase
     .from("question_attempts")
     .select("is_correct, time_taken_ms")
     .eq("session_id", sessionId)
     .eq("user_id", user.id);
+
+  if (attemptsErr) {
+    // Silent failure here wrote 0/0/0 to study_sessions.questions_answered,
+    // correct_answers, total_time_seconds for the entire session — and the
+    // streak bump trigger fires on status='completed' regardless, so the
+    // user got credit but their lifetime stats quietly rolled back. Log
+    // error so support tickets about "my streak says I studied but my
+    // stats don't" have a trail to correlate against.
+    logger.error(
+      { err: attemptsErr, sessionId, userId: user.id },
+      "Failed to aggregate question_attempts for session complete — stats will be zero"
+    );
+  }
 
   const total = attempts?.length ?? 0;
   const correct = attempts?.filter((a) => a.is_correct).length ?? 0;

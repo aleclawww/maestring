@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/logger'
 import { cn } from '@/lib/utils'
 
 const PASSING_SCORE = 720
@@ -20,11 +21,24 @@ export default async function ExamResultsPage({ params }: { params: { id: string
   const user = await requireAuthenticatedUser()
   const supabase = createAdminClient()
 
-  const { data: session } = await supabase
+  const { data: session, error: sessionErr } = await supabase
     .from('exam_sessions')
     .select('id, user_id, status, total_questions, correct_count, scaled_score, passed, by_domain, started_at, submitted_at')
     .eq('id', params.id)
     .single()
+
+  if (sessionErr) {
+    // Silent failure here rendered the exact same notFound() page as a real
+    // "session doesn't exist" miss — a student whose real session got hidden
+    // by an RLS hiccup saw "not found" and filed a support ticket instead
+    // of getting the 500 that would have paged us. Log error so ops can
+    // tell a genuine 404 apart from a stealth read failure; we still 404
+    // the UI so the user isn't stuck on a broken results screen.
+    logger.error(
+      { err: sessionErr, sessionId: params.id, userId: user.id },
+      'exam/results: failed to read exam_sessions — rendering notFound so user escapes the page'
+    )
+  }
 
   if (!session || session.user_id !== user.id) notFound()
   if (session.status === 'in_progress') redirect(`/exam/${params.id}`)
