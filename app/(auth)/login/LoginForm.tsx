@@ -58,16 +58,44 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
   }
 
   async function handleGoogleOAuth() {
+    // Guard: if the user double-clicks (or the button re-mounts), we'd call
+    // signInWithOAuth twice. The second call overwrites the PKCE code_verifier
+    // cookie from the first flow — when Google redirects back with the code
+    // from flow #1, the verifier in the cookie is from flow #2 and
+    // exchangeCodeForSession fails with "invalid_grant". This was the single
+    // most reported cause of "worked once, now says Sign-in error".
+    if (googleLoading) return
     setGoogleLoading(true)
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${nextUrl ?? '/dashboard'}`,
-        queryParams: { access_type: 'offline', prompt: 'consent' },
-      },
-    })
-    if (err) {
-      setError(err.message)
+    setError(null)
+
+    // Before starting a new OAuth flow, sign out any half-baked session from a
+    // previous attempt. Without this, a stale `sb-*-auth-token` can confuse
+    // Supabase's getUser during the callback, and the user lands in a weird
+    // "logged in but onboarding incomplete" state.
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch {
+      // Best effort — if signOut fails we still proceed; a fresh flow will
+      // overwrite most cookies anyway.
+    }
+
+    try {
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${nextUrl ?? '/dashboard'}`,
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      })
+      if (err) {
+        console.error('LoginForm signInWithOAuth failed', err)
+        setError(err.message || 'Could not start Google sign-in. Try again.')
+        setGoogleLoading(false)
+      }
+      // On success we redirect away — don't reset loading here.
+    } catch (err) {
+      console.error('LoginForm signInWithOAuth threw', err)
+      setError('Network error while starting Google sign-in. Check your connection.')
       setGoogleLoading(false)
     }
   }
