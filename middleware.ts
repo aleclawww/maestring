@@ -49,6 +49,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Internal server-to-server calls (document processing trigger, admin-
+  // initiated retries, etc.) use the same CRON_SECRET bearer that Vercel
+  // Cron uses.  Without this bypass, the internal fetch() that upload/
+  // retry routes make to /api/documents/[id]/process has no session
+  // cookie, so middleware 307-redirects it to /login.  fetch() follows the
+  // redirect by default, gets back 200 HTML from the login page, and since
+  // res.ok is true the caller never detects the failure — the document is
+  // silently left in processing_status='pending' forever.
+  //
+  // Route handlers that accept CRON_SECRET perform their own auth check
+  // (e.g. documents/[id]/process checks the bearer before doing anything),
+  // so passing through here is defense-in-depth, not a bypass.
+  if (
+    pathname.startsWith('/api/') &&
+    process.env['CRON_SECRET'] &&
+    request.headers.get('authorization') === `Bearer ${process.env['CRON_SECRET']}`
+  ) {
+    return NextResponse.next()
+  }
+
   // Refresh Supabase session
   const { response, user } = await updateSession(request)
 
