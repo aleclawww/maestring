@@ -28,25 +28,46 @@ export function TestimonialForm({ existing, defaultName }: { existing: Existing;
     e.preventDefault()
     setSending(true)
     setError(null)
-    const res = await fetch('/api/testimonials', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        displayName: displayName.trim(),
-        role: role.trim() || null,
-        content: content.trim(),
-        stars,
-        examPassed,
-        scaledScore: scaledScore ? Number(scaledScore) : undefined,
-      }),
-    })
-    const json = await res.json()
-    setSending(false)
-    if (!res.ok) {
-      setError(json.message ?? json.error ?? 'Error')
-      return
+    // Previously this function had neither a try/catch nor a `res.json()`
+    // parse guard. Two independent bugs:
+    //   1. A network error (offline, DNS blip, tab backgrounded too long)
+    //      threw out of `await fetch(...)` into nothing — the promise
+    //      rejected, `setSending(false)` never ran, and the submit button
+    //      stayed stuck on "Submitting…" until the user reloaded. The user
+    //      retyped their testimonial thinking it didn't save; sometimes it
+    //      did, producing duplicate rows moderators had to dedupe.
+    //   2. Even on a successful network call, `const json = await res.json()`
+    //      threw if the response wasn't JSON — e.g. an HTML error page from
+    //      Vercel's edge during a deploy, or a 502 from the Node runtime.
+    //      Same hang, same duplicates.
+    // Both failure modes now surface an inline error and release the
+    // Submitting state so the form is usable again.
+    try {
+      const res = await fetch('/api/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: displayName.trim(),
+          role: role.trim() || null,
+          content: content.trim(),
+          stars,
+          examPassed,
+          scaledScore: scaledScore ? Number(scaledScore) : undefined,
+        }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
+      if (!res.ok) {
+        console.error('TestimonialForm submit failed', { status: res.status, body: json })
+        setError(json.message ?? json.error ?? `Couldn't submit (HTTP ${res.status}). Please try again.`)
+        return
+      }
+      setDone('pending')
+    } catch (err) {
+      console.error('TestimonialForm submit network error', err)
+      setError("Network error. Check your connection and try again.")
+    } finally {
+      setSending(false)
     }
-    setDone('pending')
   }
 
   if (done) {
