@@ -230,11 +230,32 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
     if (nextNumber > SESSION_LENGTH) {
       // Complete session
       const correct = answersRef.current.filter(a => a.isCorrect).length
-      await fetch('/api/study/session', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sessionIdRef.current }),
-      })
+      // Silent swallow previously: a bare `await fetch(...)` discarded both
+      // non-2xx responses and network errors. A 500 from the PATCH left the
+      // session `status='active'` on the server while the client happily
+      // showed the summary. The user saw "Great job, 8/10 correct!" while
+      // their streak never bumped (the bump_user_streak trigger fires on
+      // `status='completed'`), stats never saved, and next dashboard visit
+      // showed a phantom "Resume active session" prompt for a session they
+      // thought was done. Log loudly and still show the summary — the user
+      // genuinely finished the 10 questions, so resetting the UI to setup
+      // would feel worse than showing slightly-stale stats. Diagnostics now
+      // have something to correlate "my streak didn't update" reports.
+      try {
+        const completeRes = await fetch('/api/study/session', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sessionIdRef.current }),
+        })
+        if (!completeRes.ok) {
+          console.error(
+            'StudySession complete PATCH failed',
+            { status: completeRes.status, sessionId: sessionIdRef.current }
+          )
+        }
+      } catch (err) {
+        console.error('StudySession complete PATCH network error', err)
+      }
       track({
         name: 'study_session_completed',
         properties: {
@@ -378,11 +399,30 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           current={state.questionNumber}
           total={state.total}
           onAbandon={async () => {
-            await fetch('/api/study/session', {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sessionId: sessionIdRef.current }),
-            })
+            // Silent swallow previously: a failed DELETE (500, network
+            // error) left `status='active'` server-side, even though the
+            // client UI reset to setup. POST /api/study/session auto-
+            // abandons prior active sessions on the next start so this is
+            // self-healing, but in the meantime the zombie shows up in
+            // history and the "why did Abandon silently fail" signal was
+            // invisible. Log + continue — a failed abandon shouldn't block
+            // the user from leaving the study flow, but ops should still
+            // see the failure.
+            try {
+              const abandonRes = await fetch('/api/study/session', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: sessionIdRef.current }),
+              })
+              if (!abandonRes.ok) {
+                console.warn(
+                  'StudySession abandon DELETE failed',
+                  { status: abandonRes.status, sessionId: sessionIdRef.current }
+                )
+              }
+            } catch (err) {
+              console.warn('StudySession abandon DELETE network error', err)
+            }
             dispatch({ type: 'RESET' })
           }}
         />
