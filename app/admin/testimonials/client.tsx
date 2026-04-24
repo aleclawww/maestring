@@ -32,27 +32,45 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
 
   async function patch(id: string, body: Record<string, unknown>) {
     setErr(null)
-    const res = await fetch(`/api/admin/testimonials/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setErr(j.error ?? 'Failed')
-      return
+    // Previously: no try/catch. A rejected fetch (network blip, Vercel 502
+    // during a deploy) bubbled as an unhandled promise rejection and the
+    // admin saw nothing — the card silently stayed in its old status while
+    // moderator believed the approve/reject had landed. Surface it inline.
+    try {
+      const res = await fetch(`/api/admin/testimonials/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+      if (!res.ok) {
+        console.error('TestimonialsAdmin patch failed', { status: res.status, body: j, id })
+        setErr(j.message ?? j.error ?? `Failed (HTTP ${res.status})`)
+        return
+      }
+      startTransition(() => router.refresh())
+    } catch (err) {
+      console.error('TestimonialsAdmin patch network error', { err, id })
+      setErr('Network error. Check your connection and try again.')
     }
-    startTransition(() => router.refresh())
   }
 
   async function remove(id: string) {
     if (!confirm('¿Eliminar definitivamente?')) return
-    const res = await fetch(`/api/admin/testimonials/${id}`, { method: 'DELETE' })
-    if (!res.ok) {
-      setErr('Failed to delete')
-      return
+    setErr(null)
+    try {
+      const res = await fetch(`/api/admin/testimonials/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        console.error('TestimonialsAdmin delete failed', { status: res.status, body: j, id })
+        setErr(j.message ?? j.error ?? `Failed to delete (HTTP ${res.status})`)
+        return
+      }
+      startTransition(() => router.refresh())
+    } catch (err) {
+      console.error('TestimonialsAdmin delete network error', { err, id })
+      setErr('Network error. Check your connection and try again.')
     }
-    startTransition(() => router.refresh())
   }
 
   return (

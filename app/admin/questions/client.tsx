@@ -46,24 +46,44 @@ export function QuestionsAdminClient({
 
   async function review(id: string, body: Record<string, unknown>) {
     setErr(null)
-    const res = await fetch(`/api/admin/questions/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setErr(j.message ?? j.error ?? 'Failed')
-      return
+    // Previously: no try/catch. A rejected fetch bubbled as an unhandled
+    // promise rejection and the moderator saw nothing — dangerous for a
+    // review queue where "I approved that" is load-bearing.
+    try {
+      const res = await fetch(`/api/admin/questions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+      if (!res.ok) {
+        console.error('QuestionsAdmin review failed', { status: res.status, body: j, id })
+        setErr(j.message ?? j.error ?? `Failed (HTTP ${res.status})`)
+        return
+      }
+      startTransition(() => router.refresh())
+    } catch (err) {
+      console.error('QuestionsAdmin review network error', { err, id })
+      setErr('Network error. Check your connection and try again.')
     }
-    startTransition(() => router.refresh())
   }
 
   async function remove(id: string) {
     if (!confirm('¿Eliminar definitivamente?')) return
-    const res = await fetch(`/api/admin/questions/${id}`, { method: 'DELETE' })
-    if (!res.ok) return setErr('Failed to delete')
-    startTransition(() => router.refresh())
+    setErr(null)
+    try {
+      const res = await fetch(`/api/admin/questions/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        console.error('QuestionsAdmin delete failed', { status: res.status, body: j, id })
+        setErr(j.message ?? j.error ?? `Failed to delete (HTTP ${res.status})`)
+        return
+      }
+      startTransition(() => router.refresh())
+    } catch (err) {
+      console.error('QuestionsAdmin delete network error', { err, id })
+      setErr('Network error. Check your connection and try again.')
+    }
   }
 
   return (
@@ -328,16 +348,40 @@ function BatchGenerate({ concepts, onDone }: { concepts: Concept[]; onDone: () =
     setRunning(true)
     setErr(null)
     setResult(null)
-    const res = await fetch('/api/admin/questions/generate-batch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conceptId, count }),
-    })
-    const j = await res.json().catch(() => ({}))
-    setRunning(false)
-    if (!res.ok) return setErr(j.message ?? j.error ?? 'Failed')
-    setResult({ generated: j.generated, failed: j.failed })
-    onDone()
+    // Previously: no try/catch and setRunning(false) only fired on the happy
+    // path. A rejected fetch (Anthropic timeout, Vercel Node function
+    // cold-start 502, network blip) left the "Generando…" spinner stuck
+    // forever, the button disabled, and the admin had to hard-refresh.
+    // Because this path also hits Claude Haiku for N concepts, cold-start
+    // timeouts are the most common failure — exactly when visible feedback
+    // matters most. Move setRunning(false) into finally and wrap in
+    // try/catch so a rejection surfaces a real message and the form is
+    // usable again.
+    try {
+      const res = await fetch('/api/admin/questions/generate-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conceptId, count }),
+      })
+      const j = (await res.json().catch(() => ({}))) as {
+        generated?: number
+        failed?: number
+        error?: string
+        message?: string
+      }
+      if (!res.ok) {
+        console.error('BatchGenerate failed', { status: res.status, body: j, conceptId, count })
+        setErr(j.message ?? j.error ?? `Failed (HTTP ${res.status})`)
+        return
+      }
+      setResult({ generated: j.generated ?? 0, failed: j.failed ?? 0 })
+      onDone()
+    } catch (err) {
+      console.error('BatchGenerate network error', { err, conceptId, count })
+      setErr('Network error while generating. Check your connection and try again.')
+    } finally {
+      setRunning(false)
+    }
   }
 
   // Sort concepts: thinnest pools first — they're the ones that need topping up.
