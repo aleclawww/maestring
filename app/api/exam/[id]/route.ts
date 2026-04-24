@@ -11,9 +11,25 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     .from("exam_sessions")
     .select("id, user_id, status, started_at, deadline_at, submitted_at, total_questions, correct_count, scaled_score, passed, by_domain")
     .eq("id", params.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !session || session.user_id !== user.id) {
+  // Previously this collapsed three different conditions into a single 404:
+  //   (a) DB read error (RLS/PG blip),
+  //   (b) genuinely-missing row (real 404),
+  //   (c) row belongs to a different user (404 for opacity).
+  // A DB error mid-exam looked identical to "your exam was deleted" — the
+  // user would lose trust that their submitted-but-not-yet-loaded test
+  // still existed. Distinguish (a) with a truthful 500 + logger.error, and
+  // keep (b)/(c) collapsed into 404 for security (don't leak existence of
+  // other users' sessions).
+  if (error) {
+    logger.error(
+      { err: error, sessionId: params.id, userId: user.id },
+      "Failed to load exam_sessions row — returning 500 (was previously collapsed to a misleading 404 'Not found')"
+    );
+    return NextResponse.json({ error: "Failed to load exam session" }, { status: 500 });
+  }
+  if (!session || session.user_id !== user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
