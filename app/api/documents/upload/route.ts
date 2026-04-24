@@ -62,22 +62,75 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create document record" }, { status: 500 });
   }
 
-  // Trigger background processing (fire-and-forget)
-  // In production this would enqueue a job; here we call inline
-  void triggerProcessing(doc.id);
+  // Trigger background processing (fire-and-forget).
+  // In production this would enqueue a job; here we call inline.
+  // The fetch must stay fire-and-forget so the upload response isn't blocked
+  // on the ingestion pipeline, but the trigger itself was silent in two ways:
+  //   (1) `await fetch(...)` with no `res.ok` check, so a 500 from the
+  //       /process endpoint looked identical to success;
+  //   (2) `catch {}` discarded the error object — only `docId` was logged,
+  //       with no stack, no status, no url.
+  // Either failure left the document stuck at processing_status='pending'
+  // forever. Flip the row to 'failed' with an error_message so the user
+  // sees a real state in the Documents UI and can retry/delete instead of
+  // waiting on a job that will never run.
+  void triggerProcessing(supabase, doc.id);
 
   logger.info({ docId: doc.id, userId: user.id, filename }, "Document uploaded");
   return NextResponse.json({ document: doc }, { status: 201 });
 }
 
-async function triggerProcessing(docId: string) {
+async function triggerProcessing(
+  supabase: ReturnType<typeof createAdminClient>,
+  docId: string
+) {
   const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000";
+  const url = `${baseUrl}/api/documents/${docId}/process`;
   try {
-    await fetch(`${baseUrl}/api/documents/${docId}/process`, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env["CRON_SECRET"]}` },
     });
-  } catch {
-    logger.error({ docId }, "Failed to trigger document processing");
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => "");
+      logger.error(
+        { docId, status: res.status, body: bodyText.slice(0, 500), url },
+        "Document processing trigger returned non-2xx — flipping doc to failed"
+      );
+      await markDocumentFailed(
+        supabase,
+        docId,
+        `Processing trigger returned HTTP ${res.status}`
+      );
+    }
+  } catch (err) {
+    logger.error(
+      { err, docId, url },
+      "Failed to trigger document processing — flipping doc to failed"
+    );
+    await markDocumentFailed(
+      supabase,
+      docId,
+      err instanceof Error ? err.message : "Network error starting processing"
+    );
+  }
+}
+
+async function markDocumentFailed(
+  supabase: ReturnType<typeof createAdminClient>,
+  docId: string,
+  errorMessage: string
+) {
+  const { error: updateErr } = await supabase
+    .from("user_documents")
+    .update({ processing_status: "failed", error_message: errorMessage })
+    .eq("id", docId);
+  if (updateErr) {
+    // Last-resort: if we can't even mark the doc failed, log but don't
+    // throw — we're already in a background path the caller can't see.
+    logger.error(
+      { err: updateErr, docId },
+      "Could not flip document to failed status after trigger failure — doc will remain stuck in pending"
+    );
   }
 }
