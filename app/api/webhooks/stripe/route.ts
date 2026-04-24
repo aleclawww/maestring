@@ -47,11 +47,24 @@ export async function POST(req: NextRequest) {
     // let Stripe's retry re-run the handler.
     const isDuplicate = (insertErr as { code?: string }).code === "23505";
     if (isDuplicate) {
-      const { data: existing } = await supabase
+      // Idempotency lookup: decides skip-vs-rerun for a duplicate delivery.
+      // Silent failure here made every ambiguous duplicate fall into the
+      // "previously-failed" path — handlers run again (idempotent, so safe)
+      // but we lost the log signal that tells us if we're genuinely retrying
+      // a stuck event or failing to check its state. Log the error so ops
+      // can distinguish "Stripe hammering us with duplicates" from "our RLS
+      // policy is breaking the idempotency read".
+      const { data: existing, error: existingErr } = await supabase
         .from("stripe_events")
         .select("processed_at")
         .eq("id", event.id)
         .maybeSingle();
+      if (existingErr) {
+        logger.warn(
+          { err: existingErr, eventId: event.id, type: event.type },
+          "Failed to read stripe_events row to decide duplicate handling — falling through to re-run path"
+        );
+      }
       if (existing?.processed_at) {
         logger.info({ eventId: event.id, type: event.type }, "Stripe event already processed — skipping");
         return NextResponse.json({ received: true, duplicate: true });

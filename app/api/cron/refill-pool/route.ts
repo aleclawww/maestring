@@ -31,11 +31,24 @@ export async function GET(req: NextRequest) {
     let failed = 0;
 
     for (const t of targets) {
-      const { data: concept } = await supabase
+      // Silent failure here masked a DB read error as "concept has no slug"
+      // and the loop `continue`'d — the pool for that concept never refilled
+      // but the cron still reported `status: 'ok'`, so the alert on "stuck
+      // depleted pool" never fired. Log warn so depletion spikes get
+      // attributed to DB/RLS issues rather than bad upstream data.
+      const { data: concept, error: conceptErr } = await supabase
         .from("concepts")
         .select("slug")
         .eq("id", t.concept_id)
         .maybeSingle();
+      if (conceptErr) {
+        logger.warn(
+          { err: conceptErr, conceptId: t.concept_id },
+          "Refill-pool: failed to read concept slug — skipping this concept, pool stays depleted"
+        );
+        failed++;
+        continue;
+      }
       if (!concept?.slug) continue;
 
       for (let i = 0; i < QUESTIONS_PER_REFILL; i++) {
