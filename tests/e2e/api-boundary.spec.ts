@@ -25,13 +25,20 @@ test.describe('@smoke api boundary', () => {
     expect(res.status()).toBeLessThan(500)
   })
 
+  // Vercel Cron invokes with GET (vercel.json). Test both methods so a future
+  // route handler that drops GET silently regresses production instead of CI.
   test('GET /api/cron/cleanup without bearer → 401', async ({ request }) => {
+    const res = await request.get('/api/cron/cleanup', { maxRedirects: 0 })
+    expect(res.status()).toBe(401)
+  })
+
+  test('POST /api/cron/cleanup without bearer → 401', async ({ request }) => {
     const res = await request.post('/api/cron/cleanup', { maxRedirects: 0 })
     expect(res.status()).toBe(401)
   })
 
   test('GET /api/cron/cleanup with wrong bearer → 401', async ({ request }) => {
-    const res = await request.post('/api/cron/cleanup', {
+    const res = await request.get('/api/cron/cleanup', {
       headers: { authorization: 'Bearer not-the-real-secret' },
       maxRedirects: 0,
     })
