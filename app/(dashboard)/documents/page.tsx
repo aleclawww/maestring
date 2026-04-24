@@ -26,8 +26,15 @@ export default function DocumentsPage() {
       setUploadError('Only PDF files are accepted.')
       return
     }
-    if (file.size > 100 * 1024 * 1024) {
-      setUploadError("File can't exceed 100MB.")
+    // Server enforces 50 MB (see app/api/documents/upload/route.ts
+    // MAX_FILE_SIZE). The old 100 MB client limit meant a 60 MB upload
+    // happily passed this guard, hit the server, got rejected with "File
+    // too large (max 50 MB)", then the old catch-all swallowed that
+    // server message and showed a generic "Error uploading the file.
+    // Try again." — so the user retried the same 60 MB file forever.
+    // Align the client limit and match the server's humanized size.
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadError("File can't exceed 50 MB.")
       return
     }
 
@@ -43,11 +50,27 @@ export default function DocumentsPage() {
         body: formData,
       })
 
-      if (!res.ok) throw new Error('Upload failed')
+      // Previously: `if (!res.ok) throw new Error('Upload failed')` threw
+      // into the bare `catch {}` which set a generic "Error uploading the
+      // file. Try again." — completely discarding the server's structured
+      // error (rate-limit 429 "Upload limit reached (10 per hour)",
+      // 400 "Only PDF files are supported", 400 "File too large",
+      // 500 "Upload failed", 500 "Failed to create document record").
+      // A rate-limited user kept retrying because the UI never surfaced
+      // "wait an hour" — the actionable message was sitting right there
+      // in the response body. Parse the body and prefer the server's
+      // message over our generic fallback.
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        setUploadError(j.message ?? j.error ?? `Upload failed (HTTP ${res.status}). Please try again.`)
+        return
+      }
+
       const { data } = await res.json()
       setDocuments(prev => [data, ...prev])
-    } catch {
-      setUploadError('Error uploading the file. Try again.')
+    } catch (err) {
+      console.error('Documents upload network error', err)
+      setUploadError('Network error while uploading. Check your connection and try again.')
     } finally {
       setUploading(false)
     }
@@ -90,7 +113,7 @@ export default function DocumentsPage() {
         <p className="text-sm font-medium text-text-primary mb-1">
           {uploading ? 'Uploading...' : 'Drag your PDF here or click to browse'}
         </p>
-        <p className="text-xs text-text-muted">PDF up to 100MB</p>
+        <p className="text-xs text-text-muted">PDF up to 50 MB</p>
         <input
           ref={fileInputRef}
           type="file"
