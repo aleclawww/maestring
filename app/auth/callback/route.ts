@@ -56,13 +56,26 @@ export async function GET(request: NextRequest) {
       // Fire welcome email exactly once. The UPDATE uses `is('welcome_email_sent_at', null)`
       // so two concurrent callbacks won't both send — whichever wins the write sends.
       if (profile && !profile.welcome_email_sent_at && data.user.email) {
-        const { data: claimed } = await supabase
+        // Silent failure on the claim read collapsed to `claimed = null` →
+        // the `if (claimed)` branch at L67 is skipped and the welcome email
+        // is not sent. On the NEXT login, the read of welcome_email_sent_at
+        // still shows the timestamp we wrote above, so the outer guard also
+        // skips — the user is now permanently stuck without a welcome
+        // email. Log error so "I never got a welcome email" tickets have a
+        // correlating row and ops can force-resend.
+        const { data: claimed, error: claimErr } = await supabase
           .from('profiles')
           .update({ welcome_email_sent_at: new Date().toISOString() })
           .eq('id', data.user.id)
           .is('welcome_email_sent_at', null)
           .select('id')
           .maybeSingle()
+        if (claimErr) {
+          logger.error(
+            { err: claimErr, userId: data.user.id },
+            'Welcome email claim read failed — write may have succeeded; user may be stuck without welcome email'
+          )
+        }
 
         if (claimed) {
           const firstName = profile.full_name?.trim().split(/\s+/)[0] ?? 'there'
