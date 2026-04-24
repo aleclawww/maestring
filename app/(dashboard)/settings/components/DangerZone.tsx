@@ -61,20 +61,33 @@ export function DangerZone({ email }: DangerZoneProps) {
   async function handleExportData() {
     setExportMessage(null)
     try {
-      // Trigger GDPR export. Previously this `await res.json()` destructured
-      // `{ message }` without checking `res.ok`, so a 500 with `{ error: ... }`
-      // would still fire the "You will receive your data" alert — user walks
-      // away believing the export is in-flight when the request never left
-      // the server.
+      // GDPR Art. 20 data portability export.
+      // The API returns a JSON file attachment — we download it client-side
+      // via a Blob URL so the user gets the file without a page navigation.
+      // On error (non-2xx) we parse the JSON body for an error message and
+      // surface it inline — no more silent 404 from a missing route or
+      // cryptic "Failed to fetch" on a network blip.
       const res = await fetch('/api/account/export', { method: 'POST' })
-      const j = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
       if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
         setExportMessage(
-          j.error || `Export failed (HTTP ${res.status}). Please try again.`
+          j.message ?? j.error ?? `Export failed (HTTP ${res.status}). Please try again.`
         )
         return
       }
-      setExportMessage(j.message ?? 'You will receive your data by email within 24-48 hours.')
+      // Success — stream body to a temporary Blob URL and click-download it.
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const disposition = res.headers.get('content-disposition') ?? ''
+      const filenameMatch = disposition.match(/filename="([^"]+)"/)
+      a.href = url
+      a.download = filenameMatch?.[1] ?? 'maestring-data.json'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setExportMessage('✓ Your data file has been downloaded.')
     } catch (err) {
       console.error('DangerZone handleExportData threw', err)
       setExportMessage(err instanceof Error ? err.message : 'Export failed. Please try again.')
