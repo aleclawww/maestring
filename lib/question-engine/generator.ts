@@ -62,13 +62,24 @@ export async function generateQuestion(
   const mode = req.mode ?? 'review'
   const conceptId = req.conceptId ?? null
 
-  // Check cache for existing questions to avoid duplicates
-  const { data: existingQuestions } = await supabase
+  // Check cache for existing questions to avoid duplicates. Silent failure
+  // here fell back to `existingQuestions = undefined`, the similarity check at
+  // L127 short-circuits (`if (existingQuestions)`) and we generate without
+  // dedup. Every cron run of refill-pool with a broken read goes straight to
+  // Haiku — a measurable LLM cost blind spot. Log warn so cost spikes get
+  // tied to DB/RLS incidents rather than blamed on the model.
+  const { data: existingQuestions, error: cacheErr } = await supabase
     .from('questions')
     .select('id, question_text, options, correct_index, explanation, difficulty, question_type')
     .eq('is_active', true)
     .contains('question_text', [concept.name])
     .limit(5)
+  if (cacheErr) {
+    logger.warn(
+      { err: cacheErr, conceptSlug: req.conceptSlug, conceptId },
+      'generateQuestion: dedup cache read failed — generating without dedup (expect LLM cost spike)'
+    )
+  }
 
   const prompt = formatQuestionPrompt(
     concept,

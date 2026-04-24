@@ -239,17 +239,42 @@ export async function ensureConceptStatesExist(
 ): Promise<void> {
   const admin = createAdminClient()
 
-  const { data: concepts } = await admin
+  // Silent failure on the concepts read masked as "no concepts for this cert
+  // → return early" and the caller (study/session POST, onboarding fallback)
+  // happily continued with zero seeding. Downstream: selector returns an empty
+  // queue, StudySession renders "You have 0 due concepts", user churns. Throw
+  // so the caller surfaces a real 5xx and we can see the failure in logs and
+  // the cron_runs ledger.
+  const { data: concepts, error: conceptsErr } = await admin
     .from('concepts')
     .select('id')
     .eq('certification_id', certificationId)
     .eq('is_active', true)
+  if (conceptsErr) {
+    logger.error(
+      { err: conceptsErr, userId, certificationId },
+      'ensureConceptStatesExist: failed to read concepts — aborting seeding'
+    )
+    throw new Error(`Failed to read concepts for seeding: ${conceptsErr.message ?? 'unknown error'}`)
+  }
   if (!concepts?.length) return
 
-  const { data: existing } = await admin
+  // Silent failure on the existing-states read was benign-ish — the missing
+  // diff would fall back to "seed everything" and the INSERT at L267 would
+  // throw on the unique (user_id, concept_id) constraint collision. But we
+  // were eating a DB read signal and turning it into a wasted insert + noisy
+  // downstream error. Log warn and continue with `existing = []` so the
+  // collision path still catches genuine schema/RLS breakage.
+  const { data: existing, error: existingErr } = await admin
     .from('user_concept_states')
     .select('concept_id')
     .eq('user_id', userId)
+  if (existingErr) {
+    logger.warn(
+      { err: existingErr, userId, certificationId },
+      'ensureConceptStatesExist: failed to read existing user_concept_states — seeding without dedup'
+    )
+  }
 
   const existingIds = new Set((existing ?? []).map(s => s.concept_id))
   const missing = concepts.filter(c => !existingIds.has(c.id))

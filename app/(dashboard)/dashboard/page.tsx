@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { formatRelativeTime } from '@/lib/utils'
 import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import { OutcomeCaptureBanner } from '@/components/dashboard/OutcomeCaptureBanner'
+import { logger } from '@/lib/logger'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Dashboard' }
@@ -43,14 +44,25 @@ export default async function DashboardPage() {
   ])
 
   // Auto-used freezes in the last 7 days — for the "saved your streak" toast.
+  // Silent failure here suppressed the toast entirely: the dashboard renders
+  // as if nothing happened, the user never learns their streak was saved, and
+  // the freezes_available counter silently drops. Cosmetic, but it matters
+  // for the retention loop — log warn so support can correlate "my streak
+  // counter dropped and I saw no toast" reports.
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: recentFreezes } = await supabase
+  const { data: recentFreezes, error: freezesErr } = await supabase
     .from('streak_freeze_log')
     .select('missed_date, spent_at')
     .eq('user_id', user.id)
     .gte('spent_at', sevenDaysAgo)
     .order('spent_at', { ascending: false })
     .limit(3)
+  if (freezesErr) {
+    logger.warn(
+      { err: freezesErr, userId: user.id },
+      'dashboard: failed to read recent streak freezes — toast suppressed'
+    )
+  }
 
   const readiness = (readinessRows as ReadinessData[] | null)?.[0] ?? null
 
