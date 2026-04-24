@@ -8,10 +8,15 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
--- handle_new_user() trigger on auth.users fails inside pg_prove because the
--- security-definer function's pinned search_path can't resolve gen_random_bytes.
--- Bypass ALL triggers for the duration of this test (replica role). Rollback
--- at the end restores the session.
+-- Bypass ALL triggers for the duration of this test (replica role). We want
+-- to insert synthetic auth.users rows without the handle_new_user trigger
+-- also writing to profiles / organizations — that would pollute the fixture
+-- and make assertions about "B can't see A's rows" ambiguous. The trigger
+-- itself is covered separately by handle_new_user.test.sql.
+-- (Previously this also worked around migration 033's search_path bug where
+-- gen_random_bytes wasn't resolvable — migration 034 fixed that, so the
+-- bypass is now purely a fixture-isolation concern.)
+-- Rollback at the end restores the session.
 set session_replication_role = replica;
 
 select plan(19);
