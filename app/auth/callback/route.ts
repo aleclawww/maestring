@@ -100,11 +100,39 @@ export async function GET(request: NextRequest) {
 
     {
       // Fetch onboarding + welcome-email state in one round trip.
-      const { data: profile, error: profileErr } = await supabase
+      let { data: profile, error: profileErr } = await supabase
         .from('profiles')
         .select('onboarding_completed, welcome_email_sent_at, full_name, exam_date')
         .eq('id', data.user.id)
         .single()
+
+      // Self-heal: migration 033 hardened handle_new_user() so a failing
+      // sub-INSERT no longer rolls back auth.users. The flip side is that
+      // a user can land here with no profile row (or missing org/sub). If
+      // we don't find a profile, call the idempotent bootstrap RPC and
+      // re-fetch. Without this the user would ping-pong between
+      // dashboard/onboarding on every login because downstream queries
+      // assume the profile exists.
+      if (!profile || profileErr) {
+        const { error: healErr } = await supabase.rpc('ensure_user_bootstrapped', {
+          p_user_id: data.user.id,
+        })
+        if (healErr) {
+          logger.error(
+            { err: healErr, userId: data.user.id },
+            'ensure_user_bootstrapped RPC failed after missing profile on OAuth callback'
+          )
+          captureApiException(healErr, { route: '/auth/callback', userId: data.user.id })
+        } else {
+          const retry = await supabase
+            .from('profiles')
+            .select('onboarding_completed, welcome_email_sent_at, full_name, exam_date')
+            .eq('id', data.user.id)
+            .single()
+          profile = retry.data
+          profileErr = retry.error
+        }
+      }
 
       if (profileErr) {
         // Without profile state we can't decide the onboarding redirect
@@ -113,7 +141,7 @@ export async function GET(request: NextRequest) {
         // login — the user still lands somewhere valid (safeNext).
         logger.warn(
           { err: profileErr, userId: data.user.id },
-          'Failed to load profile after OAuth code exchange — onboarding redirect and welcome email will be skipped'
+          'Failed to load profile after OAuth code exchange + self-heal — onboarding redirect and welcome email will be skipped'
         )
       }
 
