@@ -23,13 +23,34 @@ export function SubscriptionSettings({
   cancelAtPeriodEnd,
 }: SubscriptionSettingsProps) {
   const [loading, setLoading] = useState(false)
+  const [portalError, setPortalError] = useState<string | null>(null)
 
   async function handlePortal() {
     setLoading(true)
-    const res = await fetch('/api/stripe/portal', { method: 'POST' })
-    const { url } = await res.json()
-    if (url) window.location.href = url
-    setLoading(false)
+    setPortalError(null)
+    // Previously this treated any response as success: it destructured
+    // `url` from `await res.json()` and only redirected `if (url)`, so a
+    // 401/500/network failure silently reset the loading state and the
+    // user saw nothing happen after clicking "Manage subscription".
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' })
+      const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; message?: string }
+      if (!res.ok || !body.url) {
+        console.error('SubscriptionSettings portal failed', { status: res.status, body })
+        setPortalError(
+          body.message ??
+            body.error ??
+            `Couldn't open the billing portal (HTTP ${res.status}). Please try again.`
+        )
+        setLoading(false)
+        return
+      }
+      window.location.href = body.url
+    } catch (err) {
+      console.error('SubscriptionSettings portal network error', err)
+      setPortalError("Network error. Couldn't open the billing portal — please try again.")
+      setLoading(false)
+    }
   }
 
   return (
@@ -68,15 +89,22 @@ export function SubscriptionSettings({
           ✨ Upgrade to Pro
         </UpgradeButton>
       ) : stripeCustomerId ? (
-        <Button
-          onClick={handlePortal}
-          loading={loading}
-          loadingText="Opening portal..."
-          variant="outline"
-          className="mt-4 w-full"
-        >
-          Manage subscription
-        </Button>
+        <>
+          <Button
+            onClick={handlePortal}
+            loading={loading}
+            loadingText="Opening portal..."
+            variant="outline"
+            className="mt-4 w-full"
+          >
+            Manage subscription
+          </Button>
+          {portalError && (
+            <p className="mt-2 text-xs text-danger" role="alert">
+              {portalError}
+            </p>
+          )}
+        </>
       ) : null}
     </section>
   )

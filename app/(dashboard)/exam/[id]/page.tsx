@@ -40,34 +40,67 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
   const [now, setNow] = useState(() => Date.now())
   const [submitting, setSubmitting] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [answerError, setAnswerError] = useState<string | null>(null)
   const submittedRef = useRef(false)
 
   const submitExam = useCallback(async () => {
     if (submittedRef.current) return
     submittedRef.current = true
     setSubmitting(true)
-    await fetch(`/api/exam/${params.id}/submit`, { method: 'POST' })
+    setSubmitError(null)
+    // Previously this was a fire-and-forget `await fetch(...)` with no `res.ok`
+    // check, so a 500 from the submit endpoint navigated the user to the
+    // results page anyway — making them think their exam was graded when it
+    // was actually still `in_progress` on the server.
+    try {
+      const res = await fetch(`/api/exam/${params.id}/submit`, { method: 'POST' })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        const msg =
+          (j as { error?: string; message?: string })?.message ??
+          (j as { error?: string; message?: string })?.error ??
+          `Couldn't submit (HTTP ${res.status}). Please try again.`
+        console.error('ExamRunner submit failed', { status: res.status, body: j })
+        setSubmitError(msg)
+        submittedRef.current = false
+        setSubmitting(false)
+        return
+      }
+    } catch (err) {
+      console.error('ExamRunner submit network error', err)
+      setSubmitError("Network error. Your exam was not submitted — please try again.")
+      submittedRef.current = false
+      setSubmitting(false)
+      return
+    }
     router.push(`/exam/${params.id}/results`)
   }, [params.id, router])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const res = await fetch(`/api/exam/${params.id}`)
-      const json = await res.json()
-      if (cancelled) return
-      if (!res.ok) {
-        setLoadError(json.error ?? "Couldn't load")
-        return
+      try {
+        const res = await fetch(`/api/exam/${params.id}`)
+        if (cancelled) return
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setLoadError((json as { error?: string })?.error ?? `Couldn't load (HTTP ${res.status})`)
+          return
+        }
+        if (json.data.session.status !== 'in_progress') {
+          router.replace(`/exam/${params.id}/results`)
+          return
+        }
+        setSession(json.data.session)
+        setItems(json.data.items)
+        const firstUnanswered = json.data.items.findIndex((it: ExamItem) => it.user_answer_index === null)
+        setCurrentIdx(firstUnanswered === -1 ? 0 : firstUnanswered)
+      } catch (err) {
+        if (cancelled) return
+        console.error('ExamRunner load network error', err)
+        setLoadError("Network error. Couldn't load the exam — please refresh.")
       }
-      if (json.data.session.status !== 'in_progress') {
-        router.replace(`/exam/${params.id}/results`)
-        return
-      }
-      setSession(json.data.session)
-      setItems(json.data.items)
-      const firstUnanswered = json.data.items.findIndex((it: ExamItem) => it.user_answer_index === null)
-      setCurrentIdx(firstUnanswered === -1 ? 0 : firstUnanswered)
     })()
     return () => {
       cancelled = true
@@ -92,11 +125,29 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
   const current = items[currentIdx]
 
   async function persistAnswer(position: number, answerIndex: number | null, flagged: boolean) {
-    await fetch(`/api/exam/${params.id}/answer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ position, answerIndex, flagged }),
-    })
+    // Fire-and-forget previously: a bare `await fetch(...)` discarded both
+    // non-2xx responses and network errors, so a failed answer save looked
+    // identical to a successful one — leading to invisible data loss during
+    // the mock exam. Surface both failure modes inline so the user knows
+    // their last action didn't persist, without blocking the UI.
+    try {
+      const res = await fetch(`/api/exam/${params.id}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position, answerIndex, flagged }),
+      })
+      if (!res.ok) {
+        console.error('ExamRunner persistAnswer failed', { status: res.status, position })
+        setAnswerError(
+          `We couldn't save your last change (HTTP ${res.status}). Your answer may not be recorded — try again.`
+        )
+        return
+      }
+      setAnswerError(null)
+    } catch (err) {
+      console.error('ExamRunner persistAnswer network error', err)
+      setAnswerError("We couldn't save your last change. Check your connection and try again.")
+    }
   }
 
   function selectAnswer(answerIndex: number) {
@@ -140,6 +191,14 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="flex h-full flex-col">
+      {(submitError || answerError) && (
+        <div
+          className="border-b border-danger/30 bg-danger/10 px-6 py-2 text-xs text-danger"
+          role="alert"
+        >
+          {submitError ?? answerError}
+        </div>
+      )}
       <div
         className={cn(
           'flex items-center justify-between border-b px-6 py-3 transition-colors',
