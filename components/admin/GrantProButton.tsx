@@ -12,17 +12,28 @@ export function GrantProButton({ userId }: { userId: string }) {
 
   const handle = async () => {
     setErr(null)
-    const res = await fetch('/api/admin/actions/grant-pro', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, days, reason }),
-    })
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setErr(j?.error ?? 'Failed')
-      return
+    // Previously: no try/catch. A rejected fetch (offline, DNS blip, Vercel
+    // 502 during deploy) bubbled as an unhandled promise rejection — no error
+    // surfaced to the admin and Sentry/console never saw it. On an admin
+    // granting Pro manually this is the worst case: the operator thinks it
+    // worked (no error) and moves on, and the user never gets access.
+    try {
+      const res = await fetch('/api/admin/actions/grant-pro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, days, reason }),
+      })
+      const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+      if (!res.ok) {
+        console.error('GrantProButton failed', { status: res.status, body: j, userId, days, reason })
+        setErr(j.message ?? j.error ?? `Failed (HTTP ${res.status})`)
+        return
+      }
+      startTransition(() => router.refresh())
+    } catch (err) {
+      console.error('GrantProButton network error', { err, userId, days, reason })
+      setErr('Network error while granting Pro. Check your connection and try again.')
     }
-    startTransition(() => router.refresh())
   }
 
   return (
