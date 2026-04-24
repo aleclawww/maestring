@@ -61,10 +61,40 @@ export async function POST(req: NextRequest) {
   const cronSecret = process.env['CRON_SECRET']
   const base = process.env['NEXT_PUBLIC_APP_URL'] ?? ''
   if (cronSecret && base) {
-    void fetch(`${base}/api/documents/${documentId}/process`, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${cronSecret}` },
-    }).catch(err => logger.error({ err, documentId }, 'retry-document kickoff failed'))
+    // Fire-and-forget but NOT silent: both network errors AND non-2xx responses
+    // are logged so the admin can see why "Retry" appeared to succeed but the
+    // document stayed at processing_status='pending'. If the kickoff fails we
+    // flip the doc back to 'failed' so the admin sees a real state rather than
+    // an infinite pending spinner.
+    void (async () => {
+      const url = `${base}/api/documents/${documentId}/process`
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${cronSecret}` },
+        })
+        if (!res.ok) {
+          const bodyText = await res.text().catch(() => '')
+          logger.error(
+            { documentId, status: res.status, body: bodyText.slice(0, 500), url },
+            'retry-document kickoff returned non-2xx — document stuck in pending, flipping back to failed'
+          )
+          await supabase
+            .from('user_documents')
+            .update({ processing_status: 'failed', error_message: `Processing trigger returned HTTP ${res.status}` })
+            .eq('id', documentId)
+        }
+      } catch (err) {
+        logger.error({ err, documentId, url }, 'retry-document kickoff threw — flipping doc back to failed')
+        await supabase
+          .from('user_documents')
+          .update({
+            processing_status: 'failed',
+            error_message: err instanceof Error ? err.message : 'Network error starting processing',
+          })
+          .eq('id', documentId)
+      }
+    })()
   }
 
   return NextResponse.json({ ok: true })
