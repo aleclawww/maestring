@@ -8,11 +8,25 @@ import { captureApiException } from '@/lib/sentry/capture'
 
 export const runtime = 'nodejs'
 
+// Supabase enforces its own redirect-URL allowlist on the project side, but
+// server-side validation is a second layer: if the allowlist is misconfigured
+// or a new preview URL is added without updating it, an attacker could supply
+// an arbitrary `redirectTo` and have Supabase send a magic link that, after
+// verification, redirects the user to a phishing site.  We pin to our own
+// origin before the value ever reaches Supabase.
+function makeRedirectToValidator() {
+  const appUrl = (process.env['NEXT_PUBLIC_APP_URL'] ?? '').replace(/\/$/, '')
+  return z.string().url().refine(
+    (v) => appUrl !== '' && (v === appUrl || v.startsWith(appUrl + '/')),
+    { message: 'redirectTo must point to the application origin' },
+  )
+}
+
 const BodySchema = z.object({
   email: z.string().email().max(254),
   fullName: z.string().trim().min(1).max(120).optional(),
   referralCode: z.string().trim().max(64).optional(),
-  redirectTo: z.string().url(),
+  redirectTo: makeRedirectToValidator(),
   intent: z.enum(['login', 'signup']).default('login'),
 })
 
