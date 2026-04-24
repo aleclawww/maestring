@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 
 export const revalidate = 600;
 
@@ -56,15 +57,33 @@ type Testimonial = {
 async function getTestimonials(): Promise<Testimonial[]> {
   try {
     const supabase = createAdminClient();
-    const { data } = await supabase
+    // Landing-page testimonial section is gated on this list being non-empty
+    // (no fake fallback — FTC truth-in-advertising). A silent read failure
+    // here hid the entire social-proof section from every visitor while
+    // revalidate=600 held the cached empty state for 10 minutes. The
+    // try/catch below only catches throws; Supabase surfaces read errors
+    // as `{ data: null, error }`, which fell straight through. Log warn so
+    // a broken RLS or connection gets attributed correctly instead of
+    // being blamed on "no approved testimonials yet".
+    const { data, error: testimonialsErr } = await supabase
       .from("testimonials")
       .select("id, display_name, role, content, stars, exam_passed, scaled_score, featured, submitted_at")
       .eq("status", "approved")
       .order("featured", { ascending: false })
       .order("submitted_at", { ascending: false })
       .limit(6);
+    if (testimonialsErr) {
+      logger.warn(
+        { err: testimonialsErr },
+        "landing: failed to read approved testimonials — social-proof section hidden (revalidate=600 caches this state for 10min)"
+      );
+    }
     return (data ?? []) as Testimonial[];
-  } catch {
+  } catch (err) {
+    // Throw path — createAdminClient() boot or network failure. Log so
+    // a boot-time misconfig (missing SUPABASE_SERVICE_ROLE_KEY, etc.) isn't
+    // silently absorbed as "no testimonials".
+    logger.warn({ err }, "landing: getTestimonials threw — section hidden");
     return [];
   }
 }

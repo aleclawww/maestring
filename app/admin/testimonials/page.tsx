@@ -1,5 +1,6 @@
 import { requireAdmin } from '@/lib/auth/admin'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/logger'
 import { TestimonialsAdminClient } from './client'
 
 export const dynamic = 'force-dynamic'
@@ -23,8 +24,21 @@ type Row = {
 export default async function AdminTestimonialsPage() {
   await requireAdmin()
   const supabase = createAdminClient()
+  // Silent failure on this RPC call collapsed an RLS/DB read error into the
+  // same empty-list rendering as "no testimonials submitted yet" — the
+  // admin sees the pending counter at 0 and stops triaging, while real
+  // submissions sit unreviewed. Since this page is the only entry point
+  // for approval, a quiet failure can block legitimate social proof from
+  // ever reaching the landing page. Warn so broken RLS policies or DB
+  // hiccups get a trail.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.rpc as any)('admin_list_testimonials', { p_limit: 200 })
+  const { data, error: listErr } = await (supabase.rpc as any)('admin_list_testimonials', { p_limit: 200 })
+  if (listErr) {
+    logger.warn(
+      { err: listErr },
+      'admin/testimonials: admin_list_testimonials RPC failed — page renders empty, pending submissions hidden from reviewer'
+    )
+  }
   const rows = (data ?? []) as Row[]
 
   const counts = {
