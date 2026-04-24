@@ -13,15 +13,38 @@ export default function ExamIntroPage() {
     setError(null)
     try {
       const res = await fetch('/api/exam/start', { method: 'POST' })
-      const json = await res.json()
+      // Previously: `await res.json()` was unguarded AND `json.data.id` was
+      // dereferenced without a shape check. Two real failure modes both
+      // collapsed into the bare `catch { setError('Network error') }`:
+      //   1. Vercel edge 502 HTML during a deploy → .json() throws →
+      //      "Network error" even though the network was fine.
+      //   2. A 500 that still returned JSON but with `{ error: "..." }` and
+      //      no `data` field → `json.data.id` throws TypeError → same
+      //      misleading "Network error".
+      // Ship with a shape guard and proper server-message fallback so ops
+      // can see the real reason and the user sees an actionable message
+      // (e.g. "insufficient_question_pool" 409 → "study more first" hint
+      // from the server, not a generic network complaint).
+      const json = (await res.json().catch(() => ({}))) as {
+        data?: { id?: string }
+        error?: string
+        message?: string
+      }
       if (!res.ok) {
-        setError(json.message ?? json.error ?? "Couldn't start the mock exam")
-        setStarting(false)
+        console.error('ExamIntroPage start failed', { status: res.status, body: json })
+        setError(json.message ?? json.error ?? `Couldn't start the mock exam (HTTP ${res.status}).`)
+        return
+      }
+      if (!json.data?.id) {
+        console.error('ExamIntroPage start returned malformed body', { status: res.status, body: json })
+        setError("The server didn't return a valid exam session. Please try again.")
         return
       }
       router.push(`/exam/${json.data.id}`)
-    } catch {
-      setError('Network error')
+    } catch (err) {
+      console.error('ExamIntroPage start network error', err)
+      setError('Network error while starting the exam. Check your connection and try again.')
+    } finally {
       setStarting(false)
     }
   }
