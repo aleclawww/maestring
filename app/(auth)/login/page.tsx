@@ -27,6 +27,11 @@ export default async function LoginPage({
     'email_not_confirmed': 'Please confirm your email before signing in.',
     'too_many_requests': 'Too many attempts. Try again in a few minutes.',
     'user_not_found': 'No account exists for that email.',
+    'oauth_expired': 'The sign-in link expired. Please try again.',
+    'oauth_invalid_grant': 'This sign-in link was already used. Please try again.',
+    'oauth_exchange_failed': "Couldn't complete sign-in. If you're on Safari or have third-party cookies blocked, try another browser or enable cookies and retry.",
+    'oauth_missing_code': "Sign-in didn't complete. Please start again from this page.",
+    'auth_callback_failed': 'Sign-in error. Please try again.',
   }
 
   const errorMessage = searchParams.error

@@ -34,7 +34,32 @@ export async function GET(request: NextRequest) {
     const supabase = createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error && data.user) {
+    if (error || !data.user) {
+      // Previously: any exchange failure silently fell through to the
+      // generic `?error=auth_callback_failed` redirect at the bottom with
+      // no log line — impossible to diagnose from ops. Most common causes:
+      //   1. PKCE code_verifier cookie missing (Safari ITP, third-party
+      //      cookie blocking, user started OAuth on a different domain).
+      //   2. Code already redeemed (user double-clicked the callback link,
+      //      Supabase returns "invalid grant").
+      //   3. Clock skew / expired code (>10 min between redirect and land).
+      // Surface the real reason so support tickets have a correlating row.
+      logger.error(
+        { err: error, hasUser: !!data?.user },
+        'OAuth code exchange failed'
+      )
+      captureApiException(error ?? new Error('exchangeCodeForSession returned no user'), {
+        route: '/auth/callback',
+      })
+      const reason = error?.message?.toLowerCase().includes('expired')
+        ? 'oauth_expired'
+        : error?.message?.toLowerCase().includes('invalid')
+          ? 'oauth_invalid_grant'
+          : 'oauth_exchange_failed'
+      return NextResponse.redirect(`${origin}/login?error=${reason}`)
+    }
+
+    {
       // Fetch onboarding + welcome-email state in one round trip.
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
@@ -123,5 +148,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  // Landed on /auth/callback with no ?code — usually a user opening the
+  // callback URL directly, or the OAuth provider redirect stripped params.
+  // Log so we can spot provider-side regressions.
+  logger.warn({ url: request.url }, 'OAuth callback hit without a code param')
+  return NextResponse.redirect(`${origin}/login?error=oauth_missing_code`)
 }
