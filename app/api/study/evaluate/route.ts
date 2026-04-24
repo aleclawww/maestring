@@ -109,12 +109,25 @@ export async function POST(req: NextRequest) {
     if ((insertErr as { code?: string }).code === "23505") {
       // Duplicate submission — replay the canonical evaluation we already
       // stored, without re-advancing FSRS state or session counters.
-      const { data: existing } = await supabase
+      // Silent failure here made us fall through to `existing = null` and
+      // return the current-request `evaluation` as if it were the canonical
+      // one — so a duplicate submission that hit a read failure would return
+      // a fresh eval that DISAGREES with the row already in question_attempts
+      // (because evaluation_result captures `first_attempt_correct` and the
+      // client's selectedIndex may differ on retry). Log warn so we can see
+      // when the duplicate-replay fallback drifts from the stored truth.
+      const { data: existing, error: existingErr } = await supabase
         .from("question_attempts")
         .select("evaluation_result, is_correct")
         .eq("session_id", sessionId)
         .eq("question_id", questionId)
         .maybeSingle();
+      if (existingErr) {
+        logger.warn(
+          { err: existingErr, userId: user.id, sessionId, questionId },
+          "Duplicate evaluate — failed to read prior attempt; returning current-request eval (may differ from stored)"
+        );
+      }
 
       const existingEval =
         (existing?.evaluation_result as Record<string, unknown> | null) ?? null;
