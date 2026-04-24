@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string; error?: string; message?: string }
+  searchParams: { next?: string; error?: string; message?: string; msg?: string }
 }) {
   const supabase = createClient()
   const {
@@ -27,11 +27,23 @@ export default async function LoginPage({
     'email_not_confirmed': 'Please confirm your email before signing in.',
     'too_many_requests': 'Too many attempts. Try again in a few minutes.',
     'user_not_found': 'No account exists for that email.',
+    'oauth_expired': 'The sign-in link expired. Please try again.',
+    'oauth_invalid_grant': 'This sign-in link was already used (e.g. by clicking back). Click "Continue with Google" again to start fresh.',
+    'oauth_exchange_failed': "Couldn't complete sign-in. If you're on Safari or have third-party cookies blocked, try another browser or enable cookies and retry.",
+    'oauth_exchange_threw': "Couldn't reach the auth server. Check your connection and try again.",
+    'oauth_pkce_missing': "Your browser dropped the auth session (third-party cookies blocked or you opened the sign-in on a different device/tab). Please start again in a regular window.",
+    'oauth_missing_code': "Sign-in didn't complete. Please start again from this page.",
+    'oauth_provider_error': 'Google rejected the sign-in. See details below.',
+    'auth_callback_failed': 'Sign-in error. Please try again.',
   }
 
   const errorMessage = searchParams.error
     ? (errorMessages[searchParams.error] ?? 'Sign-in error. Please try again.')
     : null
+  // Raw provider/Supabase message (if any) — displayed as a secondary line so
+  // users can see the real reason when the high-level copy is too generic to
+  // act on (e.g. "redirect_uri_mismatch", "Email not allowed by domain").
+  const errorDetail = searchParams.msg ? searchParams.msg.slice(0, 300) : null
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -50,7 +62,12 @@ export default async function LoginPage({
         {/* Error message */}
         {errorMessage && (
           <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {errorMessage}
+            <p>{errorMessage}</p>
+            {errorDetail && (
+              <p className="mt-1 font-mono text-xs text-danger/70 break-words">
+                {errorDetail}
+              </p>
+            )}
           </div>
         )}
 

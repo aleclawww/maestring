@@ -26,15 +26,79 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/dashboard'
+  // Google/Supabase redirect back with these when the provider itself rejects
+  // (e.g. user denied consent, redirect URI mismatch, OAuth app disabled).
+  // Without explicit handling we used to slide into the "no code" branch with
+  // a misleading oauth_missing_code — masking the real reason.
+  const providerError = searchParams.get('error')
+  const providerErrorDescription = searchParams.get('error_description')
 
   // Anti open-redirect
   const safeNext = isSafeRedirectUrl(next) ? next : '/dashboard'
 
+  if (providerError) {
+    logger.error(
+      { providerError, providerErrorDescription, url: request.url },
+      'OAuth provider returned error'
+    )
+    captureApiException(
+      new Error(`OAuth provider error: ${providerError} — ${providerErrorDescription ?? 'no description'}`),
+      { route: '/auth/callback' }
+    )
+    const msg = providerErrorDescription ?? providerError
+    return NextResponse.redirect(
+      `${origin}/login?error=oauth_provider_error&msg=${encodeURIComponent(msg)}`
+    )
+  }
+
   if (code) {
     const supabase = createClient()
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error && data.user) {
+    // Previously: no try/catch. exchangeCodeForSession can REJECT (not just
+    // return `{error}`) on network failure or when Supabase returns a non-JSON
+    // body — classic silent-swallow that produced a useless generic error.
+    let exchangeResult: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>
+    try {
+      exchangeResult = await supabase.auth.exchangeCodeForSession(code)
+    } catch (err) {
+      logger.error({ err }, 'exchangeCodeForSession threw — likely Supabase network error or non-JSON body')
+      captureApiException(err, { route: '/auth/callback' })
+      return NextResponse.redirect(`${origin}/login?error=oauth_exchange_threw`)
+    }
+    const { data, error } = exchangeResult
+
+    if (error || !data.user) {
+      // Previously: any exchange failure silently fell through to the
+      // generic `?error=auth_callback_failed` redirect at the bottom with
+      // no log line — impossible to diagnose from ops. Most common causes:
+      //   1. PKCE code_verifier cookie missing (Safari ITP, third-party
+      //      cookie blocking, user started OAuth on a different domain).
+      //   2. Code already redeemed (user double-clicked the callback link,
+      //      Supabase returns "invalid grant").
+      //   3. Clock skew / expired code (>10 min between redirect and land).
+      // Surface the real reason so support tickets have a correlating row.
+      logger.error(
+        { err: error, hasUser: !!data?.user },
+        'OAuth code exchange failed'
+      )
+      captureApiException(error ?? new Error('exchangeCodeForSession returned no user'), {
+        route: '/auth/callback',
+      })
+      const errMsg = (error?.message ?? '').toLowerCase()
+      const reason = errMsg.includes('expired')
+        ? 'oauth_expired'
+        : errMsg.includes('invalid') || errMsg.includes('not found') || errMsg.includes('already')
+          ? 'oauth_invalid_grant'
+          : errMsg.includes('verifier') || errMsg.includes('pkce')
+            ? 'oauth_pkce_missing'
+            : 'oauth_exchange_failed'
+      // Attach the raw Supabase message so the login page can show it inline.
+      // Without this the admin can't diagnose without pulling Vercel logs.
+      const msg = error?.message ? `&msg=${encodeURIComponent(error.message)}` : ''
+      return NextResponse.redirect(`${origin}/login?error=${reason}${msg}`)
+    }
+
+    {
       // Fetch onboarding + welcome-email state in one round trip.
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
@@ -123,5 +187,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  // Landed on /auth/callback with no ?code and no ?error — usually a user
+  // opening the callback URL directly, or the OAuth provider redirect stripped
+  // params. Log so we can spot provider-side regressions.
+  logger.warn({ url: request.url }, 'OAuth callback hit without code or error param')
+  return NextResponse.redirect(`${origin}/login?error=oauth_missing_code`)
 }

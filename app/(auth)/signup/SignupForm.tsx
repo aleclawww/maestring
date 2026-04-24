@@ -59,20 +59,40 @@ export default function SignupForm({ referralCode }: SignupFormProps) {
   }
 
   async function handleGoogleOAuth() {
-    track({ name: 'signup_completed', properties: { method: 'google' } })
+    // Double-click guard — see LoginForm for the full rationale. A second
+    // click overwrites the PKCE code_verifier and the callback exchange then
+    // fails with "invalid_grant", which the user sees as a generic sign-in
+    // error. On signup this is especially bad because the account IS created
+    // on Supabase's side, so the user is half-registered with no way in.
+    if (googleLoading) return
     setGoogleLoading(true)
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+    setError(null)
+    track({ name: 'signup_completed', properties: { method: 'google' } })
+
+    // Clear any stale local session before starting a new flow — see LoginForm.
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch {
+      // Best effort.
+    }
+
+    try {
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+          queryParams: { access_type: 'offline', prompt: 'consent' },
         },
-      },
-    })
-    if (err) {
-      setError(err.message)
+      })
+      if (err) {
+        console.error('SignupForm signInWithOAuth failed', err)
+        setError(err.message || 'Could not start Google sign-up. Try again.')
+        setGoogleLoading(false)
+      }
+      // On success the browser navigates to Google — loading stays true.
+    } catch (err) {
+      console.error('SignupForm signInWithOAuth threw', err)
+      setError('Network error while starting Google sign-up. Check your connection.')
       setGoogleLoading(false)
     }
   }
