@@ -117,3 +117,10 @@ export async function POST(req: NextRequest) {
   if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: 500 });
   return NextResponse.json(outcome.result);
 }
+
+// Vercel Cron uses GET (vercel.json schedules this path). Without a GET
+// export the handler 405s the scheduled invocation and no nudges are sent.
+// Matches app/api/cron/snapshot-readiness/route.ts.
+export async function GET(req: NextRequest) {
+  return POST(req);
+}

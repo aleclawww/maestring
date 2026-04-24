@@ -113,3 +113,13 @@ export async function POST(req: NextRequest) {
   if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: 500 });
   return NextResponse.json(outcome.result);
 }
+
+// Vercel Cron invokes scheduled jobs with GET (docs: https://vercel.com/docs/cron-jobs).
+// Without this export the cron silently 405s and the job never runs — the
+// Authorization: Bearer <CRON_SECRET> header is attached either way, so the
+// POST-only handler would reject it at the HTTP method layer before auth even
+// runs. Delegates to POST so there's exactly one implementation.
+// Matches the pattern already in app/api/cron/snapshot-readiness/route.ts.
+export async function GET(req: NextRequest) {
+  return POST(req);
+}
