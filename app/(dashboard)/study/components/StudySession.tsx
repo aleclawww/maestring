@@ -195,7 +195,44 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           firstAttemptCorrect,
         }),
       })
+      // Previously `const { data: evaluation } = await res.json()` skipped
+      // the `res.ok` check entirely. When /api/study/evaluate returned
+      // 429 (rate limit) or 500 (LLM grading error / DB write failure),
+      // `evaluation` was `undefined` from the destructure and the very
+      // next line (`evaluation.isCorrect`) threw TypeError — which fell
+      // into the bare `catch { dispatch({ type: 'RESET' }) }` below.
+      // The user saw their answer vanish, the session reset to setup,
+      // and no error message — looked like a misclick, but the server
+      // had often *already* recorded the attempt and bumped FSRS state,
+      // so retrying from the setup screen would serve a DIFFERENT
+      // question while the original attempt sat persisted but invisible.
+      // Worst case: user answers the "same" concept twice from the top,
+      // FSRS sees two attempts on different question IDs, calibrator
+      // drifts. Fail loud: log the server body, track it, and still
+      // dispatch RESET so the UI doesn't hang — but with diagnostics.
+      if (!res.ok) {
+        const errBody = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        const msg = errBody.message ?? errBody.error ?? `HTTP ${res.status}`
+        console.error('StudySession evaluate failed', {
+          status: res.status,
+          msg,
+          questionId: state.question.id,
+          sessionId: sessionIdRef.current,
+          conceptId: state.question.conceptId,
+        })
+        dispatch({ type: 'RESET' })
+        return
+      }
       const { data: evaluation } = await res.json()
+      if (!evaluation || typeof evaluation.isCorrect !== 'boolean') {
+        console.error('StudySession evaluate returned malformed body', {
+          questionId: state.question.id,
+          sessionId: sessionIdRef.current,
+          conceptId: state.question.conceptId,
+        })
+        dispatch({ type: 'RESET' })
+        return
+      }
 
       answersRef.current.push({
         conceptId: state.question.conceptId,
@@ -218,7 +255,12 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
         evaluation,
         timeTaken,
       })
-    } catch {
+    } catch (err) {
+      console.error('StudySession evaluate network error', {
+        err,
+        questionId: state.question.id,
+        conceptId: state.question.conceptId,
+      })
       dispatch({ type: 'RESET' })
     }
   }, [state])
