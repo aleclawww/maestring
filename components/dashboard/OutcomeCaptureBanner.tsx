@@ -29,7 +29,21 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error('Failed')
+      // Previously: `if (!res.ok) throw new Error('Failed')` threw into the
+      // bare `catch { setError("We couldn't save your result. Try again.") }`
+      // below, which discarded EVERY structured server error — a 400
+      // "Invalid payload" (bad score range), a 401 (session expired mid-exam
+      // week), a 429 if we ever rate-limit this, and the 500 "Update failed"
+      // from the Supabase write all collapsed into one generic "try again"
+      // — which a user with a truly invalid score (e.g. pasted "7800")
+      // kept retrying forever. Surface the server's error body so the
+      // banner tells the user what to actually fix.
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        setError(j.message ?? j.error ?? `Couldn't save result (HTTP ${res.status}). Try again.`)
+        setSubmitting(false)
+        return
+      }
       track({
         name: 'outcome_captured',
         properties: {
@@ -38,8 +52,9 @@ export function OutcomeCaptureBanner({ examDate }: { examDate: string }) {
         },
       })
       router.refresh()
-    } catch {
-      setError("We couldn't save your result. Try again.")
+    } catch (err) {
+      console.error('OutcomeCaptureBanner network error', err)
+      setError("Network error while saving. Check your connection and try again.")
       setSubmitting(false)
     }
   }
