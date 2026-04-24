@@ -36,13 +36,19 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 
 type BulkRecipient = { to: string; subject: string; react: React.ReactElement };
 
-export async function sendBulkEmail(recipients: BulkRecipient[]): Promise<void> {
-  // Resend bulk send in batches of 100
+// Returns the number of sends that failed (0 = all succeeded).
+// Uses Promise.allSettled so a single failed send never blocks the remaining
+// batch — but results are inspected and every failure is logged so "10k
+// nudges sent, 42 failed" surfaces in the logs rather than silently
+// disappearing into the settled-reject bucket.
+export async function sendBulkEmail(recipients: BulkRecipient[]): Promise<number> {
   const BATCH = 100;
+  let totalFailed = 0;
+  const client = getResend();
+
   for (let i = 0; i < recipients.length; i += BATCH) {
     const batch = recipients.slice(i, i + BATCH);
-    const client = getResend();
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       batch.map((r) =>
         client.emails.send({
           from: FROM,
@@ -52,5 +58,25 @@ export async function sendBulkEmail(recipients: BulkRecipient[]): Promise<void> 
         })
       )
     );
+
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j]!;
+      const r = batch[j]!;
+      if (result.status === 'rejected') {
+        logger.error(
+          { err: result.reason, to: r.to, subject: r.subject },
+          'sendBulkEmail: individual send rejected'
+        );
+        totalFailed++;
+      } else if (result.value.error) {
+        logger.error(
+          { error: result.value.error, to: r.to, subject: r.subject },
+          'sendBulkEmail: individual send returned error'
+        );
+        totalFailed++;
+      }
+    }
   }
+
+  return totalFailed;
 }
