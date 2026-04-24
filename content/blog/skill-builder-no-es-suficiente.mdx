@@ -1,0 +1,138 @@
+---
+title: "Usé AWS Skill Builder 3 meses y suspendí el SAA-C03: esto es lo que me faltó"
+description: "Skill Builder es un recurso oficial excelente para aprender AWS, pero no está diseñado para aprobar el examen. Cuenta por qué 3 meses de cursos no bastan y qué añadir para cerrar la brecha."
+publishedAt: "2026-04-24"
+tags: ["aws", "saa-c03", "skill-builder", "certificacion", "plan-de-estudio"]
+featured: true
+---
+
+Pagué AWS Skill Builder Individual durante tres meses, completé el curso oficial **Exam Prep Standard: AWS Certified Solutions Architect – Associate**, hice el practice exam oficial, y saqué un **698 en el examen real** — 22 puntos por debajo del 720 de corte.
+
+Este post es el post-mortem honesto. No es un ataque a Skill Builder — es un recurso genuinamente bueno. Es una explicación de **por qué un recurso bueno no es suficiente**, y qué tienes que añadir si quieres aprobar a la primera.
+
+## Qué hice durante esos 3 meses
+
+Semanas 1–4:
+- Completé **AWS Cloud Practitioner Essentials** (refresh)
+- Completé **Architecting on AWS** en Skill Builder (16 horas de video)
+- Tomé notas en Notion de ~120 páginas
+
+Semanas 5–8:
+- Completé **Exam Prep Standard: SAA-C03** (el curso oficial de preparación)
+- Hice los labs de AWS Jam en la ruta SAA
+- Repasé las notas 2 veces
+
+Semanas 9–12:
+- Hice el **official practice exam** oficial ($20). Saqué 82%. Confianza por las nubes.
+- Releí notas de los dominios donde fallé
+- Programé el examen real.
+
+**Resultado:** 698. Suspenso.
+
+## Por qué suspendí (el post-mortem)
+
+Cuando salí del centro de examen, apunté cada pregunta donde dudé. El patrón fue clarísimo al día siguiente.
+
+### Problema 1 — Skill Builder me enseñó AWS, no me enseñó a aprobar el examen
+
+Parece una distinción tonta, pero no lo es. Aprender AWS significa entender qué hace cada servicio. **Aprobar el examen significa elegir la opción ÓPTIMA entre 4 opciones donde 3 son técnicamente correctas**.
+
+Ejemplo real (parafraseado, no el literal del examen):
+
+> Una empresa necesita replicar objetos S3 entre regiones con SLA de tiempo. ¿Qué configuración usas?
+> - A) S3 Cross-Region Replication con Replication Time Control
+> - B) S3 Cross-Region Replication con notificaciones SNS
+> - C) AWS DataSync con schedule cada 15 minutos
+> - D) Lambda + S3 Event Notifications + copy a región destino
+
+Las **4 son técnicamente válidas**. Solo **A** garantiza el SLA contractual de 15 minutos. El curso de Skill Builder me enseñó qué es CRR. No me entrenó a detectar que la palabra "SLA" en el stem descarta automáticamente B, C y D porque ninguna ofrece garantía formal.
+
+Ese tipo de lectura se entrena haciendo **cientos de preguntas de alta fidelidad con escenarios**, no viendo videos.
+
+### Problema 2 — El practice exam oficial es un solo disparo
+
+Por $20 puedes hacer el examen oficial una vez. 20 preguntas. Te da tu score y una lista de dominios débiles.
+
+¿Problema? **Una vez hecho, ya lo has visto.** Repetirlo no enseña — solo memorizas respuestas. Y 20 preguntas es una muestra demasiado pequeña para estimar tu pass probability con fiabilidad.
+
+Yo saqué 82% en esas 20. En el examen real fallé mucho más, porque las 20 del practice no cubrían los subdominios donde yo era débil de verdad (Networking avanzado y Cost Optimization).
+
+### Problema 3 — Sin spaced repetition, olvidé cosas de la semana 2
+
+Las primeras semanas estudié **S3 storage classes** y quedó clarísimo. En el examen, 10 semanas después, fallé una pregunta sobre Glacier Deep Archive vs S3 Glacier Instant Retrieval porque **había olvidado los tiempos de retrieval**.
+
+Skill Builder es lineal: avanzas, completas el módulo, pasas al siguiente. **No hay mecanismo que me obligue a revisar S3 en la semana 10**. Y mi cerebro, naturalmente, había descargado los matices.
+
+Esto es literatura de 130 años (Ebbinghaus, curva del olvido). Sin spaced repetition, **la mitad de lo que aprendes la semana 1 lo has perdido la semana 6**.
+
+### Problema 4 — No sabía que no estaba listo
+
+Esta es la parte más frustrante. Programé el examen con confianza. El practice exam decía 82%, mis notas estaban al día, había acabado todos los cursos.
+
+**No tenía ningún indicador fiable de mi pass probability real.**
+
+Si alguien me hubiera dicho *"basado en los patrones de respuesta que has mostrado en los últimos 400 items, tu pass probability es 58%, espera 2 semanas"*, me habría ahorrado $150 del examen y dos meses de disgusto.
+
+## Qué debería haber hecho (el plan que funciona)
+
+Después de suspender, me tomé un mes, cambié el enfoque, y aprobé con 798 en el segundo intento. Esto es lo que añadí:
+
+### 1. Spaced repetition sistemática
+
+Empecé a usar un sistema de repetición espaciada (en mi caso [Maestring](/), que usa el algoritmo FSRS-4.5). **Cada concepto que aprendía en Skill Builder lo convertía en ítems de revisión que el sistema me devolvía automáticamente en el momento óptimo**: justo antes de olvidarlo.
+
+Resultado: en la semana 8 seguía recordando los matices de S3 storage classes de la semana 1 sin esfuerzo consciente.
+
+### 2. Preguntas de escenario adaptativas — cientos, no decenas
+
+Necesitaba volumen. No 20 preguntas del practice exam oficial — **500+ preguntas de escenario**, idealmente generadas adaptativamente según mis gaps. Cada pregunta te entrena a detectar el matiz que descarta las 3 opciones incorrectas.
+
+Esto es algo que Skill Builder no puede ofrecer: su banco es estático y pequeño, porque cada pregunta pasa por un proceso legal de revisión (necesario para el examen oficial, pero limitante para práctica masiva).
+
+### 3. Un Readiness Score predictivo honesto
+
+Lo más importante. Un número que me dijera, cada día, **"si te presentaras hoy, tu pass probability es X%"**, ponderado por el peso real de cada dominio en el blueprint oficial.
+
+Skill Builder no te da esto porque AWS tiene un conflicto estructural de intereses: **les conviene que te presentes al examen** (son $150 por intento). Un producto independiente puede ser honesto: *"espera dos semanas, aún no estás"*.
+
+### 4. Explicaciones del POR QUÉ cada distractor es incorrecto
+
+Skill Builder me decía "correct/incorrect" y pasaba. Lo que necesitaba era, para cada pregunta fallada:
+
+- Validación de mi razonamiento ("tu elección prioriza X, lo cual es válido cuando Y")
+- Por qué en este escenario específico la otra opción es preferible
+- Una micro-pregunta que me obligara a elaborar (*"¿en qué escenario SÍ sería correcta tu elección?"*)
+
+Ese tipo de feedback **convierte el error en aprendizaje**. "Incorrect" convierte el error en frustración.
+
+## La mezcla que sí funciona
+
+Mi stack final, el que recomiendo, es:
+
+1. **AWS Skill Builder** ($29/mes) — para el contenido oficial. Sigue siendo la fuente autoritaria.
+2. **AWS Jam / Cloud Quest** — para labs hands-on, imprescindible.
+3. **Una capa adaptativa por encima** (Maestring o similar) — para spaced repetition, preguntas de escenario ilimitadas, y un Readiness Score predictivo.
+4. **Official practice exam** — SOLO como checkpoint final cuando tu Readiness interna está ≥80.
+
+Coste combinado: ~€48/mes durante 2–3 meses. Mucho menos que repetir el examen real dos veces ($300 perdidos + 3 meses más).
+
+## Los 4 errores mentales que cometí
+
+Si tienes que recordar solo 4 cosas de este post:
+
+1. **"Completé el curso" ≠ "lo recuerdo"**. Sin spaced repetition, completar un curso en semana 2 es casi inútil en semana 10.
+2. **"Saqué 82% en el practice exam" ≠ "voy a aprobar"**. El practice exam tiene 20 preguntas. Tu pass probability real necesita cientos de ítems para estimarse.
+3. **"Sé lo que hace cada servicio" ≠ "sé elegir el óptimo entre 4 opciones válidas"**. Son dos habilidades distintas.
+4. **"Me siento listo" ≠ "estoy listo"**. El feeling de preparación correlaciona mal con el outcome real. Necesitas una métrica externa.
+
+## Resumen
+
+Skill Builder es un recurso excelente. No es suficiente. No está diseñado para serlo — AWS necesita que te presentes al examen, tú necesitas aprobarlo a la primera. Incentivos distintos.
+
+La jugada inteligente es combinar el contenido oficial con una capa adaptativa de práctica + predicción. **No son competidores. Son complementos.**
+
+Si ya tienes Skill Builder y quieres probar la capa de encima: [Maestring](/) te da un Readiness Score 0–100 actualizado cada sesión, preguntas adaptativas ilimitadas generadas por Claude, y garantía de reembolso si llegas a 80+ y suspendes. Los primeros 20 early adopters entran a €19/mes.
+
+---
+
+*¿Has suspendido el SAA-C03 con Skill Builder? Me interesa saber qué te faltó. Escríbeme a hello@maestring.app — todos los post-mortems que recibimos alimentan el roadmap de la plataforma.*

@@ -6,6 +6,12 @@
 > actualiza el mismo día. Si entra en conflicto con `estrategia-pilares.md`,
 > gana el doc de pilares.
 
+## Estado al 2026-04-24 (founder check)
+
+**Fases 0–6 están ✅ en producción.** El bottleneck ya no es producto, es
+distribución. Próximo gate: 10 usuarios pagos completando >=1 sesión en la
+próxima semana. Ver `docs/launch-week.md`.
+
 ## Tesis
 
 La certificación AWS no se prepara, **se construye**: es una restructuración
@@ -39,7 +45,14 @@ validar runtime.
 
 ---
 
-### Fase 2 — Pilar 1 MVP: Readiness Score + Mapa de Riesgo ▶️
+### Fase 2 — Pilar 1 MVP: Readiness Score + Mapa de Riesgo ✅ (v2 en prod)
+**Estado real (abril 2026):** Entregado y superado. Migración 012 + 019 (v2)
+implementan `get_exam_readiness()` con **confidence interval, pass_probability,
+velocity_per_week, history** (más allá del scope original). `components/dashboard/
+ReadinessCard.tsx` (369 líneas) renderiza velocímetro + bandas + weakest domain +
+at-risk list. Endpoints `/api/dashboard/readiness` y `/api/dashboard/at-risk`.
+
+
 **Por qué primero:** la predicción es input de la personalización (Pilar 2), de
 la calibración de la ZDP (Pilar 3) y de la métrica de carga cognitiva (Pilar 4).
 Sin readiness score, los demás pilares son reactivos.
@@ -58,7 +71,11 @@ Entregables:
 Métrica de éxito (interna): correlación `readiness_at_D-3` ↔ outcome de examen
 > 0.7 (necesita 500+ outcomes — heurística hasta entonces).
 
-### Fase 3 — Pilar 2 MVP: Onboarding diagnóstico + fingerprint cognitivo
+### Fase 3 — Pilar 2 MVP: Onboarding diagnóstico + fingerprint cognitivo ✅
+**Estado real:** `/onboarding/calibrate` y `/onboarding/diagnostic` en API,
+`OnboardingForm` en UI, migración 013 persiste `profiles.cognitive_fingerprint`.
+Middleware redirige si `onboarding_completed=false`.
+
 Calibrar `user_concept_states` antes de la primera sesión real para evitar
 discovery puro durante días.
 - `(dashboard)/onboarding/page.tsx`: exam_target_date, daily_minutes,
@@ -69,7 +86,10 @@ discovery puro durante días.
   `{ background, peak_hour, avg_session_length_min, weakness_pattern }`.
 - Middleware redirige a `/onboarding` si `onboarding_completed=false`.
 
-### Fase 4 — Pilar 3 MVP: Error productivo + Modo Exploración
+### Fase 4 — Pilar 3 MVP: Error productivo + Modo Exploración ✅
+**Estado real:** `/api/study/elaborate` route activo, `study_mode='exploration'`
+en migración 013 (no actualiza FSRS). Copy neutro aplicado en `AnswerFeedback`.
+
 - `evaluator.ts`: cuando `is_correct=false`, generar **micro-pregunta de
   elaboración** ("¿En qué escenario sería correcta tu elección?") guardada en
   `evaluation_result.elaboration`.
@@ -79,7 +99,11 @@ discovery puro durante días.
   actualizan `user_concept_states`; banner visual; resumen final con opción de
   "añadir al deck".
 
-### Fase 5 — Pilar 4 MVP: Style guide + warm-up/pico/cooldown
+### Fase 5 — Pilar 4 MVP: Style guide + warm-up/pico/cooldown ✅
+**Estado real:** `applySessionShape()` + `enforceInterleaving()` (max 2 consecutivos
+mismo dominio) ya en `lib/question-engine/selector.ts`. Pendiente: auto-score de
+ambigüedad post-gen (longitud diferencial >30% regenerar) — opcional.
+
 - `lib/question-engine/prompt.ts`: style guide explícito — una idea/pregunta,
   opciones paralelas en longitud, distractores plausibles, escenario específico.
   Auto-score de ambigüedad post-generación (longitud diferencial > 30% =
@@ -90,7 +114,10 @@ discovery puro durante días.
 - Detección básica de fatiga: si tiempo medio de las últimas 3 respuestas > 1.8x
   el medio de las primeras 3, banner "buena pausa" no intrusivo.
 
-### Fase 6 — Pilar 5 MVP: Journey de 5 fases + reactivación con contexto real
+### Fase 6 — Pilar 5 MVP: Journey de 5 fases + reactivación con contexto real ✅
+**Estado real:** Migración 014 con enum + `snapshot_readiness()`. `journey_phase`
+usado en 7 rutas API. Cron de reactivación + weekly digest (025) operativo.
+
 - `profiles.journey_phase enum` (migración 014): `pre_study | active_prep |
   pre_exam | post_cert | maintenance`. Trigger por `exam_target_date` y outcome.
 - Email de reactivación (cron) usa `get_exam_readiness` *anterior* vs. *actual*:

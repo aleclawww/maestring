@@ -98,6 +98,14 @@ const FAQS = [
     a: "Those platforms give you a fixed question bank. Maestring generates fresh questions adapted to your specific gaps and schedules reviews scientifically so you retain information long-term, not just for test day.",
   },
   {
+    q: "Do I still need AWS Skill Builder?",
+    a: "Yes — keep it. Skill Builder is the authoritative source for AWS content and official labs. Maestring is the adaptive exam-readiness layer on top: it tells you when you're actually ready to pass, something AWS can't do for you (AWS is paid when you sit the exam; we're paid when you pass it). Most of our users run both.",
+  },
+  {
+    q: "How does Maestring compare to the official AWS practice exam?",
+    a: "The official practice exam is a single 20-question set — useful once, not repeatable. Maestring gives you unlimited adaptive questions, spaced repetition, and a live Readiness Score that updates every session. Use the official practice exam as a final checkpoint; use Maestring to get there.",
+  },
+  {
     q: "Can I cancel anytime?",
     a: "Yes. No lock-ins, no dark patterns. Cancel from Settings → Billing at any time and you keep access until the end of your billing period.",
   },
@@ -142,13 +150,14 @@ export default async function LandingPage() {
           AWS SAA-C03 · AI-Powered · FSRS v5
         </div>
         <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
-          Pass AWS SAA
+          Know exactly when
           <br />
-          <span className="gradient-text">the smart way</span>
+          <span className="gradient-text">you&rsquo;re ready to pass</span>
         </h1>
         <p className="text-xl text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Adaptive AI questions + spaced repetition = faster certification at a fraction of the time.
-          Study less. Retain more. Pass sooner.
+          Maestring gives you a live <strong className="text-white">Readiness Score 0–100</strong> that predicts your AWS SAA
+          outcome weeks before the exam — powered by adaptive AI questions and the FSRS-4.5 memory model.
+          Stop guessing. Start measuring.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/signup" className="btn-primary px-8 py-4 text-lg rounded-xl font-semibold">
@@ -159,6 +168,58 @@ export default async function LandingPage() {
           </Link>
         </div>
         <p className="text-zinc-500 text-sm mt-6">No credit card required · Free tier forever</p>
+      </section>
+
+      {/* Product screenshot — swap src when /public/readiness-demo.gif (or .png) is ready.
+          Falls back to a styled placeholder card so the landing never ships broken. */}
+      <section className="max-w-5xl mx-auto px-6 -mt-8 mb-16">
+        <div className="relative rounded-2xl border border-white/10 bg-gradient-to-b from-indigo-500/10 to-transparent p-2 shadow-2xl shadow-indigo-500/10">
+          <div className="aspect-[16/9] w-full rounded-xl bg-zinc-900/80 overflow-hidden flex items-center justify-center">
+            {/* Replace this block with <Image src="/readiness-demo.gif" ... /> once asset exists. */}
+            <div className="text-center px-6">
+              <div className="inline-block text-7xl font-black gradient-text mb-3">72</div>
+              <div className="text-sm uppercase tracking-widest text-zinc-400 mb-1">Readiness Score</div>
+              <div className="text-xs text-zinc-500">Pass probability 68% · Weakest: Networking · 12 concepts at risk</div>
+              <div className="mt-6 flex justify-center gap-1">
+                <div className="h-2 w-8 rounded bg-rose-500/60"></div>
+                <div className="h-2 w-8 rounded bg-amber-500/60"></div>
+                <div className="h-2 w-8 rounded bg-emerald-500"></div>
+                <div className="h-2 w-8 rounded bg-emerald-500"></div>
+                <div className="h-2 w-8 rounded bg-zinc-700"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p className="text-center text-xs text-zinc-600 mt-3">Live Readiness Score — updated after every study session.</p>
+      </section>
+
+      {/* Guarantee strip */}
+      <section className="border-y border-emerald-500/20 bg-emerald-500/5 py-6">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10 text-center">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🛡️</span>
+            <div className="text-sm">
+              <div className="font-semibold text-emerald-300">Pass-or-refund guarantee</div>
+              <div className="text-zinc-400">Hit 80+ Readiness and fail? Full refund, no questions.</div>
+            </div>
+          </div>
+          <div className="hidden md:block w-px h-10 bg-emerald-500/20" />
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📈</span>
+            <div className="text-sm">
+              <div className="font-semibold text-emerald-300">Live Readiness Score</div>
+              <div className="text-zinc-400">Know your pass probability in real time.</div>
+            </div>
+          </div>
+          <div className="hidden md:block w-px h-10 bg-emerald-500/20" />
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🧠</span>
+            <div className="text-sm">
+              <div className="font-semibold text-emerald-300">FSRS-4.5 + Claude</div>
+              <div className="text-zinc-400">Not a static question bank. A cognitive system.</div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Features */}
@@ -176,6 +237,71 @@ export default async function LandingPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Positioning — Skill Builder + Maestring. Neutralizes the #1 objection
+          ("but AWS has its own resources") by reframing us as a complement,
+          not a competitor. SEO-friendly and moves us up the funnel. */}
+      <section className="max-w-5xl mx-auto px-6 py-20">
+        <div className="text-center mb-12">
+          <div className="inline-block text-xs uppercase tracking-widest text-indigo-400 mb-3">
+            Works with what you already use
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Skill Builder teaches AWS.
+            <br />
+            <span className="gradient-text">Maestring gets you certified.</span>
+          </h2>
+          <p className="text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+            AWS Skill Builder is the authoritative source for AWS content — you should use it.
+            Maestring is the adaptive exam-readiness layer on top. We give you the one thing AWS
+            structurally can&rsquo;t: an honest prediction of your pass probability before you spend
+            $150 on the real exam.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          <div className="card-base p-6">
+            <div className="text-sm font-semibold text-zinc-300 mb-3">AWS Skill Builder</div>
+            <ul className="text-sm text-zinc-400 space-y-2">
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Official content & labs</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Video courses by AWS instructors</li>
+              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">—</span>Static question bank</li>
+              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">—</span>No readiness prediction</li>
+              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">—</span>No adaptive difficulty</li>
+            </ul>
+          </div>
+
+          <div className="card-base p-6 border-indigo-500/30 relative">
+            <div className="absolute -top-3 left-6 bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wider">
+              IDEAL STACK
+            </div>
+            <div className="text-sm font-semibold text-indigo-300 mb-3">Both, together</div>
+            <ul className="text-sm text-zinc-300 space-y-2">
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Learn AWS from AWS</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Measure readiness with Maestring</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Fresh adaptive questions forever</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Pass on the first attempt</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>~€48/mo combined</li>
+            </ul>
+          </div>
+
+          <div className="card-base p-6">
+            <div className="text-sm font-semibold text-zinc-300 mb-3">Maestring</div>
+            <ul className="text-sm text-zinc-400 space-y-2">
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Live Readiness Score 0–100</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>FSRS-4.5 spaced repetition</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Unlimited adaptive AI questions</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Productive-error elaboration</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Pass-or-refund guarantee</li>
+            </ul>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-zinc-600 mt-8 max-w-xl mx-auto leading-relaxed">
+          Different incentives, shared outcome. AWS profits when you sit the exam.
+          We profit when you pass it. Use both.
+        </p>
       </section>
 
       {/* How it works */}

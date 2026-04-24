@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SubscriptionPlan, SubscriptionStatus } from '@/types/database'
 import logger from '@/lib/logger'
+import { trackServer } from '@/lib/analytics-server'
 
 export function mapStripePlan(priceId: string): SubscriptionPlan {
   if (priceId === process.env.STRIPE_PRICE_PRO_ANNUAL) return 'pro_annual'
@@ -72,6 +73,8 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session) 
   }
 
   logger.info({ userId, plan }, 'Checkout completed, subscription created')
+
+  await trackServer(userId, { name: 'subscription_created', properties: { plan } })
 }
 
 export async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -101,7 +104,7 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
 
 export async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const supabase = createAdminClient()
-  const { error } = await supabase.from('subscriptions')
+  const { data, error } = await supabase.from('subscriptions')
     .update({
       plan: 'free',
       status: 'canceled',
@@ -109,12 +112,18 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscription.id)
+    .select('user_id')
+    .maybeSingle()
 
   if (error) {
     logger.error({ err: error, subscriptionId: subscription.id }, 'Failed to delete subscription')
     // Must retry — otherwise a user keeps Pro access after canceling because
     // the webhook silently ate a transient DB error. Stripe will redeliver.
     throw error
+  }
+
+  if (data?.user_id) {
+    await trackServer(data.user_id, { name: 'subscription_cancelled' })
   }
 }
 
