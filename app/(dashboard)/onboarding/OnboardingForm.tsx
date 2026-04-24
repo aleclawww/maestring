@@ -74,16 +74,37 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
   const [diagnostic, setDiagnostic] = useState<DiagnosticQuestion[]>([])
   const [diagnosticLoading, setDiagnosticLoading] = useState(false)
   const [diagnosticAnswers, setDiagnosticAnswers] = useState<Record<string, number>>({})
+  // Previously the fetch catch-handler quietly set diagnostic to `[]` and
+  // `.then(r => r.json())` never checked `r.ok`, so a 500-with-JSON response
+  // collapsed into the same empty path. The UI then silently rendered the
+  // "we'll use your self-assessment" fallback as if the diagnostic had been
+  // genuinely skipped — the user never learned the calibration step failed
+  // and couldn't retry. Track the error so we can (a) log it, (b) show a
+  // tiny notice below the fallback copy so the user knows it was a failure,
+  // not a deliberate skip.
+  const [diagnosticError, setDiagnosticError] = useState<string | null>(null)
   const diagnosticFetchedRef = useRef(false)
 
   useEffect(() => {
     if (step !== 3 || diagnosticFetchedRef.current) return
     diagnosticFetchedRef.current = true
     setDiagnosticLoading(true)
+    setDiagnosticError(null)
     fetch('/api/onboarding/diagnostic')
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          // A 500 with a JSON body used to slide into the success path and
+          // silently map to empty — refuse that, route it to the catch.
+          throw new Error(`HTTP ${r.status}`)
+        }
+        return r.json()
+      })
       .then(j => setDiagnostic(j?.data?.questions ?? []))
-      .catch(() => setDiagnostic([]))
+      .catch(err => {
+        console.error('Onboarding diagnostic fetch failed', err)
+        setDiagnosticError(err?.message || 'Could not load diagnostic questions.')
+        setDiagnostic([])
+      })
       .finally(() => setDiagnosticLoading(false))
   }, [step])
 
@@ -272,6 +293,16 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
                 ? 'Loading diagnostic…'
                 : 'Your initial plan will use your self-assessment. The system will adjust with your first sessions.'}
             </p>
+            {/*
+              Surface the fetch failure separately so "fallback to self-assessment"
+              doesn't masquerade as a deliberate skip. Keeps the graceful path
+              (user can still continue) while making the miss observable.
+            */}
+            {diagnosticError && (
+              <p className="text-xs text-danger mb-4" role="alert">
+                Couldn&apos;t load the diagnostic. Continuing with your self-assessment.
+              </p>
+            )}
             {diagnostic.map((q, qi) => {
               const selected = diagnosticAnswers[q.questionId]
               return (

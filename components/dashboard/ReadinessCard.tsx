@@ -199,6 +199,15 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [atRisk, setAtRisk] = useState<AtRiskItem[] | null>(null)
   const [atRiskLoading, setAtRiskLoading] = useState(false)
+  // Previously this fetch catch-handler quietly set `atRisk` to `[]` on ANY
+  // failure (network blip, 500, JSON parse error) and `.then(r => r.json())`
+  // didn't check `r.ok`, so a 500-with-JSON-body also slipped into the
+  // success path with `j?.data?.items ?? []`. Both cases rendered "No
+  // concepts at risk right now." — a confident false-negative that hides the
+  // very list the user opened this drawer to see. Track error state
+  // separately so the empty render can tell the truth: "we couldn't load"
+  // vs "nothing is at risk".
+  const [atRiskError, setAtRiskError] = useState<string | null>(null)
 
   const openAtRisk = useCallback(() => {
     setDrawerOpen(true)
@@ -207,10 +216,22 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
   useEffect(() => {
     if (!drawerOpen || atRisk !== null || atRiskLoading) return
     setAtRiskLoading(true)
+    setAtRiskError(null)
     fetch('/api/dashboard/at-risk')
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          // Surface 4xx/5xx explicitly — don't let them slide into the
+          // "success" branch and get silently mapped to an empty list.
+          throw new Error(`HTTP ${r.status}`)
+        }
+        return r.json()
+      })
       .then(j => setAtRisk(j?.data?.items ?? []))
-      .catch(() => setAtRisk([]))
+      .catch(err => {
+        console.error('ReadinessCard at-risk fetch failed', err)
+        setAtRiskError(err?.message || 'Could not load at-risk concepts.')
+        setAtRisk([])
+      })
       .finally(() => setAtRiskLoading(false))
   }, [drawerOpen, atRisk, atRiskLoading])
 
@@ -306,6 +327,10 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
       <Modal isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title="Concepts at risk" size="lg">
         {atRiskLoading ? (
           <p className="text-sm text-text-muted">Loading…</p>
+        ) : atRiskError ? (
+          <p className="text-sm text-danger" role="alert">
+            Could not load at-risk concepts. Please try again.
+          </p>
         ) : !atRisk || atRisk.length === 0 ? (
           <p className="text-sm text-text-muted">No concepts at risk right now.</p>
         ) : (

@@ -153,16 +153,33 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
     const timeTaken = Date.now() - state.startedAt
     const questionNumber = state.questionNumber
 
-    // Prefetch next question in background
+    // Prefetch next question in background.
+    //
+    // Previously the `.catch(() => {})` swallowed EVERY failure mode:
+    //   - transient 5xx from /api/study/generate (rate limit, LLM timeout)
+    //   - JSON parse errors when the response isn't JSON (HTML error page)
+    //   - `.then(({ data }) => ...)` destructuring `data` off a non-`data`
+    //     response shape (e.g. `{ error: "..." }` after a quota miss)
+    // The user's on-demand fetch path still works, so this is a soft degrade
+    // — not worth surfacing to the user. But swallowing diagnostics meant a
+    // spike in "the next question takes 4s to load" tickets was untraceable
+    // because the prefetch silently failing looked identical to prefetch
+    // succeeding from the client's perspective. `console.warn` costs nothing
+    // and gives support a copy-paste trail when someone opens DevTools.
     if (questionNumber < SESSION_LENGTH) {
       fetch('/api/study/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'review', sessionId: sessionIdRef.current }),
       })
-        .then(r => r.json())
-        .then(({ data }) => { prefetchedRef.current = data })
-        .catch(() => {})
+        .then(async r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          return r.json()
+        })
+        .then(j => { prefetchedRef.current = j?.data ?? null })
+        .catch(err => {
+          console.warn('StudySession prefetch failed (next question will load on demand)', err)
+        })
     }
 
     try {
