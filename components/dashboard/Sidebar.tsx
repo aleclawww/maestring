@@ -31,7 +31,19 @@ export function Sidebar({ userName, userAvatar, plan = 'free' }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
+    // Previously `await supabase.auth.signOut()` was a bare await with no
+    // error check. If the signOut call silently failed (network blip, cookie
+    // adapter error, Supabase SDK rejection) we STILL pushed to /login — the
+    // user saw the login screen but the session cookie was intact, so the
+    // middleware redirect and/or the back button put them right back into
+    // the dashboard. Classic "I clicked log out and I'm still logged in"
+    // security/UX bug. Log the error to DevTools and skip the redirect so
+    // the user can see they're still signed in and retry (or refresh).
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      console.error('Sidebar signOut failed — session cookie may still be active', error)
+      return
+    }
     router.push('/login')
     router.refresh()
   }

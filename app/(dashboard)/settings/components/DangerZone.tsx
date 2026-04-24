@@ -14,26 +14,71 @@ export function DangerZone({ email }: DangerZoneProps) {
   const [confirmEmail, setConfirmEmail] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  // Previously `handleDelete` on a failed DELETE just flipped `deleting`
+  // back to false with no message — the user saw the button pop back and
+  // no feedback, stuck in a confused retry loop. Same for `handleExportData`
+  // which never checked `res.ok` and alerted the success copy even on 5xx.
+  // Track errors explicitly so each flow shows real feedback.
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [exportMessage, setExportMessage] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
   async function handleDelete() {
     if (confirmEmail !== email) return
     setDeleting(true)
-    // Call server action to delete account
-    const res = await fetch('/api/profile/me', { method: 'DELETE' })
-    if (res.ok) {
-      await supabase.auth.signOut()
+    setDeleteError(null)
+    try {
+      // Call server action to delete account
+      const res = await fetch('/api/profile/me', { method: 'DELETE' })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setDeleteError(
+          (j as { error?: string }).error ||
+            `Could not delete your account (HTTP ${res.status}). Please try again or contact support.`
+        )
+        return
+      }
+      // signOut cleans the session cookie so the user can't navigate back
+      // into the dashboard after deletion. A silent failure here previously
+      // left a lingering session cookie — user hit /?deleted=true but the
+      // middleware still treated them as authenticated on the next click.
+      // Log but still redirect — the server-side auth user has been wiped,
+      // so the cookie is dead anyway and any retry will land on /login.
+      const { error: signOutErr } = await supabase.auth.signOut()
+      if (signOutErr) {
+        console.warn('DangerZone signOut failed after delete (cookie may linger briefly)', signOutErr)
+      }
       router.push('/?deleted=true')
+    } catch (err) {
+      console.error('DangerZone handleDelete threw', err)
+      setDeleteError(err instanceof Error ? err.message : 'Unknown error. Please try again.')
+    } finally {
+      setDeleting(false)
     }
-    setDeleting(false)
   }
 
   async function handleExportData() {
-    // Trigger GDPR export
-    const res = await fetch('/api/account/export', { method: 'POST' })
-    const { message } = await res.json()
-    alert(message ?? 'You will receive your data by email within 24-48 hours.')
+    setExportMessage(null)
+    try {
+      // Trigger GDPR export. Previously this `await res.json()` destructured
+      // `{ message }` without checking `res.ok`, so a 500 with `{ error: ... }`
+      // would still fire the "You will receive your data" alert — user walks
+      // away believing the export is in-flight when the request never left
+      // the server.
+      const res = await fetch('/api/account/export', { method: 'POST' })
+      const j = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
+      if (!res.ok) {
+        setExportMessage(
+          j.error || `Export failed (HTTP ${res.status}). Please try again.`
+        )
+        return
+      }
+      setExportMessage(j.message ?? 'You will receive your data by email within 24-48 hours.')
+    } catch (err) {
+      console.error('DangerZone handleExportData threw', err)
+      setExportMessage(err instanceof Error ? err.message : 'Export failed. Please try again.')
+    }
   }
 
   return (
@@ -50,6 +95,11 @@ export function DangerZone({ email }: DangerZoneProps) {
           <Button variant="outline" size="sm" onClick={handleExportData}>
             Export data
           </Button>
+          {exportMessage && (
+            <p className="mt-2 text-xs text-text-secondary" role="status">
+              {exportMessage}
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl border border-danger/30 bg-danger/5 p-4">
@@ -86,6 +136,11 @@ export function DangerZone({ email }: DangerZoneProps) {
                   Cancel
                 </Button>
               </div>
+              {deleteError && (
+                <p className="text-xs text-danger" role="alert">
+                  {deleteError}
+                </p>
+              )}
             </div>
           )}
         </div>
