@@ -24,7 +24,18 @@ export async function POST(req: NextRequest) {
   const { sessionId, mode } = parsed.data;
   const supabase = createAdminClient();
 
-  const [{ data: session }, { data: profile }] = await Promise.all([
+  // Same silent-swallow pattern PR #39 fixed in /api/study/evaluate. The
+  // earlier shape `const [{ data: session }, { data: profile }] = await
+  // Promise.all([...])` dropped `error` off both PostgREST results. A DB
+  // read failure (RLS regression, network blip, Postgres hiccup) would
+  // leave `session` null and collapse into the 404 branch below, lying
+  // to the user with "Session not found or inactive" when the session
+  // actually exists and the DB is the problem. Capture full result
+  // objects and distinguish read errors (500 + truthful code) from
+  // genuinely-missing rows (404 as before). Profile is a soft degrade —
+  // a read failure just means the prompt loses fingerprint
+  // personalization; warn but continue.
+  const [sessionRes, profileRes] = await Promise.all([
     supabase
       .from("study_sessions")
       .select("id, status, mode, domain_id")
@@ -38,6 +49,24 @@ export async function POST(req: NextRequest) {
       .eq("id", user.id)
       .maybeSingle(),
   ]);
+
+  if (sessionRes.error && sessionRes.error.code !== "PGRST116") {
+    // PGRST116 = "no rows returned" from .single() — that's a genuine
+    // 404. Any other code is a real read failure.
+    logger.error(
+      { err: sessionRes.error, userId: user.id, sessionId },
+      "generate: study_sessions read failed — returning 500 (was previously collapsed to a misleading 404 'Session not found or inactive')"
+    );
+    return NextResponse.json({ error: "session_read_failed" }, { status: 500 });
+  }
+  if (profileRes.error) {
+    logger.warn(
+      { err: profileRes.error, userId: user.id },
+      "generate: profiles read failed — proceeding without cognitive_fingerprint (prompt loses personalization)"
+    );
+  }
+  const session = sessionRes.data;
+  const profile = profileRes.data;
 
   if (!session || session.status !== "active") {
     return NextResponse.json({ error: "Session not found or inactive" }, { status: 404 });
