@@ -23,22 +23,36 @@ export default function LoginForm({ nextUrl }: LoginFormProps) {
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        redirectTo: `${window.location.origin}/auth/callback?next=${nextUrl ?? '/dashboard'}`,
-        intent: 'login',
-      }),
-    })
+    // Previously: no try/catch wrapped this fetch. A network error (offline,
+    // DNS blip, Vercel cold-start 502) made the fetch promise reject,
+    // escaped the function, and left `loading=true` forever — the "Sending..."
+    // spinner hung permanently, the button stayed disabled, and the user had
+    // no way to retry without a hard refresh. On the login path specifically
+    // this is catastrophic: it's the very first interaction a returning user
+    // has with the app. Also guarded the 200-path json parse against
+    // non-JSON bodies (Vercel edge HTML during a deploy switchover).
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          redirectTo: `${window.location.origin}/auth/callback?next=${nextUrl ?? '/dashboard'}`,
+          intent: 'login',
+        }),
+      })
 
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setError(j.message ?? 'Could not send the link.')
-      setLoading(false)
-    } else {
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        console.error('LoginForm send-otp failed', { status: res.status, body: j })
+        setError(j.message ?? j.error ?? `Could not send the link (HTTP ${res.status}).`)
+        return
+      }
       setSent(true)
+    } catch (err) {
+      console.error('LoginForm send-otp network error', err)
+      setError('Network error while sending the link. Check your connection and try again.')
+    } finally {
       setLoading(false)
     }
   }

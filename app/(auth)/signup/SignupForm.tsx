@@ -23,25 +23,37 @@ export default function SignupForm({ referralCode }: SignupFormProps) {
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        fullName: name.trim(),
-        referralCode,
-        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
-        intent: 'signup',
-      }),
-    })
+    // Previously: no try/catch. A rejected fetch promise (offline, DNS blip,
+    // Vercel 502 during deploy) bubbled out, leaving loading=true forever —
+    // "Creating account..." spinner stuck, button disabled, user unable to
+    // retry without a hard refresh. Same bug as LoginForm; on signup it's
+    // worse because we also never fired the `signup_completed` event, so
+    // funnel analytics underreported real attempts on flaky network days.
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          fullName: name.trim(),
+          referralCode,
+          redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+          intent: 'signup',
+        }),
+      })
 
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setError(j.message ?? 'Could not create the account.')
-      setLoading(false)
-    } else {
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        console.error('SignupForm send-otp failed', { status: res.status, body: j })
+        setError(j.message ?? j.error ?? `Could not create the account (HTTP ${res.status}).`)
+        return
+      }
       track({ name: 'signup_completed', properties: { method: 'magic' } })
       setSent(true)
+    } catch (err) {
+      console.error('SignupForm send-otp network error', err)
+      setError('Network error while creating the account. Check your connection and try again.')
+    } finally {
       setLoading(false)
     }
   }
