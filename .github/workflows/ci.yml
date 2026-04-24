@@ -74,10 +74,35 @@ jobs:
           key: node-modules-${{ hashFiles('package-lock.json') }}
       - run: npm test
 
+  # Boots local Supabase via the CLI (Docker) and runs pgTAP assertions under
+  # supabase/tests/*.sql. Gates PRs that touch migrations or trigger functions:
+  # the handle_new_user search_path regression (migration 034) would have been
+  # caught here before it ever reached prod. Kept separate from Unit tests so
+  # a Docker pull failure doesn't fail fast the whole suite.
+  db-tests:
+    name: DB tests (pgTAP)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # `supabase db start` boots only Postgres + the migration runner inside
+      # Docker — no auth/storage/studio containers. Faster than `supabase start`
+      # and sufficient for pgTAP. Applies every file under supabase/migrations/
+      # in order, so a migration with a syntax error fails this step.
+      - name: Start local Supabase Postgres
+        run: supabase db start
+      # Runs pg_prove against supabase/tests/*.sql. Each file is wrapped in
+      # begin/rollback so assertions don't leak between files.
+      - name: Run pgTAP assertions
+        run: supabase test db
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, test]
+    needs: [typecheck, lint, test, db-tests]
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
