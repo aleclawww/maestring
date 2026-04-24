@@ -38,15 +38,38 @@ export function UpgradeButton({
         return;
       }
 
-      const data = (await res.json()) as { url?: string; error?: string };
+      // Previously: `await res.json()` was unguarded. A non-JSON response —
+      // Vercel edge HTML during a deploy cutover, a Cloudflare 502 page, a
+      // proxy-mangled body — threw inside the .json() call and fell into the
+      // bare `catch {}` below, which set "Network error" even though the
+      // network was fine. The actual signal (revenue-critical checkout is
+      // broken) never reached ops, and the user was told to check their
+      // connection while the real issue was server-side. Also, the bare
+      // catch threw away the error object so Sentry/console never saw
+      // anything. This is the literal pay page — worth being precise.
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+        message?: string;
+      };
       if (!res.ok || !data.url) {
-        setError(data.error ?? "Could not start checkout");
+        console.error("UpgradeButton checkout failed", {
+          status: res.status,
+          body: data,
+          plan,
+        });
+        setError(
+          data.message ??
+            data.error ??
+            `Could not start checkout (HTTP ${res.status}). Please try again.`
+        );
         setLoading(false);
         return;
       }
       window.location.href = data.url;
-    } catch {
-      setError("Network error");
+    } catch (err) {
+      console.error("UpgradeButton checkout network error", { err, plan });
+      setError("Network error while starting checkout. Check your connection and try again.");
       setLoading(false);
     }
   }
