@@ -16,12 +16,29 @@ export async function POST(req: NextRequest) {
   const { documentId } = parsed.data
 
   const supabase = createAdminClient()
+  // Previously `if (fetchErr || !doc) return 404 "Document not found"` collapsed
+  // three conditions into one misleading response:
+  //   (a) DB read error (RLS drift, PG blip),
+  //   (b) genuinely-missing document,
+  //   (c) (n/a here — admin can see all rows).
+  // An admin clicking "Retry" during a DB hiccup saw "Document not found" and
+  // reasonably concluded the record was gone, possibly triggering panic /
+  // re-upload workflows. Surface (a) as a truthful 500 + logger.error so the
+  // admin and ops can distinguish "transient DB failure, try again" from
+  // "this document does not exist".
   const { data: doc, error: fetchErr } = await supabase
     .from('user_documents')
     .select('id, user_id, processing_status')
     .eq('id', documentId)
-    .single()
-  if (fetchErr || !doc) {
+    .maybeSingle()
+  if (fetchErr) {
+    logger.error(
+      { err: fetchErr, documentId, adminEmail: admin.email },
+      'retry-document fetch failed — returning 500 (was previously collapsed to a misleading 404 "Document not found")'
+    )
+    return NextResponse.json({ error: 'Failed to load document' }, { status: 500 })
+  }
+  if (!doc) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })
   }
 
