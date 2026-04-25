@@ -246,6 +246,18 @@ export async function POST(req: NextRequest) {
 
   logger.info({ userId: user.id, conceptId, isCorrect: evaluation.isCorrect, rating }, "Answer evaluated");
 
+  // Every 10th question, refresh cognitive fingerprint in the background.
+  // Fire-and-forget: never block the response or propagate errors to the client.
+  const questionsAnsweredNow = (session.questions_answered ?? 0) + 1;
+  if (questionsAnsweredNow % 10 === 0) {
+    supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .rpc("update_cognitive_fingerprint" as any, { p_user_id: user.id })
+      .then(({ error: fpErr }) => {
+        if (fpErr) logger.warn({ err: fpErr, userId: user.id }, "update_cognitive_fingerprint failed — fingerprint not updated");
+      });
+  }
+
   return NextResponse.json({
     data: { evaluation, rating, nextReviewDate, exploration: isExploration },
   });

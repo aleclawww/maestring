@@ -94,6 +94,19 @@ export function applySessionShape(
   return [...warmup, ...peak, ...cooldown]
 }
 
+// ── Blueprint domain weights (exam spec) ─────────────────────────────────────
+// Maps to knowledge_domains.name substrings. Used to boost concepts from
+// underrepresented domains so the user's question mix tracks the exam blueprint
+// even when FSRS schedules happen to cluster in one domain.
+const DOMAIN_WEIGHT_BY_NAME: Array<{ match: string; weight: number }> = [
+  { match: 'Secure',      weight: 0.30 },
+  { match: 'Resilient',   weight: 0.26 },
+  { match: 'Performing',  weight: 0.24 },
+  { match: 'Cost',        weight: 0.20 },
+]
+
+const MAX_BLUEPRINT_BOOST = 2.5 // cap priority multiplier
+
 export async function buildStudyQueue(
   userId: string,
   mode: StudyMode,
@@ -133,18 +146,48 @@ export async function buildStudyQueue(
     .eq('certification_id', certificationId)
     .eq('is_active', true)
   if (domainId) conceptsQuery = conceptsQuery.eq('domain_id', domainId)
-  const { data: allConcepts, error: conceptsErr } = await conceptsQuery
+  const [{ data: allConcepts, error: conceptsErr }, { data: domainRows }] = await Promise.all([
+    conceptsQuery,
+    admin
+      .from('knowledge_domains')
+      .select('id, name, exam_weight_percent')
+      .eq('certification_id', certificationId),
+  ])
 
   if (conceptsErr) {
-    // Same failure mode as states above, but for the new-concept pool:
-    // discovery mode returns [], hybrid mode drops its discovery slots, and
-    // the domain interleaver has no enrichment data. The caller sees a
-    // shorter-than-expected queue rather than a 500, so we need the log
-    // trail.
     logger.warn(
       { err: conceptsErr, userId, mode, certificationId, domainId },
       'Failed to load concepts pool — discovery/hybrid slots will be empty'
     )
+  }
+
+  // ── Blueprint domain boost map ─────────────────────────────────────────────
+  // Compare how many concepts per domain the user has actually practiced (reps>0)
+  // against the exam-weight expected distribution. Domains below their expected
+  // share get a priority multiplier to pull them into the session queue faster.
+  const domainBoost = new Map<string, number>()
+  if (domainRows && domainRows.length > 0 && existingStates.length > 0) {
+    const practicedByDomain = new Map<string, number>()
+    for (const s of existingStates) {
+      if ((s.reps ?? 0) > 0 && s.concepts?.domain_id) {
+        practicedByDomain.set(
+          s.concepts.domain_id,
+          (practicedByDomain.get(s.concepts.domain_id) ?? 0) + 1
+        )
+      }
+    }
+    const totalPracticed = [...practicedByDomain.values()].reduce((a, b) => a + b, 0)
+    if (totalPracticed >= 10) {
+      for (const d of domainRows as Array<{ id: string; name: string; exam_weight_percent: number }>) {
+        const expectedPct = (d.exam_weight_percent ?? 0) / 100
+        // Fall back to name-based weight if DB weight is missing
+        const fallback = DOMAIN_WEIGHT_BY_NAME.find(w => d.name.includes(w.match))?.weight ?? expectedPct
+        const expected = fallback > 0 ? fallback : expectedPct
+        const actualPct = (practicedByDomain.get(d.id) ?? 0) / totalPracticed
+        const boost = Math.min(MAX_BLUEPRINT_BOOST, expected / Math.max(actualPct, 0.05))
+        domainBoost.set(d.id, boost)
+      }
+    }
   }
 
   const newConcepts = (allConcepts ?? []).filter(c => !existingConceptIds.has(c.id))
@@ -179,25 +222,32 @@ export async function buildStudyQueue(
 
   const reviewItems: StudyQueueItem[] = (dueConcepts as typeof existingStates)
     .slice(0, reviewLimit)
-    .map(s => ({
-      conceptId: s.concept_id,
-      conceptSlug: s.concepts?.slug ?? '',
-      conceptName: s.concepts?.name ?? '',
-      difficulty: s.concepts?.difficulty ?? 0.5,
-      priority: getStudyPriority(s),
-      reason: s.reps === 0 ? 'new' : s.lapses > 2 ? 'difficult' : 'scheduled',
-    }))
+    .map(s => {
+      const boost = domainBoost.get(s.concepts?.domain_id ?? '') ?? 1
+      return {
+        conceptId: s.concept_id,
+        conceptSlug: s.concepts?.slug ?? '',
+        conceptName: s.concepts?.name ?? '',
+        difficulty: s.concepts?.difficulty ?? 0.5,
+        priority: getStudyPriority(s) * boost,
+        reason: (s.reps === 0 ? 'new' : s.lapses > 2 ? 'difficult' : 'scheduled') as StudyQueueItem['reason'],
+      }
+    })
+    .sort((a, b) => b.priority - a.priority)
 
   const discoveryItems: StudyQueueItem[] = shuffle(newConcepts)
     .slice(0, discoveryLimit)
-    .map(c => ({
-      conceptId: c.id,
-      conceptSlug: c.slug,
-      conceptName: c.name,
-      difficulty: c.difficulty,
-      priority: 50,
-      reason: 'new' as const,
-    }))
+    .map(c => {
+      const boost = domainBoost.get(c.domain_id ?? '') ?? 1
+      return {
+        conceptId: c.id,
+        conceptSlug: c.slug,
+        conceptName: c.name,
+        difficulty: c.difficulty,
+        priority: 50 * boost,
+        reason: 'new' as const,
+      }
+    })
 
   let ri = 0
   let di = 0

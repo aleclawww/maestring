@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
 import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import { createHash } from 'crypto'
 import { CONCEPTS } from '../lib/knowledge-graph/aws-saa'
 import type { PatternTag } from '../lib/question-engine/templates'
@@ -40,9 +41,15 @@ const MAX_RETRIES = 2
 
 // ─── Provider setup ──────────────────────────────────────────────────────────
 
-type ProviderConfig = { name: string; client: OpenAI; model: string }
+type ProviderConfig =
+  | { name: 'Anthropic'; anthropic: Anthropic }
+  | { name: string; client: OpenAI; model: string }
 
 function buildClient(): ProviderConfig {
+  // Priority 1: Anthropic (already in .env.local for the app — no extra key needed)
+  if (process.env.ANTHROPIC_API_KEY) {
+    return { name: 'Anthropic', anthropic: new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) }
+  }
   if (process.env.GEMINI_API_KEY) {
     return {
       name: 'Gemini',
@@ -63,9 +70,8 @@ function buildClient(): ProviderConfig {
       model: 'llama-3.3-70b-versatile',
     }
   }
-  console.error('❌ No LLM API key found. Set GEMINI_API_KEY or GROQ_API_KEY in .env.local')
-  console.error('   Gemini free: https://aistudio.google.com/apikey')
-  console.error('   Groq free:   https://console.groq.com')
+  console.error('❌ No LLM API key found. Set ANTHROPIC_API_KEY, GEMINI_API_KEY or GROQ_API_KEY in .env.local')
+  console.error('   ANTHROPIC_API_KEY should already be set if the app is running')
   process.exit(1)
 }
 
@@ -207,13 +213,23 @@ async function generate(
 ): Promise<GeneratedQ> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const resp = await provider.client.chat.completions.create({
-        model: provider.model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 800,
-        temperature: 0.7,
-      })
-      const content = resp.choices[0]?.message?.content ?? ''
+      let content: string
+      if ('anthropic' in provider) {
+        const msg = await provider.anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 800,
+          messages: [{ role: 'user', content: prompt }],
+        })
+        content = (msg.content[0] as { type: string; text: string })?.text ?? ''
+      } else {
+        const resp = await provider.client.chat.completions.create({
+          model: provider.model,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 800,
+          temperature: 0.7,
+        })
+        content = resp.choices[0]?.message?.content ?? ''
+      }
       return parseResponse(content)
     } catch (err) {
       if (attempt === MAX_RETRIES) throw err
@@ -233,7 +249,8 @@ const supabase = createClient(
 
 async function main() {
   const provider = buildClient()
-  console.log(`🤖 seed-batch-gemini  provider=${provider.name}  model=${provider.model}`)
+  const modelLabel = provider.name === 'Anthropic' ? 'claude-haiku-4-5-20251001' : (provider as { model: string }).model
+  console.log(`🤖 seed-batch-gemini  provider=${provider.name}  model=${modelLabel}`)
 
   // Filter target pairs
   let pairs = TASK_CONCEPT_PAIRS
