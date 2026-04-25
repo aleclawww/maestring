@@ -502,6 +502,129 @@ export const TEMPLATES: Template[] = [
     explanation: 'AWS Backup centralises backup policies across services, automates cross-Region copy, and Audit Manager produces compliance reports out-of-the-box.',
   },
 
+  // ───── Domain 2: Resilient (extra coverage to hit weight target) ─────
+  {
+    id: 'tpl-206',
+    conceptSlug: 'dynamodb-resilience',
+    blueprintTaskId: '2.1',
+    patternTag: 'highest-availability',
+    difficulty: 0.55,
+    slots: {
+      need: ['active-active multi-Region writes', 'cross-Region replication for DR', 'point-in-time recovery for the last 35 days'],
+    },
+    stem: 'A DynamoDB workload requires {{need}} with managed operations.',
+    options: [
+      { text: 'Take nightly mysqldump-style exports and restore them in a second Region.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Daily exports cannot deliver active-active or PITR.' } },
+      { text: 'Enable DynamoDB Global Tables for multi-Region writes; PITR for 35-day recovery.', correct: true },
+      { text: 'Run DynamoDB on a single-AZ self-managed Cassandra cluster.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Self-managed loses every DynamoDB benefit.' } },
+      { text: 'Use DAX as the durability layer.', correct: false, distractor: { type: 'misuses-caching', explanation: 'DAX is a cache, not a replica or backup.' } },
+    ],
+    explanation: 'Global Tables give multi-Region active-active replication with last-writer-wins; Point-in-Time Recovery gives 35-day per-second restore. Together they cover both availability and operational recovery without custom tooling.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-207',
+    conceptSlug: 's3-replication',
+    blueprintTaskId: '2.2',
+    patternTag: 'dr-rpo-rto',
+    difficulty: 0.55,
+    slots: {
+      need: ['cross-Region disaster recovery for S3 data', 'compliance-driven cross-account isolation of replicas', 'low-latency reads close to global users'],
+      sla: ['15-minute RPO', '1-hour RPO'],
+    },
+    stem: 'For {{need}} with a {{sla}}, what S3 feature should be configured?',
+    options: [
+      { text: 'A Lambda triggered on PUT that copies objects to the destination bucket.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reinvents S3 Replication and breaks under load.' } },
+      { text: 'S3 Cross-Region Replication (CRR) with Replication Time Control (RTC) for the 15-minute RPO SLA.', correct: true },
+      { text: 'Daily AWS Backup copy jobs across Regions.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Daily cadence misses tight RPOs.' } },
+      { text: 'Cross-Region snapshot of the bucket.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'S3 buckets are not snapshottable.' } },
+    ],
+    explanation: 'CRR replicates new objects asynchronously; with Replication Time Control 99.99% of objects replicate within 15 minutes (a contractual SLA). For cross-account replicas, CRR can target a destination owned by another account.',
+    maxVariants: 6,
+  },
+
+  {
+    id: 'tpl-208',
+    conceptSlug: 'rds-backups-snapshots',
+    blueprintTaskId: '2.2',
+    patternTag: 'dr-rpo-rto',
+    difficulty: 0.5,
+    slots: {
+      strategy: ['backup & restore', 'pilot light', 'warm standby', 'multi-site active-active'],
+    },
+    stem: 'Pick the AWS service mix for an RDS-based DR strategy of type "{{strategy}}".',
+    options: [
+      { text: 'Automated daily snapshots only; no DR plan defined for the workload.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Single-Region only; not a DR strategy.' } },
+      { text: 'Map strategy → service mix: snapshots+copy for backup, read replica for pilot light, scaled-down active for warm standby, Aurora Global Database for multi-site.', correct: true },
+      { text: 'Use Aurora Global Database uniformly for every DR strategy tier.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Overkill for backup & restore tier.' } },
+      { text: 'Multi-AZ deployments alone replace every DR tier strategy.', correct: false, distractor: { type: 'wrong-region-scope', explanation: 'Multi-AZ is in-Region HA, not DR.' } },
+    ],
+    explanation: 'The four canonical DR strategies map to RPO/RTO budgets and cost. Snapshots cover the cheapest end; Aurora Global Database covers the active-active end with sub-second replication.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-209',
+    conceptSlug: 'vpc-fundamentals',
+    blueprintTaskId: '2.1',
+    patternTag: 'fault-tolerant-design',
+    difficulty: 0.5,
+    slots: {
+      tier: ['the public-facing tier', 'the private app tier', 'the database tier'],
+      azCount: ['two AZs', 'three AZs'],
+    },
+    stem: 'Design a VPC topology that survives the loss of a single AZ for {{tier}} across {{azCount}}.',
+    options: [
+      { text: 'A single subnet in one AZ with EIP failover scripts.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Single subnet collapses on AZ loss.' } },
+      { text: 'One subnet per AZ; NAT Gateway in each AZ for private subnets; route tables per AZ.', correct: true },
+      { text: 'A single NAT Gateway shared across AZs.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'Single NAT becomes a Cross-AZ failure point.' } },
+      { text: 'Use Transit Gateway as the only network primitive.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'TGW is for many-VPC; not the per-AZ HA primitive.' } },
+    ],
+    explanation: 'AZ loss is the canonical failure unit. The HA recipe is one subnet per AZ per tier, an AZ-local NAT Gateway for private egress, and route tables that keep traffic within an AZ unless a target is unhealthy.',
+    maxVariants: 6,
+  },
+
+  {
+    id: 'tpl-210',
+    conceptSlug: 'aws-backup',
+    blueprintTaskId: '2.2',
+    patternTag: 'compliance-immutable',
+    difficulty: 0.6,
+    slots: {
+      mandate: ['ransomware-resistant immutable backups', 'cross-account isolation from production', 'legal hold on backups beyond their retention'],
+    },
+    stem: 'A regulated company needs {{mandate}} for AWS Backup recovery points.',
+    options: [
+      { text: 'Manually copy snapshots to a personal AWS account.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Not WORM, not auditable.' } },
+      { text: 'Use AWS Backup Vault Lock in compliance mode plus cross-account backup copy and Legal Hold.', correct: true },
+      { text: 'A bucket policy denying delete on the backup bucket.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'Bucket policies are mutable by root.' } },
+      { text: 'MFA-delete on the backup S3 bucket.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'MFA-delete is bypassable; not WORM.' } },
+    ],
+    explanation: 'Vault Lock in compliance mode is WORM (not even root can shorten retention). Cross-account backup copy isolates from a compromised production account. Legal Hold prevents deletion beyond retention until manually released.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-211',
+    conceptSlug: 'transit-gateway',
+    blueprintTaskId: '2.1',
+    patternTag: 'fault-tolerant-design',
+    difficulty: 0.6,
+    slots: {
+      topology: ['50 VPCs across 4 accounts in one Region', 'on-prem + 20 VPCs with overlapping traffic patterns', 'multi-Region VPC connectivity with managed peering'],
+    },
+    stem: 'For {{topology}} with HA and minimal mesh complexity, choose the connectivity primitive.',
+    options: [
+      { text: 'Full-mesh VPC Peering between every pair of VPCs.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'O(N²) complexity; route tables explode.' } },
+      { text: 'AWS Transit Gateway as the central hub, with TGW peering for cross-Region and Direct Connect Gateway for on-prem.', correct: true },
+      { text: 'A VPN Gateway per VPC.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'No central routing; per-VPC management.' } },
+      { text: 'PrivateLink for everything.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'PrivateLink exposes services, not full VPC routing.' } },
+    ],
+    explanation: 'Transit Gateway is the AWS hub-and-spoke router: one attachment per VPC, route tables for segmentation, TGW peering for cross-Region, and Direct Connect Gateway integration for on-prem. Replaces full-mesh peering at scale.',
+    maxVariants: 3,
+  },
+
   // ───── Domain 3: Performant (3.1 — Storage) ─────
   {
     id: 'tpl-301',
@@ -510,7 +633,7 @@ export const TEMPLATES: Template[] = [
     patternTag: 'highest-throughput',
     difficulty: 0.6,
     slots: {
-      iops: ['16,000', '64,000', '256,000'],
+      iops: ['16,000', '64,000', '128,000', '256,000'],
       latency: ['millisecond', 'sub-millisecond'],
     },
     stem: 'Choose the EBS volume type for sustained {{iops}} IOPS at {{latency}} latency.',
@@ -930,6 +1053,127 @@ export const TEMPLATES: Template[] = [
       { text: 'AWS Config for cost monitoring.', correct: false, distractor: { type: 'wrong-region-scope', explanation: 'Config is config drift, not cost.' } },
     ],
     explanation: 'AWS Budgets handles thresholds and alerts; Cost Explorer handles trends, forecasts, and tag aggregation; Trusted Advisor surfaces idle/unused resources for savings.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-410',
+    conceptSlug: 'ebs-cost-optimization',
+    blueprintTaskId: '4.1',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      situation: ['gp2 volumes provisioned 5 years ago', 'high IOPS volumes that are over-provisioned', 'EBS snapshots that are no longer needed but kept for years'],
+    },
+    stem: 'Cut EBS storage spend caused by: {{situation}}.',
+    options: [
+      { text: 'Migrate to gp3 (cheaper, configurable IOPS/throughput); right-size with Compute Optimizer; lifecycle old snapshots via Data Lifecycle Manager.', correct: true },
+      { text: 'Switch every volume to io2 Block Express for performance.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Premium tier; raises cost.' } },
+      { text: 'Delete the volumes and rely on instance store only.', correct: false, distractor: { type: 'misses-durability-tier', explanation: 'Instance store is ephemeral.' } },
+      { text: 'Detach the volumes and keep them unattached to save money.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Unattached EBS still bills for storage.' } },
+    ],
+    explanation: 'gp3 is ~20% cheaper than gp2 at equivalent performance and decouples IOPS/throughput from size. DLM automates snapshot lifecycle. Compute Optimizer flags over-provisioned volumes for right-sizing.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-411',
+    conceptSlug: 'fargate-spot',
+    blueprintTaskId: '4.2',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.55,
+    slots: {
+      workload: ['nightly batch jobs in containers', 'CI/CD build runners on ECS', 'a stateless API tier behind ALB'],
+      cluster: ['ECS', 'EKS'],
+    },
+    stem: 'Cost-optimise {{workload}} running on {{cluster}}.',
+    options: [
+      { text: 'Run On-Demand Fargate at 100% capacity uniformly across all clusters.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'No discount applied; misses cheaper tiers.' } },
+      { text: 'For ECS use Fargate Spot via Capacity Providers (mix On-Demand + Spot); for EKS use EC2 Spot in managed node groups (Fargate Spot is not supported on EKS).', correct: true },
+      { text: 'Switch to long-running EC2 Reserved Instances regardless of workload.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Locks capacity; loses serverless benefit.' } },
+      { text: 'Always run Fargate Spot regardless of stateful or stateless behaviour.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Spot can interrupt; stateful tiers break.' } },
+    ],
+    explanation: 'ECS Capacity Providers natively mix Fargate On-Demand and Fargate Spot for stateless interruption-tolerant work. EKS Fargate does not support Spot, but EKS managed node groups can use EC2 Spot for the same savings.',
+    maxVariants: 6,
+  },
+
+  {
+    id: 'tpl-412',
+    conceptSlug: 'cost-optimization-strategies',
+    blueprintTaskId: '4.3',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.55,
+    slots: {
+      profile: ['a development environment used 9-5 weekdays', 'a steady production workload running 24/7', 'a data pipeline that runs 4 hours a night'],
+    },
+    stem: 'Pick the cheapest compute pricing strategy for: {{profile}}.',
+    options: [
+      { text: 'Match: Instance Scheduler + On-Demand for dev; Compute Savings Plans for steady prod; Spot or Fargate Spot for fault-tolerant nightly jobs.', correct: true },
+      { text: 'Spot only for every workload to chase the deepest discount.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Interruption breaks dev IDE sessions and SLA-bound prod.' } },
+      { text: 'Reserved Instances 3-year all-upfront for the dev environment alone.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Locks capacity that idles 16h/day.' } },
+      { text: 'On-Demand only for every workload to keep operations simple.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Leaves the largest discount lever unused.' } },
+    ],
+    explanation: 'Match the pricing model to the duty cycle: schedulable dev workloads use Instance Scheduler + On-Demand; steady prod uses Compute Savings Plans for cross-service flexibility; bursty/interruption-tolerant jobs use Spot.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-413',
+    conceptSlug: 'aurora-performance',
+    blueprintTaskId: '4.3',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.55,
+    slots: {
+      pattern: ['unpredictable bursty load with long idle gaps', 'predictable 24/7 read-heavy workload', 'a dev/test database used during business hours'],
+    },
+    stem: 'Most cost-effective Aurora topology for: {{pattern}}.',
+    options: [
+      { text: 'Match: Aurora Serverless v2 for bursty/idle and dev/test (auto-scales by ACU); provisioned Aurora with read replicas plus reserved capacity for steady 24/7 reads.', correct: true },
+      { text: 'Use Aurora Serverless v2 uniformly for every Aurora deployment in the account.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'Serverless on always-busy is more expensive than reserved.' } },
+      { text: 'Provisioned Aurora with always-on On-Demand pricing for every database tier.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'No reservation discount; idle hours billed for dev.' } },
+      { text: 'Migrate every Aurora workload to single-AZ RDS to maximise cost savings.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Loses Aurora durability and HA.' } },
+    ],
+    explanation: 'Aurora Serverless v2 idles cheaply and scales by ACU in seconds — ideal for bursty/idle. Steady 24/7 read-heavy workloads are cheapest on provisioned Aurora with reserved capacity plus read replicas.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-313',
+    conceptSlug: 'kinesis-streams-vs-firehose',
+    blueprintTaskId: '3.5',
+    patternTag: 'event-driven-decoupling',
+    difficulty: 0.55,
+    slots: {
+      need: ['ingest 10 GB/s with custom consumers and replay', 'land streaming data in S3/Redshift with format conversion', 'stream and process with sub-second latency'],
+    },
+    stem: 'Pick the streaming primitive for: {{need}}.',
+    options: [
+      { text: 'Kinesis Data Streams for custom consumers and replay; Kinesis Data Firehose for managed delivery to S3/Redshift with format conversion.', correct: true },
+      { text: 'SQS standard queue used as the high-throughput streaming pipeline.', correct: false, distractor: { type: 'sync-when-decoupled-needed', explanation: 'SQS is a queue, not an ordered stream.' } },
+      { text: 'EventBridge bus used for every streaming-related ingestion need.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'EventBridge is event routing, not GB/s ingest.' } },
+      { text: 'Self-managed Kafka brokers on EC2 with full operations.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'MSK or Kinesis are managed.' } },
+    ],
+    explanation: 'Data Streams gives shard-based ordered records with replay and custom consumers; Firehose adds managed delivery and format conversion (Parquet/ORC) into S3/Redshift/OpenSearch.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-314',
+    conceptSlug: 'dynamodb-performance',
+    blueprintTaskId: '3.3',
+    patternTag: 'highest-throughput',
+    difficulty: 0.55,
+    slots: {
+      pattern: ['hot partition causing throttling', 'read-heavy workload at 100k RPS', 'occasional bursts on otherwise low traffic'],
+    },
+    stem: 'Solve a DynamoDB performance issue: {{pattern}}.',
+    options: [
+      { text: 'Hot partition: re-design partition key for high-cardinality plus DAX; read-heavy: DAX cache and/or eventually-consistent reads; bursty: On-Demand capacity.', correct: true },
+      { text: 'Switch every DynamoDB workload to provisioned capacity with low limits.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Bursty needs adaptive capacity.' } },
+      { text: 'Use Global Tables to fix throttling problems on a single Region.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Replication is for HA, not throttling.' } },
+      { text: 'Add a Lambda in front of DynamoDB to retry every operation forever.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'SDK already retries; does not fix root cause.' } },
+    ],
+    explanation: 'Hot partitions need cardinality engineering plus DAX caching. Read-heavy workloads benefit from DAX or eventually-consistent reads. Bursty workloads should use On-Demand capacity which auto-scales without operational tuning.',
     maxVariants: 3,
   },
 ]
