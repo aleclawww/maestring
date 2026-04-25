@@ -25,6 +25,8 @@ type DigestRow = {
   weakest_domain_slug: string | null;
   weakest_domain_name: string | null;
   weakest_domain_accuracy: number | null;
+  weakest_task_id: string | null;
+  weakest_task_label: string | null;
   due_next_7d: number;
   best_exam_scaled: number | null;
   best_exam_passed: boolean | null;
@@ -78,6 +80,8 @@ export async function POST(req: NextRequest) {
             passProbability: r.pass_probability != null ? Number(r.pass_probability) : null,
             weakestDomainName: r.weakest_domain_name,
             weakestDomainAccuracy: r.weakest_domain_accuracy != null ? Number(r.weakest_domain_accuracy) : null,
+            weakestTaskId: r.weakest_task_id,
+            weakestTaskLabel: r.weakest_task_label,
             dueNext7d: r.due_next_7d,
             bestExamScaled: r.best_exam_scaled,
             bestExamPassed: r.best_exam_passed,

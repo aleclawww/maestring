@@ -29,9 +29,12 @@ export type WeeklyDigestProps = {
   readinessNow: number | null;
   readinessDelta: number | null;
   passProbability: number | null; // 0..1
-  // Weakness
+  // Weakness — domain
   weakestDomainName: string | null;
   weakestDomainAccuracy: number | null; // 0..1
+  // Weakness — blueprint task
+  weakestTaskId: string | null;
+  weakestTaskLabel: string | null;
   // Forward looking
   dueNext7d: number;
   // Simulator highlight
@@ -54,6 +57,8 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
     passProbability,
     weakestDomainName,
     weakestDomainAccuracy,
+    weakestTaskId,
+    weakestTaskLabel,
     dueNext7d,
     bestExamScaled,
     bestExamPassed,
@@ -145,6 +150,14 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
             </Section>
           )}
 
+          {weakestTaskId && weakestTaskLabel && (
+            <Section style={weakTaskBox}>
+              <Text style={cardLabel}>Tarea del examen más débil</Text>
+              <Text style={weakTaskId}>{weakestTaskId}</Text>
+              <Text style={weakDomainName}>{weakestTaskLabel}</Text>
+            </Section>
+          )}
+
           {bestExamScaled != null && (
             <Section style={examBox}>
               <Text style={cardLabel}>Mejor simulacro de las últimas 4 semanas</Text>
@@ -193,6 +206,8 @@ const readinessBox = { backgroundColor: "#15172a", borderRadius: "12px", padding
 const readinessValue = { color: "#ffffff", fontSize: "30px", fontWeight: "700", margin: "4px 0 0" };
 const weakBox = { backgroundColor: "#15172a", borderRadius: "12px", padding: "16px", margin: "12px 0", border: "1px solid #ef444433" };
 const weakDomainName = { color: "#ffffff", fontSize: "18px", fontWeight: "600", margin: "4px 0" };
+const weakTaskBox = { backgroundColor: "#15172a", borderRadius: "12px", padding: "16px", margin: "12px 0", border: "1px solid #f59e0b33" };
+const weakTaskId = { color: "#f59e0b", fontSize: "13px", fontWeight: "700", fontFamily: "monospace", margin: "0 0 2px" };
 const examBox = { backgroundColor: "#15172a", borderRadius: "12px", padding: "16px", margin: "12px 0" };
 const examScore = { color: "#ffffff", fontSize: "24px", fontWeight: "700", margin: "4px 0 0" };
 const cardLabel = { color: "#71717a", fontSize: "11px", margin: 0, textTransform: "uppercase" as const, letterSpacing: "0.05em" };
