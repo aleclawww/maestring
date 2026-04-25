@@ -566,6 +566,7 @@ export type Database = {
           full_name: string | null
           id: string
           journey_phase: Database["public"]["Enums"]["journey_phase"]
+          last_export_at: string | null
           last_readiness_at: string | null
           last_readiness_score: number | null
           last_study_date: string | null
@@ -594,6 +595,7 @@ export type Database = {
           full_name?: string | null
           id: string
           journey_phase?: Database["public"]["Enums"]["journey_phase"]
+          last_export_at?: string | null
           last_readiness_at?: string | null
           last_readiness_score?: number | null
           last_study_date?: string | null
@@ -622,6 +624,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           journey_phase?: Database["public"]["Enums"]["journey_phase"]
+          last_export_at?: string | null
           last_readiness_at?: string | null
           last_readiness_score?: number | null
           last_study_date?: string | null
@@ -746,17 +749,21 @@ export type Database = {
       }
       questions: {
         Row: {
+          blueprint_task_id: string | null
           concept_id: string
           correct_index: number
           created_at: string
           difficulty: number
+          expected_distractor_type: Json | null
           explanation: string
           explanation_deep: string | null
           hint: string | null
           id: string
           is_active: boolean
+          is_canonical: boolean
           key_insight: string | null
           options: Json
+          pattern_tag: string | null
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
           reject_reason: string | null
@@ -768,19 +775,24 @@ export type Database = {
           tags: string[]
           times_correct: number
           times_shown: number
+          variation_seed: string | null
         }
         Insert: {
+          blueprint_task_id?: string | null
           concept_id: string
           correct_index: number
           created_at?: string
           difficulty?: number
+          expected_distractor_type?: Json | null
           explanation: string
           explanation_deep?: string | null
           hint?: string | null
           id?: string
           is_active?: boolean
+          is_canonical?: boolean
           key_insight?: string | null
           options: Json
+          pattern_tag?: string | null
           question_text: string
           question_type?: Database["public"]["Enums"]["question_type"]
           reject_reason?: string | null
@@ -792,19 +804,24 @@ export type Database = {
           tags?: string[]
           times_correct?: number
           times_shown?: number
+          variation_seed?: string | null
         }
         Update: {
+          blueprint_task_id?: string | null
           concept_id?: string
           correct_index?: number
           created_at?: string
           difficulty?: number
+          expected_distractor_type?: Json | null
           explanation?: string
           explanation_deep?: string | null
           hint?: string | null
           id?: string
           is_active?: boolean
+          is_canonical?: boolean
           key_insight?: string | null
           options?: Json
+          pattern_tag?: string | null
           question_text?: string
           question_type?: Database["public"]["Enums"]["question_type"]
           reject_reason?: string | null
@@ -816,6 +833,7 @@ export type Database = {
           tags?: string[]
           times_correct?: number
           times_shown?: number
+          variation_seed?: string | null
         }
         Relationships: [
           {
@@ -1239,6 +1257,15 @@ export type Database = {
       }
     }
     Views: {
+      blueprint_coverage: {
+        Row: {
+          approved_count: number | null
+          blueprint_task_id: string | null
+          canonical_count: number | null
+          concept_diversity: number | null
+        }
+        Relationships: []
+      }
       user_subscription_plan: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -1381,6 +1408,10 @@ export type Database = {
           quota: number
           used: number
         }[]
+      }
+      ensure_user_bootstrapped: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       get_broken_streaks_today: {
         Args: never
