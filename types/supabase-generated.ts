@@ -1413,6 +1413,20 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      get_blueprint_task_accuracy: {
+        Args: { p_certification_id?: string; p_user_id: string }
+        Returns: {
+          accuracy_pct: number
+          attempts: number
+          correct: number
+          domain_name: string
+          domain_number: number
+          domain_weight_pct: number
+          pool_available: number
+          task_id: string
+          task_label: string
+        }[]
+      }
       get_broken_streaks_today: {
         Args: never
         Returns: {
