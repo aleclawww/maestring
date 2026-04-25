@@ -13,7 +13,7 @@ export type AnalyticsEvent =
   | { name: "study_session_completed"; properties: { mode: string; session_id?: string; total: number; correct: number } }
   | { name: "study_session_abandoned"; properties: { mode: string; session_id?: string; questions_answered: number } }
   | { name: "question_answered"; properties: { is_correct: boolean; mode: string; time_taken_ms: number; concept_id?: string; first_attempt_correct?: boolean; used_hint?: boolean } }
-  | { name: "hint_revealed"; properties: { concept_id?: string; question_id?: string } }
+  | { name: "hint_revealed"; properties: { concept_id?: string; question_id?: string; proactive?: boolean } }
   | { name: "deep_explanation_opened"; properties: { concept_id?: string; question_id?: string } }
   // Readiness & milestones
   | { name: "readiness_milestone_hit"; properties: { score: number; band: "50" | "70" | "85" } }

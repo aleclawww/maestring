@@ -21,6 +21,7 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
   const [selected, setSelected] = useState<number | null>(null)
   const [attempt, setAttempt] = useState<1 | 2>(1)
   const [hintShown, setHintShown] = useState(false)
+  const [hintRequestedBeforeAnswer, setHintRequestedBeforeAnswer] = useState(false)
   const [firstAttempt, setFirstAttempt] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -39,10 +40,12 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
 
     const isCorrect = selected === question.correctIndex
 
-    // First attempt correct, or no hint available, or on second attempt → submit.
-    if (isCorrect || !hasHint || attempt === 2) {
+    // First attempt correct, or no hint available, or on second attempt,
+    // or user already consumed the hint proactively → submit.
+    if (isCorrect || !hasHint || attempt === 2 || hintRequestedBeforeAnswer) {
       setSubmitting(true)
-      const firstCorrect = attempt === 1 && isCorrect
+      // Proactive hint use forfeits first-try bonus even when correct.
+      const firstCorrect = attempt === 1 && isCorrect && !hintRequestedBeforeAnswer
       setTimeout(() => onAnswer(selected, firstCorrect), 200)
       return
     }
@@ -84,9 +87,26 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
             </>
           )}
         </div>
-        <span className={cn('text-xs font-semibold', difficultyLabel.color)}>
-          {difficultyLabel.label}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className={cn('text-xs font-semibold', difficultyLabel.color)}>
+            {difficultyLabel.label}
+          </span>
+          {hasHint && !hintShown && attempt === 1 && !locked && (
+            <button
+              onClick={() => {
+                setHintShown(true)
+                setHintRequestedBeforeAnswer(true)
+                track({
+                  name: 'hint_revealed',
+                  properties: { concept_id: question.conceptId, question_id: question.id, proactive: true },
+                })
+              }}
+              className="text-xs text-text-muted hover:text-warning transition-colors"
+            >
+              💡 Hint
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Question text */}
@@ -136,7 +156,7 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
         )}
       </div>
 
-      {/* Hint reveal — surfaces after a wrong first attempt */}
+      {/* Hint — shown proactively (user clicked 💡) or after a wrong first attempt */}
       {hintShown && question.hint && (
         <div className="mx-6 mb-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-warning">
@@ -144,7 +164,9 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
           </p>
           <p className="text-sm text-text-primary">{question.hint}</p>
           <p className="mt-2 text-xs italic text-text-muted">
-            You get one retry. This question no longer counts as a "first-try correct".
+            {hintRequestedBeforeAnswer
+              ? 'First-try bonus forfeited — the system will still reinforce the concept.'
+              : 'You get one retry. This question no longer counts as a "first-try correct".'}
           </p>
         </div>
       )}
