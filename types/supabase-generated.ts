@@ -1540,16 +1540,24 @@ export type Database = {
       nanoid: { Args: { size?: number }; Returns: string }
       needs_outcome_capture: { Args: { p_user_id: string }; Returns: boolean }
       pick_pool_question: {
-        Args: { p_concept_id: string; p_user_id: string }
+        Args: {
+          p_concept_id: string
+          p_seen_patterns?: string[]
+          p_seen_tasks?: string[]
+          p_user_id: string
+        }
         Returns: {
+          blueprint_task_id: string
           correct_index: number
           difficulty: number
           explanation: string
           explanation_deep: string
           hint: string
           id: string
+          is_canonical: boolean
           key_insight: string
           options: Json
+          pattern_tag: string
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
           scenario_context: Json

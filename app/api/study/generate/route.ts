@@ -78,10 +78,28 @@ export async function POST(req: NextRequest) {
   const selectionMode = sessionMode === "exploration" ? "discovery" : sessionMode;
   const domainId = (session as { domain_id?: string | null }).domain_id ?? undefined;
 
-  const [queue, recentMistakes] = await Promise.all([
+  // Fetch session context: seen blueprint tasks + pattern tags for diversity ranking.
+  const [queue, recentMistakes, sessionAttemptsRes] = await Promise.all([
     buildStudyQueue(user.id, selectionMode, domainId ?? undefined),
     getRecentMistakes(user.id, 5),
+    supabase
+      .from("question_attempts")
+      .select("questions!inner(blueprint_task_id, pattern_tag)")
+      .eq("session_id", sessionId)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
+
+  const sessionAttempts = (sessionAttemptsRes.data ?? []) as unknown as Array<{
+    questions: { blueprint_task_id: string | null; pattern_tag: string | null };
+  }>;
+  const seenTasks = [...new Set(
+    sessionAttempts.map(a => a.questions?.blueprint_task_id).filter(Boolean) as string[]
+  )];
+  const seenPatterns = [...new Set(
+    sessionAttempts.map(a => a.questions?.pattern_tag).filter(Boolean) as string[]
+  )];
 
   if (queue.length === 0) {
     return NextResponse.json({ data: null, message: "No more questions due" });
@@ -95,6 +113,8 @@ export async function POST(req: NextRequest) {
   const poolRes = await supabase.rpc("pick_pool_question" as any, {
     p_user_id: user.id,
     p_concept_id: next.conceptId,
+    p_seen_tasks: seenTasks,
+    p_seen_patterns: seenPatterns,
   });
   // If the pool RPC errored we fall through to LLM generation (fail-open —
   // the user still gets a question). Previously this was silent, which
@@ -142,6 +162,9 @@ export async function POST(req: NextRequest) {
         keyInsight: pooled.key_insight ?? null,
         scenarioContext: pooled.scenario_context ?? null,
         tags: pooled.tags ?? [],
+        blueprintTaskId: pooled.blueprint_task_id ?? null,
+        patternTag: pooled.pattern_tag ?? null,
+        isCanonical: pooled.is_canonical ?? false,
       },
       metadata: {
         conceptId: next.conceptId,
@@ -149,6 +172,8 @@ export async function POST(req: NextRequest) {
         priority: next.priority,
         queueRemaining: queue.length - 1,
         source: "pool",
+        blueprintTaskId: pooled.blueprint_task_id ?? null,
+        patternTag: pooled.pattern_tag ?? null,
       },
     });
   }
