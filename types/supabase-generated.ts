@@ -1614,7 +1614,11 @@ export type Database = {
         | "post_cert"
         | "maintenance"
       processing_status: "pending" | "processing" | "completed" | "failed"
-      question_review_status: "pending" | "approved" | "rejected"
+      question_review_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "needs_review"
       question_type: "multiple_choice" | "scenario" | "drag_drop"
       study_mode:
         | "discovery"
@@ -1769,7 +1773,12 @@ export const Constants = {
         "maintenance",
       ],
       processing_status: ["pending", "processing", "completed", "failed"],
-      question_review_status: ["pending", "approved", "rejected"],
+      question_review_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "needs_review",
+      ],
       question_type: ["multiple_choice", "scenario", "drag_drop"],
       study_mode: [
         "discovery",
