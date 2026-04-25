@@ -82,30 +82,73 @@ function structuralValidate(qs: ReturnType<typeof expandAll>): string[] {
   return errors
 }
 
-// Greedy weight-aware sampler: pick variants round-robin across domains,
-// preferring domains that are below their target ratio. Stops at `target`.
+// Weight-aware sampler with per-task floor.
+//
+// Step 1: guarantee a per-task floor (default 3) so every blueprint task
+//         gets at least that many variants, even when its domain bucket
+//         is over-quota.
+// Step 2: distribute the remaining budget per-domain proportional to
+//         official weights, taking from each task round-robin so a
+//         high-yield template doesn't starve sibling tasks.
 function rebalanceToWeights(
   expanded: ReturnType<typeof expandAll>,
   target: number,
+  floorPerTask = 3,
 ): ReturnType<typeof expandAll> {
-  const buckets: Record<string, ReturnType<typeof expandAll>> = { '1': [], '2': [], '3': [], '4': [] }
+  type Q = ReturnType<typeof expandAll>[number]
+
+  // Bucket by task and by domain.
+  const byTask = new Map<string, Q[]>()
   for (const q of expanded) {
-    const d = q.blueprintTaskId.split('.')[0] ?? '1'
-    if (buckets[d]) buckets[d]!.push(q)
+    const arr = byTask.get(q.blueprintTaskId) ?? []
+    arr.push(q)
+    byTask.set(q.blueprintTaskId, arr)
   }
+
+  const out: Q[] = []
+  const taken = new Map<string, number>() // taskId → count taken
+
+  // Step 1: per-task floor.
+  for (const [tid, qs] of byTask) {
+    const take = Math.min(floorPerTask, qs.length)
+    out.push(...qs.slice(0, take))
+    taken.set(tid, take)
+  }
+
+  // Step 2: per-domain quota from remaining budget.
+  const remaining = target - out.length
+  if (remaining <= 0) return out.slice(0, target)
 
   const goal: Record<string, number> = {
-    '1': Math.round(target * OFFICIAL_WEIGHTS['1']!),
-    '2': Math.round(target * OFFICIAL_WEIGHTS['2']!),
-    '3': Math.round(target * OFFICIAL_WEIGHTS['3']!),
-    '4': target - Math.round(target * OFFICIAL_WEIGHTS['1']!) - Math.round(target * OFFICIAL_WEIGHTS['2']!) - Math.round(target * OFFICIAL_WEIGHTS['3']!),
+    '1': Math.round(remaining * OFFICIAL_WEIGHTS['1']!),
+    '2': Math.round(remaining * OFFICIAL_WEIGHTS['2']!),
+    '3': Math.round(remaining * OFFICIAL_WEIGHTS['3']!),
+    '4': 0,
   }
+  goal['4'] = remaining - goal['1']! - goal['2']! - goal['3']!
 
-  const out: ReturnType<typeof expandAll> = []
+  // Round-robin across tasks within each domain, taking the next un-taken
+  // variant from each task until the domain quota is exhausted.
   for (const d of ['1', '2', '3', '4'] as const) {
+    let added = 0
     const want = goal[d]!
-    const have = buckets[d]!
-    out.push(...have.slice(0, Math.min(want, have.length)))
+    const tasksInDomain = [...byTask.keys()].filter(t => t.startsWith(`${d}.`)).sort()
+    if (tasksInDomain.length === 0) continue
+    let progress = true
+    while (added < want && progress) {
+      progress = false
+      for (const tid of tasksInDomain) {
+        if (added >= want) break
+        const all = byTask.get(tid)!
+        const t = taken.get(tid) ?? 0
+        if (t < all.length) {
+          out.push(all[t]!)
+          taken.set(tid, t + 1)
+          added++
+          progress = true
+        }
+      }
+    }
   }
   return out
 }

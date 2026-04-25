@@ -690,21 +690,142 @@ export const TEMPLATES: Template[] = [
   // ───── Domain 3: Performant (3.5 — Data) ─────
   {
     id: 'tpl-310',
-    conceptSlug: 'redshift-fundamentals',
+    conceptSlug: 'athena-fundamentals',
+    blueprintTaskId: '3.5',
+    patternTag: 'least-operational-overhead',
+    difficulty: 0.5,
+    slots: {
+      pattern: ['ad-hoc SQL over JSON logs in S3 with no infrastructure', 'querying CloudTrail logs once a week', 'analysing VPC Flow Logs on demand'],
+    },
+    stem: 'A team needs {{pattern}} and wants to pay only for the data scanned.',
+    options: [
+      { text: 'Provision a Redshift cluster and COPY the logs nightly.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Cluster overhead for ad-hoc workloads.' } },
+      { text: 'Use Amazon Athena over the S3 prefix with a Glue Data Catalog table.', correct: true },
+      { text: 'Spin up an EMR cluster running Presto for each query.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'EMR is heavy for ad-hoc queries.' } },
+      { text: 'Self-host Presto on EC2 and mount S3 with s3fs.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Athena is the managed Presto.' } },
+    ],
+    explanation: 'Athena is serverless Presto: pay-per-TB-scanned, no cluster, integrates with Glue Catalog, and converting source files to Parquet plus partitioning slashes scan cost further.',
+  },
+
+  {
+    id: 'tpl-311',
+    conceptSlug: 'glue-catalog-etl',
     blueprintTaskId: '3.5',
     patternTag: 'least-operational-overhead',
     difficulty: 0.55,
     slots: {
-      need: ['ad-hoc SQL over S3', 'managed data catalog with ETL jobs', 'governance and row-level security across the lake'],
+      need: ['discover schemas of new S3 data automatically', 'run a Spark ETL pipeline without managing clusters', 'maintain a central metastore for Athena and Redshift Spectrum'],
     },
-    stem: 'For {{need}} pick the AWS-managed service.',
+    stem: 'A data platform team needs to {{need}}.',
     options: [
-      { text: 'Athena for ad-hoc SQL, Glue for catalog/ETL, Lake Formation for governance.', correct: true },
-      { text: 'EMR for everything.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'EMR is a Hadoop cluster; heavy for ad-hoc or governance.' } },
-      { text: 'Redshift for ad-hoc S3 SQL with no Spectrum.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Plain Redshift is warehouse, not lake.' } },
-      { text: 'Self-managed Presto on EC2.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Athena is the managed Presto.' } },
+      { text: 'Stand up a self-managed Hive metastore on EC2.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'AWS Glue replaces this entirely.' } },
+      { text: 'Use AWS Glue (Crawlers, ETL jobs, and the Data Catalog).', correct: true },
+      { text: 'Run a permanent EMR cluster with Hive Metastore enabled.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Cluster overhead for a metastore.' } },
+      { text: 'Store schemas in DynamoDB and reference manually from queries.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reinvents Glue Catalog.' } },
     ],
-    explanation: 'The S3 data-lake stack maps cleanly: Athena (serverless SQL), Glue (catalog + ETL), Lake Formation (permissions, row/column-level security). EMR is for code-heavy Spark/Hadoop, not ad-hoc.',
+    explanation: 'Glue covers the three roles: Crawlers infer schema, ETL jobs run serverless Spark, and the Data Catalog is the canonical metastore that Athena, EMR, Redshift Spectrum, and Lake Formation all consume.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-312',
+    conceptSlug: 'lake-formation-governance',
+    blueprintTaskId: '3.5',
+    patternTag: 'most-secure',
+    difficulty: 0.6,
+    slots: {
+      requirement: ['row-level security so EU analysts only see EU customer rows', 'cross-account data sharing without copying objects', 'tag-based access control across hundreds of tables'],
+    },
+    stem: 'A data platform must enforce {{requirement}} on a data lake catalogued in Glue.',
+    options: [
+      { text: 'Write a Lambda that checks the user identity in every Athena query.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reinvents Lake Formation poorly.' } },
+      { text: 'Use AWS Lake Formation permissions with data filters and LF-Tags.', correct: true },
+      { text: 'Replicate data to per-team S3 buckets and use IAM bucket policies.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Data duplication; ungovernable at scale.' } },
+      { text: 'Apply Service Control Policies at the Organization level only.', correct: false, distractor: { type: 'wrong-region-scope', explanation: 'SCPs cannot do row/column filtering.' } },
+    ],
+    explanation: 'Lake Formation extends the Glue Catalog with SQL-style GRANT/REVOKE, row/cell-level filters, LF-Tags for tag-based access control, and cross-account sharing via Resource Links — without copying data.',
+    maxVariants: 3,
+  },
+
+  // ───── Domain 4: Cost (4.4 — Cost monitoring, more) ─────
+  {
+    id: 'tpl-406',
+    conceptSlug: 'compute-optimizer',
+    blueprintTaskId: '4.4',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      resource: ['EC2 instances', 'EBS volumes', 'Lambda functions'],
+    },
+    stem: 'A team wants ML-based right-sizing recommendations for their {{resource}} based on actual utilisation.',
+    options: [
+      { text: 'Read CloudWatch metrics manually and pick smaller instances by intuition.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Compute Optimizer automates this with ML.' } },
+      { text: 'Enable AWS Compute Optimizer and act on its recommendations.', correct: true },
+      { text: 'Use AWS Trusted Advisor only.', correct: false, distractor: { type: 'monitoring-observability', explanation: 'TA covers idle resources, not ML right-sizing.' } },
+      { text: 'Pay a third-party SaaS to analyse the Cost & Usage Report.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Compute Optimizer is free and AWS-native.' } },
+    ],
+    explanation: 'Compute Optimizer uses ML on CloudWatch metrics to recommend right-sizing for EC2, EBS, Lambda, ECS-on-Fargate, and ASGs. Free of charge, surfaces both downsizing and upsizing opportunities.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-407',
+    conceptSlug: 'tag-policies',
+    blueprintTaskId: '4.4',
+    patternTag: 'monitoring-observability',
+    difficulty: 0.55,
+    slots: {
+      goal: ['split monthly cost by team and project', 'block non-compliant tags at creation time', 'enforce that every resource has a CostCenter tag'],
+    },
+    stem: 'Finance needs to {{goal}} across all accounts in an Organization.',
+    options: [
+      { text: 'Email engineers asking them to tag resources consistently.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'No enforcement; will drift.' } },
+      { text: 'Use AWS Organizations Tag Policies plus activated cost-allocation tags in the management account.', correct: true },
+      { text: 'Manually parse the Cost & Usage Report in Excel each month.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'No prevention; reactive.' } },
+      { text: 'Apply IAM policies that deny resource creation without tags, per account.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'IAM tag-condition works but Tag Policies are central.' } },
+    ],
+    explanation: 'Tag Policies enforce key/value structure org-wide; activating cost-allocation tags in the management account makes them appear as dimensions in Cost Explorer and the Cost & Usage Report.',
+    maxVariants: 3,
+  },
+
+  {
+    id: 'tpl-408',
+    conceptSlug: 'cost-optimization-strategies',
+    blueprintTaskId: '4.4',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      target: ['idle Elastic IPs', 'unattached EBS volumes', 'underutilised Reserved Instances'],
+      org: ['a single account', 'an Organization with 50 accounts'],
+    },
+    stem: 'Surface {{target}} across {{org}} for cleanup with minimal effort.',
+    options: [
+      { text: 'Build a Lambda that loops every account and writes findings to S3.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reinvents Trusted Advisor org view.' } },
+      { text: 'Use AWS Trusted Advisor cost-optimisation checks at the Organization level.', correct: true },
+      { text: 'Manually inspect each region of each account.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Does not scale.' } },
+      { text: 'Wait for the bill to spike and react.', correct: false, distractor: { type: 'monitoring-observability', explanation: 'Reactive, not preventive.' } },
+    ],
+    explanation: 'Trusted Advisor ships managed cost-optimisation checks (idle EIPs, unattached volumes, underutilised RIs, low-utilisation EC2). Org-level access (Business/Enterprise Support) gives a consolidated view.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-409',
+    conceptSlug: 'storage-tier-decision-matrix',
+    blueprintTaskId: '4.1',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.55,
+    slots: {
+      pattern: ['log files written daily and read mainly within 30 days', 'medical imaging accessed twice per year for 10 years', 'datasets accessed unpredictably with millisecond retrieval'],
+    },
+    stem: 'Pick the cheapest S3 storage tier that still meets the access pattern: {{pattern}}.',
+    options: [
+      { text: 'S3 Standard with no lifecycle.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Always-hot pricing wastes money on cold tail.' } },
+      { text: 'Match the access pattern: lifecycle to Glacier Instant Retrieval for low-frequency-but-instant; Glacier Deep Archive for years-cold compliance; Intelligent-Tiering for unknown access.', correct: true },
+      { text: 'Glacier Deep Archive for everything regardless of access pattern.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Breaks ms-retrieval requirements.' } },
+      { text: 'S3 One Zone-IA for everything.', correct: false, distractor: { type: 'misses-durability-tier', explanation: 'Single-AZ; not for compliance datasets.' } },
+    ],
+    explanation: 'Glacier Instant Retrieval is the right tier for rarely-accessed data that still needs ms retrieval. Deep Archive is for compliance archives. Intelligent-Tiering is for unknown patterns. Standard for active.',
     maxVariants: 3,
   },
 
