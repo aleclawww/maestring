@@ -1923,6 +1923,660 @@ export const TEMPLATES: Template[] = [
     explanation: 'Site-to-Site VPN is cheap for occasional/bursty hybrid traffic. Direct Connect (1/10/100 Gbps) wins for steady, high-bandwidth, predictable-latency hybrid; pair with DX Gateway for multi-Region/account. AWS Client VPN is the managed OpenVPN-compatible service for remote workforce.',
     maxVariants: 4,
   },
+
+  // ───── Wave 5: final push to 100% ─────
+
+  // D1.1 — secure access
+  {
+    id: 'tpl-117',
+    conceptSlug: 'iam-fundamentals',
+    blueprintTaskId: '1.1',
+    patternTag: 'most-secure',
+    difficulty: 0.5,
+    slots: {
+      need: ['EC2 instance reading from S3', 'Lambda function writing to DynamoDB', 'cross-account application calling SQS', 'on-prem app needing temporary AWS credentials', 'CI/CD pipeline deploying CloudFormation stacks'],
+    },
+    stem: 'Best identity primitive for: {{need}}.',
+    options: [
+      { text: 'IAM Roles assumed by the workload (instance profile, Lambda execution role, cross-account trust, IAM Roles Anywhere, OIDC for CI/CD) — temporary credentials, no static keys.', correct: true },
+      { text: 'A long-lived IAM user with access keys baked into the application code.', correct: false, distractor: { type: 'iam-user-when-role-needed', explanation: 'Static keys leak; roles give rotated, scoped credentials.' } },
+      { text: 'The root account credentials shared via secret manager.', correct: false, distractor: { type: 'over-permissive-iam', explanation: 'Root must never be used for workloads.' } },
+      { text: 'Disable IAM and rely on resource policies alone for everything.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'IAM is the identity layer; not optional.' } },
+    ],
+    explanation: 'IAM Roles + STS deliver short-lived credentials per workload: instance profile (EC2), execution role (Lambda), trust policy (cross-account), Roles Anywhere (on-prem with X.509), OIDC federation (GitHub Actions/CI). Static IAM-user keys are a last resort and should not be embedded in code.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-118',
+    conceptSlug: 'scp-organizations',
+    blueprintTaskId: '1.1',
+    patternTag: 'most-secure',
+    difficulty: 0.6,
+    slots: {
+      goal: ['prevent any account from disabling CloudTrail', 'block unapproved Regions for all accounts in an OU', 'forbid root user actions across the organization', 'cap the services every dev sandbox can use', 'enforce that S3 buckets cannot be made public'],
+    },
+    stem: 'Best Organizations control to {{goal}}.',
+    options: [
+      { text: 'Service Control Policies (SCPs) attached at the OU/account level — guardrails that no IAM identity (including root) can override.', correct: true },
+      { text: 'IAM permission policies attached to every user manually.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'IAM cannot stop root; SCPs can.' } },
+      { text: 'Trusted Advisor checks alone with email reminders.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'TA reports; does not enforce.' } },
+      { text: 'A bucket policy template applied to each account on creation.', correct: false, distractor: { type: 'wrong-region-scope', explanation: 'Bucket policy is per-bucket; SCP is org-wide guardrail.' } },
+    ],
+    explanation: 'SCPs are the AWS Organizations guardrail mechanism — they limit the maximum permissions accessible in target accounts (deny-list or allow-list style) and apply even to root. They do not grant permissions; they cap them. The standard tool for org-wide compliance enforcement.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-119',
+    conceptSlug: 'cognito',
+    blueprintTaskId: '1.1',
+    patternTag: 'identity-federation',
+    difficulty: 0.55,
+    slots: {
+      need: ['mobile app sign-in with social/OIDC providers', 'public web app needing temporary AWS credentials for S3', 'enterprise SSO via SAML for an AWS-hosted webapp', 'guest access to a small subset of AWS resources', 'MFA-enforced sign-in with managed user directory'],
+    },
+    stem: 'Cognito feature for: {{need}}.',
+    options: [
+      { text: 'User Pools for sign-up/sign-in (with social/SAML/OIDC + MFA), Identity Pools for temporary AWS credentials (authenticated and guest).', correct: true },
+      { text: 'IAM users created per end-customer of the application.', correct: false, distractor: { type: 'iam-user-when-role-needed', explanation: 'IAM is for AWS humans/workloads; not end-user auth.' } },
+      { text: 'A custom OAuth server on EC2 with hand-rolled token issuance.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Cognito is the managed identity service.' } },
+      { text: 'A long-lived API key shared by every mobile client.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'Static shared key violates basic credential hygiene.' } },
+    ],
+    explanation: 'Cognito has two halves: User Pools (managed user directory, OAuth/OIDC/SAML providers, MFA, hosted UI) and Identity Pools (federated identities exchanged for temporary AWS credentials via IAM roles, supports authenticated + unauthenticated/guest).',
+    maxVariants: 5,
+  },
+
+  // D1.2 — secure workloads
+  {
+    id: 'tpl-120',
+    conceptSlug: 'inspector',
+    blueprintTaskId: '1.2',
+    patternTag: 'monitoring-observability',
+    difficulty: 0.5,
+    slots: {
+      target: ['EC2 instances for OS CVEs', 'container images in ECR for vulnerabilities', 'Lambda functions for vulnerable dependencies', 'continuous scanning across an entire Organization'],
+    },
+    stem: 'Vulnerability scanning of {{target}} — best AWS service?',
+    options: [
+      { text: 'Amazon Inspector — agentless EC2/ECR/Lambda CVE scanning with automated continuous re-evaluation and Security Hub integration.', correct: true },
+      { text: 'GuardDuty findings filtered by severity.', correct: false, distractor: { type: 'wrong-encryption-scope', explanation: 'GuardDuty is threat detection on logs, not CVE scanning.' } },
+      { text: 'Manual nessus scans run quarterly by ops.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Inspector is continuous and managed.' } },
+      { text: 'WAF managed rules looking for vulnerable user-agent strings.', correct: false, distractor: { type: 'wrong-load-balancer-type', explanation: 'WAF inspects HTTP traffic, not host vulnerabilities.' } },
+    ],
+    explanation: 'Inspector is the AWS-managed CVE scanner: agentless EC2 (via SSM), ECR image scan on push and continuously, Lambda function scanning for vulnerable dependencies. Findings flow to Security Hub. Replaces self-managed Nessus/Qualys for AWS resources.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-121',
+    conceptSlug: 'security-groups-vs-nacls',
+    blueprintTaskId: '1.2',
+    patternTag: 'network-segmentation',
+    difficulty: 0.5,
+    slots: {
+      need: ['allow only port 443 to a web server from anywhere', 'block a specific malicious IP range at the subnet edge', 'restrict EC2-to-RDS traffic to specific security groups', 'audit subnet-level connection state'],
+    },
+    stem: 'Best primitive for: {{need}}.',
+    options: [
+      { text: 'Security Groups (stateful, instance-level, allow-only) for app-to-app rules; NACLs (stateless, subnet-level, allow + deny) for IP-range blocks.', correct: true },
+      { text: 'Always NACLs for everything because they support deny rules.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'Stateless rules require explicit return-traffic rules — error-prone for app-level control.' } },
+      { text: 'Always Security Groups because they are simpler.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'SGs cannot deny; cannot block specific IPs.' } },
+      { text: 'A single firewall EC2 instance routing all traffic.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'AWS Network Firewall or SG/NACL replace this.' } },
+    ],
+    explanation: 'Security Groups are stateful, instance-attached, allow-only — the right tool for application-tier rules ("web SG can talk to DB SG"). NACLs are stateless, subnet-attached, support deny — the tool for IP-range blocks at the subnet edge. They complement each other.',
+    maxVariants: 4,
+  },
+
+  // D1.3 — data security
+  {
+    id: 'tpl-122',
+    conceptSlug: 's3-access-points',
+    blueprintTaskId: '1.3',
+    patternTag: 'most-secure',
+    difficulty: 0.55,
+    slots: {
+      need: ['per-application access policies on a shared bucket', 'restrict access points to a specific VPC', 'multi-Region active-active S3 access via a single endpoint', 'cross-account analyst access scoped to a prefix'],
+    },
+    stem: 'S3 feature for: {{need}}.',
+    options: [
+      { text: 'S3 Access Points (per-app named endpoints with their own policies and VPC-only flag); Multi-Region Access Points for routing across replicated buckets.', correct: true },
+      { text: 'A single bucket policy that hand-rolls every application path with one giant document.', correct: false, distractor: { type: 'over-permissive-iam', explanation: 'Bucket policies hit size limits and are hard to govern at scale.' } },
+      { text: 'A new S3 bucket per application with manual replication scripts.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Access Points solve this without bucket sprawl.' } },
+      { text: 'IAM users created per application accessing the bucket directly.', correct: false, distractor: { type: 'iam-user-when-role-needed', explanation: 'Roles + Access Points are the right pattern.' } },
+    ],
+    explanation: 'S3 Access Points create named per-application endpoints into a single bucket, each with its own access-point policy (and optional VPC-only restriction). Multi-Region Access Points route requests across replicated buckets in multiple Regions via a single global hostname.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-123',
+    conceptSlug: 's3-replication',
+    blueprintTaskId: '1.3',
+    patternTag: 'compliance-immutable',
+    difficulty: 0.55,
+    slots: {
+      goal: ['cross-Region disaster recovery with KMS re-encryption', 'cross-account replication for ransomware isolation', 'replicate only objects matching a tag prefix', 'replicate within the same Region across accounts'],
+    },
+    stem: 'S3 replication setup for: {{goal}}.',
+    options: [
+      { text: 'S3 CRR/SRR with replica KMS key, destination-owner override, replication rules with prefix/tag filters, and replication time control (RTC) for SLA.', correct: true },
+      { text: 'Manual nightly aws s3 sync from a cron on EC2.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Native replication is event-driven and SLA-backed.' } },
+      { text: 'Versioning alone with no replication configured.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Versioning is intra-bucket; not DR.' } },
+      { text: 'S3 Transfer Acceleration as the replication mechanism.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Transfer Acceleration is for upload speed, not replication.' } },
+    ],
+    explanation: 'S3 Replication (CRR cross-Region, SRR same-Region) is event-driven: requires Versioning, supports filter rules (prefix/tag), replica KMS keys, destination-owner override (cross-account), and Replication Time Control (15-minute SLA with metrics).',
+    maxVariants: 4,
+  },
+
+  // D2.1 — scalable & loosely coupled
+  {
+    id: 'tpl-222',
+    conceptSlug: 'sqs-vs-sns-vs-eventbridge',
+    blueprintTaskId: '2.1',
+    patternTag: 'event-driven-decoupling',
+    difficulty: 0.55,
+    slots: {
+      use: ['decouple producer and slow consumer with retry and DLQ', 'fan-out one event to 10 different services', 'route events from many SaaS sources with content-based filtering', 'guaranteed FIFO ordering by customer ID'],
+    },
+    stem: 'Best messaging primitive for: {{use}}.',
+    options: [
+      { text: 'SQS (Standard or FIFO) for queue/DLQ; SNS for fan-out pub-sub; EventBridge for SaaS sources, schemas, and content-based routing.', correct: true },
+      { text: 'EventBridge for every messaging need including FIFO ordered queueing.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'EventBridge has no FIFO ordering or DLQ replay semantics.' } },
+      { text: 'A single SNS topic chaining straight into another SNS topic for queueing.', correct: false, distractor: { type: 'wrong-load-balancer-type', explanation: 'SNS has no buffering; SQS does.' } },
+      { text: 'Kinesis Data Streams for everything since it is the most scalable.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Streams is not a queue; consumers must be built for stream semantics.' } },
+    ],
+    explanation: 'SQS = decoupling queue (Standard at-least-once or FIFO exactly-once with ordering by group). SNS = pub-sub fan-out to multiple subscribers. EventBridge = event bus with SaaS partner sources, schemas, and content-based filtering. Pick by semantics, not by trend.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-223',
+    conceptSlug: 'ec2-auto-scaling',
+    blueprintTaskId: '2.1',
+    patternTag: 'scalable-elastic',
+    difficulty: 0.55,
+    slots: {
+      profile: ['traffic spike during predictable business hours', 'unpredictable bursts requiring fast response', 'queue depth-driven scale-out', 'fleet of mixed Spot+On-Demand for cost'],
+    },
+    stem: 'Auto Scaling configuration for: {{profile}}.',
+    options: [
+      { text: 'Mix of Scheduled actions (predictable), Target Tracking on CPU/ALB request count (steady), Step scaling on SQS depth (queue), and Mixed Instances Policy with Spot for cost.', correct: true },
+      { text: 'A single static instance count and scale manually when paged.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Defeats the purpose of ASG.' } },
+      { text: 'Predictive Scaling alone replacing all other policies forever.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Predictive is an addition, not a single replacement.' } },
+      { text: 'Trigger scale-out on a 5-minute average — even for sudden bursts.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Slow reaction; bursts need step or target tracking with shorter eval.' } },
+    ],
+    explanation: 'EC2 Auto Scaling supports multiple policy types simultaneously: Scheduled (predictable), Target Tracking (steady on a metric), Step scaling (custom CloudWatch metrics like SQS depth), and Predictive (ML forecast). Mixed Instances Policies blend Spot/On-Demand/RIs for cost.',
+    maxVariants: 4,
+  },
+
+  // D2.2 — HA / fault-tolerant
+  {
+    id: 'tpl-224',
+    conceptSlug: 'elb-types',
+    blueprintTaskId: '2.2',
+    patternTag: 'highest-availability',
+    difficulty: 0.55,
+    slots: {
+      workload: ['HTTP/HTTPS microservices with path-based routing', 'TCP/UDP gaming server with millions of connections', 'transparent inline firewall appliance fleet', 'static IPs required by clients with corporate firewalls'],
+    },
+    stem: 'Best load balancer for: {{workload}}.',
+    options: [
+      { text: 'ALB for HTTP/path-based; NLB for TCP/UDP at extreme scale and static IPs; GWLB for inline firewall/IDS appliances; Global Accelerator for anycast IPs.', correct: true },
+      { text: 'Always Classic Load Balancer because it is the simplest option.', correct: false, distractor: { type: 'wrong-load-balancer-type', explanation: 'CLB is legacy; lacks features and cost-efficiency of ALB/NLB.' } },
+      { text: 'API Gateway in front of the workload for every load-balancing scenario.', correct: false, distractor: { type: 'wrong-load-balancer-type', explanation: 'API Gateway is API management, not transport-layer LB.' } },
+      { text: 'Pure DNS round-robin for any large workload.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'No health checks, no session affinity.' } },
+    ],
+    explanation: 'ALB is L7 with path/host routing, gRPC, WebSockets. NLB is L4 with millions of conns, static IPs, source-IP preservation. GWLB chains traffic through inline appliances (firewalls/IDS) using GENEVE. Pick by protocol layer and feature need.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-225',
+    conceptSlug: 'datasync',
+    blueprintTaskId: '2.2',
+    patternTag: 'migrate-minimal-disruption',
+    difficulty: 0.5,
+    slots: {
+      transfer: ['100 TB from on-prem NFS to S3 over Direct Connect', 'EFS-to-EFS cross-Region copy', 'on-prem SMB to FSx for Windows scheduled nightly', 'cross-account S3 migration with verification'],
+    },
+    stem: 'Best service for: {{transfer}}.',
+    options: [
+      { text: 'AWS DataSync — managed online data transfer agent with parallel multi-threaded copy, integrity verification, and scheduling.', correct: true },
+      { text: 'Snowball Edge for any online data transfer.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Snow is offline; appropriate only above ~10 TB AND limited bandwidth.' } },
+      { text: 'rsync over SSH on a single EC2 instance.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Single-threaded; no validation; not the AWS-native answer.' } },
+      { text: 'Storage Gateway as a one-time copy mechanism.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Gateway is steady-state hybrid, not one-shot transfer.' } },
+    ],
+    explanation: 'DataSync is the AWS-native online migration tool: agent on-prem (or in-VPC for cloud-cloud), parallel transfer, automatic retry, MD5 verification, scheduling and bandwidth throttling. Targets S3, EFS, FSx (Windows/Lustre/ONTAP). Use Snow only when bandwidth is insufficient.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-226',
+    conceptSlug: 'snow-family',
+    blueprintTaskId: '2.2',
+    patternTag: 'migrate-minimal-disruption',
+    difficulty: 0.5,
+    slots: {
+      situation: ['80 TB to migrate with no Direct Connect and slow internet', 'edge processing in a disconnected ship for 3 months', 'multi-PB data lake migration in one shipment', 'compute + storage in a remote site with intermittent connectivity'],
+    },
+    stem: 'Best Snow Family device for: {{situation}}.',
+    options: [
+      { text: 'Snowcone for small edge, Snowball Edge for medium edge + 80 TB transfer, Snowmobile for petabyte-scale shipments — pick by capacity and need for compute.', correct: true },
+      { text: 'DataSync for any multi-TB transfer regardless of bandwidth available.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'When bandwidth is the bottleneck Snow wins.' } },
+      { text: 'A hard drive shipped via FedEx in normal mail.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'No encryption guarantee, no chain-of-custody.' } },
+      { text: 'Direct Connect 100 Gbps for any one-time large transfer.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'DX is for steady-state; provisioning lead time defeats one-time use.' } },
+    ],
+    explanation: 'Snow Family bridges compute+storage to disconnected/edge. Snowcone (tiny edge, 8/14 TB), Snowball Edge (compute-intensive or storage-optimized, ~50–80 TB), Snowmobile (100 PB shipping container). Encrypted in-transit, chain-of-custody, and tamper-evident.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-227',
+    conceptSlug: 'ec2-placement-groups',
+    blueprintTaskId: '2.2',
+    patternTag: 'highest-availability',
+    difficulty: 0.6,
+    slots: {
+      need: ['HPC workload requiring 100 Gbps low-latency between nodes', 'critical app needing fault tolerance across separate hardware in one AZ', 'large rack-aware Hadoop cluster spanning multiple racks'],
+    },
+    stem: 'Best EC2 placement group for: {{need}}.',
+    options: [
+      { text: 'Cluster (low-latency, single-AZ) for HPC; Spread (separate hardware, max 7/AZ) for HA-critical small workloads; Partition (rack-aware) for large distributed data systems.', correct: true },
+      { text: 'No placement group ever — defaults are always correct.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Default placement does not optimize for HPC or rack-fault tolerance.' } },
+      { text: 'Cluster placement across multiple AZs for both HPC and HA.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'Cluster is single-AZ by definition.' } },
+      { text: 'Spread placement of 100 instances per AZ for an HPC job.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'Spread caps at 7/AZ; not HPC-grade latency.' } },
+    ],
+    explanation: 'Three placement strategies: Cluster (same rack, lowest latency, single AZ — HPC). Spread (each instance on distinct hardware, max 7/AZ — small critical workloads). Partition (rack-isolated groups, used by Hadoop/Cassandra for rack awareness).',
+    maxVariants: 3,
+  },
+
+  // D3.3 — high-performance database
+  {
+    id: 'tpl-326',
+    conceptSlug: 'elasticache',
+    blueprintTaskId: '3.3',
+    patternTag: 'caching-strategy',
+    difficulty: 0.55,
+    slots: {
+      pattern: ['DynamoDB read-heavy with sub-ms latency target', 'RDS read offload during peak', 'session store for stateless web fleet', 'leaderboard with sorted-set semantics'],
+    },
+    stem: 'Caching strategy for: {{pattern}}.',
+    options: [
+      { text: 'DAX for DynamoDB, ElastiCache for Redis (lazy-loading or write-through) in front of RDS, Redis for sessions and sorted-set leaderboards.', correct: true },
+      { text: 'Self-managed Redis on EC2 with manual failover for every workload.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'ElastiCache is managed; DAX is DynamoDB-specific.' } },
+      { text: 'Add CloudFront in front of the database for read caching.', correct: false, distractor: { type: 'misuses-caching', explanation: 'CloudFront is a CDN for HTTP, not DB result cache.' } },
+      { text: 'Increase RDS instance size repeatedly to absorb read load.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Caching is the right answer; vertical scaling is expensive.' } },
+    ],
+    explanation: 'DAX is the DynamoDB-only in-memory accelerator (microseconds). ElastiCache Redis is the general-purpose cache (lazy-loading, write-through, TTL). Sessions and leaderboards rely on Redis-specific data structures. Always cache only what reads more than writes.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-327',
+    conceptSlug: 'rds-read-replicas',
+    blueprintTaskId: '3.3',
+    patternTag: 'highest-throughput',
+    difficulty: 0.5,
+    slots: {
+      pattern: ['offload reporting queries from primary', 'serve global low-latency reads from 5 Regions', 'promote a replica during planned maintenance', 'cross-engine reads (MySQL primary, MySQL replica)'],
+    },
+    stem: 'RDS read-replica plan for: {{pattern}}.',
+    options: [
+      { text: 'Up to 15 read replicas (in-Region or cross-Region), promote during maintenance, route read traffic via app or RDS Proxy.', correct: true },
+      { text: 'Multi-AZ standby used as a read replica (it is not).', correct: false, distractor: { type: 'underestimates-availability', explanation: 'RDS Multi-AZ standby is not readable.' } },
+      { text: 'Manual nightly backup + restore as the read scale-out plan.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Replicas stream changes continuously; backups do not.' } },
+      { text: 'A second separate RDS instance with hand-rolled scripts to copy rows.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Read replicas are the managed answer.' } },
+    ],
+    explanation: 'RDS read replicas (up to 15) replicate asynchronously and can be in-Region or cross-Region; they are independently promotable for DR or planned maintenance. Multi-AZ standby is for HA, NOT readable. Aurora cluster has its own reader endpoint with up to 15 readers.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-328',
+    conceptSlug: 'aurora-performance',
+    blueprintTaskId: '3.3',
+    patternTag: 'highest-throughput',
+    difficulty: 0.55,
+    slots: {
+      need: ['scale to 128 vCPUs during business hours, idle off-hours', 'serverless tier that responds to sudden bursts', 'parallel query for analytical workloads on Aurora', 'low-latency reads from up to 15 readers'],
+    },
+    stem: 'Aurora feature for: {{need}}.',
+    options: [
+      { text: 'Aurora Provisioned with Auto Scaling readers, Aurora Serverless v2 for bursty, Parallel Query for analytics, and reader endpoint with up to 15 readers.', correct: true },
+      { text: 'A single huge db.r6g.16xlarge running 24/7 forever.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'No elasticity; expensive.' } },
+      { text: 'Switch to RDS PostgreSQL Single-AZ for performance gains.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Aurora outperforms vanilla RDS at scale.' } },
+      { text: 'Use DynamoDB Streams as the analytics layer.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'NoSQL streams are not a parallel-query analytics engine.' } },
+    ],
+    explanation: 'Aurora separates compute from storage and supports Auto Scaling readers, Serverless v2 (0.5 ACU steps), Parallel Query (push down to storage layer), and a reader endpoint that load-balances across up to 15 read replicas in the same cluster.',
+    maxVariants: 4,
+  },
+
+  // D3.4 — high-performance networking
+  {
+    id: 'tpl-329',
+    conceptSlug: 'vpc-endpoints',
+    blueprintTaskId: '3.4',
+    patternTag: 'lowest-latency',
+    difficulty: 0.55,
+    slots: {
+      need: ['private S3 access from VPC without internet', 'private API call to DynamoDB from a private subnet', 'private connectivity to KMS or Secrets Manager', 'private third-party SaaS via PrivateLink'],
+    },
+    stem: 'VPC endpoint type for: {{need}}.',
+    options: [
+      { text: 'Gateway Endpoints for S3 and DynamoDB (free, route-table based); Interface Endpoints (PrivateLink, ENI-based) for AWS services and third-party SaaS.', correct: true },
+      { text: 'NAT Gateway as the privacy primitive for AWS service access.', correct: false, distractor: { type: 'public-when-private-needed', explanation: 'NAT still hits public AWS endpoints.' } },
+      { text: 'A Customer Gateway with site-to-site VPN to AWS services.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'CGW is for on-prem, not in-VPC service access.' } },
+      { text: 'VPC Peering between every VPC and AWS service VPCs.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'AWS services are not exposed via peering.' } },
+    ],
+    explanation: 'Gateway Endpoints (S3, DynamoDB) route via route table, no ENI, free. Interface Endpoints (PrivateLink) attach an ENI per AZ, cost hourly + per-GB, and cover most AWS services and third-party SaaS published as PrivateLink services.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-330',
+    conceptSlug: 'cloudfront-caching',
+    blueprintTaskId: '3.4',
+    patternTag: 'lowest-latency',
+    difficulty: 0.5,
+    slots: {
+      content: ['static assets with month-long TTL', 'dynamic API responses cacheable for 5 seconds', 'mixed origins with different cache requirements', 'live video streaming to global audience'],
+    },
+    stem: 'CloudFront caching strategy for: {{content}}.',
+    options: [
+      { text: 'Cache policies per behavior with appropriate TTLs, Origin Request Policy for forwarded headers, Origin Shield for cache hit ratio, and CMAF for live video.', correct: true },
+      { text: 'A single global TTL of 0 to always go to origin.', correct: false, distractor: { type: 'misuses-caching', explanation: 'Defeats the CDN purpose.' } },
+      { text: 'Pure static caching with no dynamic content support.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'CloudFront supports dynamic content with TTL=0 or short TTL.' } },
+      { text: 'A Lambda invoked on every request as the cache layer.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'CloudFront is the cache; Lambda@Edge augments behavior, not replaces.' } },
+    ],
+    explanation: 'CloudFront cache behaviors define TTL per path. Cache Policy (TTL + key) and Origin Request Policy (forwarded headers/cookies) decouple cache key from origin. Origin Shield reduces origin load. CMAF + LL-HLS supports low-latency live streaming.',
+    maxVariants: 4,
+  },
+
+  // D4.1 — cost-optimized storage
+  {
+    id: 'tpl-421',
+    conceptSlug: 'datasync',
+    blueprintTaskId: '4.1',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      transfer: ['frequent on-prem-to-S3 sync of changed files', 'one-time 50 TB migration over 1 Gbps link', 'cloud-to-cloud cross-Region copy of EFS', 'on-prem backup to S3 Glacier for archive'],
+    },
+    stem: 'Cheapest correct transfer mechanism for: {{transfer}}.',
+    options: [
+      { text: 'DataSync for online (cents per GB, parallel transfer, validation), Snowball when bandwidth is the bottleneck, S3 Replication for cloud-cloud bucket copies.', correct: true },
+      { text: 'A custom rsync script on a Lambda function looping in 15-minute increments.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Lambda timeouts; no incremental tracking.' } },
+      { text: 'Storage Gateway on a permanent EC2 instance for one-time transfers.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Gateway is steady-state, not migration.' } },
+      { text: 'Direct Connect 10 Gbps provisioned for 60 days for a one-time copy.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'DX is steady-state; provisioning lead time and cost wrong fit.' } },
+    ],
+    explanation: 'For cost-effective transfer: DataSync (online, parallel, ~$0.0125/GB), Snowball Edge (offline, when bandwidth costs exceed device fee — typically >10 TB on slow links), S3 Replication (cloud-to-cloud), Storage Gateway (steady-state hybrid).',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-422',
+    conceptSlug: 'ebs-cost-optimization',
+    blueprintTaskId: '4.1',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      issue: ['gp2 volumes that could be downsized to gp3', 'unused volumes from terminated instances', 'snapshots accumulating without lifecycle', 'over-provisioned IOPS on io1'],
+    },
+    stem: 'Cost optimization action for: {{issue}}.',
+    options: [
+      { text: 'Migrate gp2 → gp3 (cheaper at same IOPS), delete orphaned volumes via Compute Optimizer, automate snapshot lifecycle with Data Lifecycle Manager, right-size io1 IOPS.', correct: true },
+      { text: 'Keep all unused volumes for 1 year just in case.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Idle EBS still bills at full rate.' } },
+      { text: 'Manually take screenshots of volume metrics monthly.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Compute Optimizer + DLM automate this.' } },
+      { text: 'Disable EBS snapshots entirely to save money.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'No backup means catastrophic data loss risk.' } },
+    ],
+    explanation: 'EBS cost wins: gp3 (decoupled IOPS/throughput, ~20% cheaper than gp2), AWS Backup or Data Lifecycle Manager for snapshot rotation, Compute Optimizer to spot orphaned and over-provisioned volumes, right-size io1/io2 IOPS to actual workload.',
+    maxVariants: 4,
+  },
+
+  // D4.3 — cost-optimized database
+  {
+    id: 'tpl-423',
+    conceptSlug: 'dynamodb-performance',
+    blueprintTaskId: '4.3',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      pattern: ['unpredictable workload with idle periods', 'predictable steady traffic at 5k RPS', 'spiky workload with predictable peaks twice a day', 'global table with very low traffic in some Regions'],
+    },
+    stem: 'DynamoDB capacity mode for: {{pattern}}.',
+    options: [
+      { text: 'On-Demand for unpredictable/idle, Provisioned + Auto Scaling for predictable steady, Provisioned with Reserved Capacity for the deepest discount on stable workloads.', correct: true },
+      { text: 'Provisioned with very high static RCU/WCU regardless of actual traffic.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Wastes money on idle capacity.' } },
+      { text: 'Always On-Demand because it has no provisioning hassle.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'On-Demand costs ~6× more per request than Provisioned at scale.' } },
+      { text: 'Switch to Aurora because DynamoDB cost is unpredictable.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Aurora is relational; doesn\'t solve key-value workload economics.' } },
+    ],
+    explanation: 'On-Demand is great for idle/unpredictable but costly per request. Provisioned + Auto Scaling tracks steady patterns. Reserved Capacity (1y or 3y) gives ~50–70% discount on Provisioned RCU/WCU baseline. Match capacity mode to traffic shape.',
+    maxVariants: 4,
+  },
+
+  {
+    id: 'tpl-424',
+    conceptSlug: 'elasticache-redis-vs-memcached',
+    blueprintTaskId: '4.3',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      need: ['offload 80% of read traffic from RDS', 'reduce DynamoDB RCU consumption with caching', 'cache popular product detail pages globally'],
+    },
+    stem: 'Cheapest correct caching for: {{need}}.',
+    options: [
+      { text: 'ElastiCache (Redis) in front of RDS, DAX in front of DynamoDB, CloudFront for HTTP-cacheable pages — caching cuts DB billable units dramatically.', correct: true },
+      { text: 'Add more RDS read replicas indefinitely until reads keep up.', correct: false, distractor: { type: 'misuses-caching', explanation: 'Replicas help but cache cents-per-hit beats per-replica cost.' } },
+      { text: 'Increase DynamoDB provisioned WCU thinking it scales reads.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'WCU is writes; reads are RCU.' } },
+      { text: 'Disable caching to save the cache cluster bill.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Cache miss cost on origin is much higher than cluster fee.' } },
+    ],
+    explanation: 'Caching wins on cost when read >> write. ElastiCache offloads RDS reads at sub-ms latency for cents/hour. DAX cuts DynamoDB RCU consumption (microsecond reads). CloudFront caches HTTP at the edge, eliminating origin reads entirely for cacheable content.',
+    maxVariants: 3,
+  },
+
+  // D4.4 — cost-optimized networking
+  {
+    id: 'tpl-425',
+    conceptSlug: 'cloudfront-caching',
+    blueprintTaskId: '4.4',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      goal: ['cut S3 egress cost on a high-traffic public site', 'reduce ALB request cost on a CDN-cacheable workload', 'minimize cross-Region data transfer for read-mostly content'],
+    },
+    stem: 'Cheapest network architecture for: {{goal}}.',
+    options: [
+      { text: 'CloudFront in front of origin (S3/ALB) — egress to internet is cheaper than direct S3, requests are absorbed at the edge, and cross-Region reads can be served from edge cache.', correct: true },
+      { text: 'Direct origin access from clients with no CDN.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'S3/ALB egress + per-request cost is much higher than CloudFront-served.' } },
+      { text: 'A NAT Gateway in each AZ accelerating egress.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'NAT GW is for VPC egress, not user-facing CDN.' } },
+      { text: 'Pure Route 53 caching the response in DNS.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'Route 53 caches DNS records, not HTTP bodies.' } },
+    ],
+    explanation: 'CloudFront acts as both performance accelerator and cost reducer: egress from CloudFront is cheaper than direct S3/ALB, edge cache absorbs requests (cutting per-request cost), and cross-Region reads served from a nearby edge avoid expensive cross-Region transfer fees.',
+    maxVariants: 3,
+  },
+
+  // Wave 6 — close the gap to 500
+  {
+    id: 'tpl-124',
+    conceptSlug: 'iam-identity-center-sso',
+    blueprintTaskId: '1.1',
+    patternTag: 'identity-federation',
+    difficulty: 0.55,
+    slots: {
+      need: ['SSO across 50 AWS accounts with corporate Active Directory', 'centralized permission sets for engineering vs finance', 'short-lived AWS credentials for the CLI', 'attribute-based access using AD group membership', 'one-time setup with periodic auditing of access'],
+    },
+    stem: 'Best identity solution for: {{need}}.',
+    options: [
+      { text: 'AWS IAM Identity Center (formerly AWS SSO) with permission sets, AD/Azure AD/Okta as IdP, AWS access portal for CLI credentials, and ABAC via session tags.', correct: true },
+      { text: 'Per-account IAM users provisioned manually for every engineer.', correct: false, distractor: { type: 'iam-user-when-role-needed', explanation: 'Does not scale; no SSO; static credentials.' } },
+      { text: 'A single shared IAM user with the access keys rotated monthly.', correct: false, distractor: { type: 'over-permissive-iam', explanation: 'Shared identity violates auditability.' } },
+      { text: 'Cognito User Pools as the workforce SSO solution.', correct: false, distractor: { type: 'wrong-encryption-scope', explanation: 'Cognito is for end-customers; Identity Center is for workforce.' } },
+    ],
+    explanation: 'IAM Identity Center is the AWS workforce SSO. Federate to AD/Azure AD/Okta, define permission sets, assign users/groups to accounts, and consume from the access portal (web + CLI). ABAC works via session tags propagated from the IdP.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-125',
+    conceptSlug: 'shield-waf',
+    blueprintTaskId: '1.2',
+    patternTag: 'most-secure',
+    difficulty: 0.55,
+    slots: {
+      threat: ['SYN-flood DDoS on a public CloudFront distribution', 'OWASP top-10 attacks on a public ALB', 'rate-limit abuse from a small set of IPs', 'application-layer DDoS with cost-protection guarantees', 'bot scraping product pages aggressively'],
+    },
+    stem: 'Defense against: {{threat}}.',
+    options: [
+      { text: 'AWS Shield Advanced (DDoS, cost-protection refunds), AWS WAF (managed rule groups for OWASP, rate-based rules), and AWS WAF Bot Control.', correct: true },
+      { text: 'Security Groups configured to block specific countries.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'SGs are not Layer 7 and have no geo or attack-pattern matching.' } },
+      { text: 'Shield Standard alone for application-layer protection.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Shield Standard is L3/L4 only; needs WAF for L7.' } },
+      { text: 'A single NACL with deny rules added by a Lambda after attacks.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reactive; managed rule groups are continuous.' } },
+    ],
+    explanation: 'Shield Standard (free, L3/L4) is auto-applied. Shield Advanced adds L7 protection, 24/7 DRT support, and cost-protection refunds during attacks. AWS WAF provides L7 rules: managed groups for OWASP/IP-reputation, rate-based rules, and Bot Control for bot management.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-126',
+    conceptSlug: 's3-security',
+    blueprintTaskId: '1.3',
+    patternTag: 'most-secure',
+    difficulty: 0.5,
+    slots: {
+      need: ['enforce TLS-only access to all objects', 'block public access at the account level', 'encrypt all objects with SSE-KMS by default', 'audit every object-level API call', 'verify object integrity end-to-end'],
+    },
+    stem: 'Best S3 security control for: {{need}}.',
+    options: [
+      { text: 'Account-level Block Public Access, default bucket SSE-KMS encryption, bucket policy aws:SecureTransport=true, S3 server access logs + CloudTrail data events, S3 Object Lambda or checksums for integrity.', correct: true },
+      { text: 'Rely on individual user discretion for bucket-level encryption.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'No defaults means inconsistent posture.' } },
+      { text: 'A single IAM policy at the org root with broad s3:* permissions.', correct: false, distractor: { type: 'over-permissive-iam', explanation: 'Wildcard policies break least privilege.' } },
+      { text: 'Disable CloudTrail for S3 to save on log storage.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'Audit logging is non-negotiable for compliance.' } },
+    ],
+    explanation: 'S3 security is a layered set: Account-level Block Public Access (overrides bucket settings), default bucket encryption (SSE-KMS or SSE-S3), TLS-only via bucket policy aws:SecureTransport, CloudTrail data events for object-level audit, and SHA-256 checksums for end-to-end integrity.',
+    maxVariants: 5,
+  },
+
+  // Wave 7 — D3 expansion to close the final gap
+  {
+    id: 'tpl-331',
+    conceptSlug: 'ec2-instance-types',
+    blueprintTaskId: '3.2',
+    patternTag: 'highest-throughput',
+    difficulty: 0.5,
+    slots: {
+      workload: ['memory-bound in-memory database', 'CPU-bound encoding pipeline', 'GPU-accelerated ML inference', 'storage-IO-intensive analytics', 'network-intensive HPC node'],
+    },
+    stem: 'Pick the EC2 family for: {{workload}}.',
+    options: [
+      { text: 'R/X (memory), C (compute), G/P/Inf/Trn (GPU/ML), I/D (storage IO), Hpc (HPC) — match family to dominant resource.', correct: true },
+      { text: 'Always M-family because it is general-purpose.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'M is balanced; loses to specialized families on bottleneck workloads.' } },
+      { text: 'T3 burstable for every production workload.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Burstable is for idle/spiky; not steady production.' } },
+      { text: 'A single largest instance regardless of workload type.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Wastes capacity outside the dominant resource.' } },
+    ],
+    explanation: 'EC2 families specialize: M (general), C (compute-optimized), R/X (memory-optimized), G/P/Inf/Trn (accelerators for ML/graphics), I/D (storage-IO), Hpc (HPC interconnect). Pick the family that matches the bottleneck resource of the workload.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-332',
+    conceptSlug: 'ecs-vs-eks-vs-fargate',
+    blueprintTaskId: '3.2',
+    patternTag: 'serverless-vs-container',
+    difficulty: 0.55,
+    slots: {
+      need: ['simple container workload with minimal Kubernetes complexity', 'existing Kubernetes investment with portable tooling', 'serverless containers without node management', 'long-running stateful services with EBS volumes', 'spot-friendly batch workers'],
+    },
+    stem: 'Best container service for: {{need}}.',
+    options: [
+      { text: 'ECS for simple AWS-native, EKS when Kubernetes is the standard, Fargate as the serverless launch type, EBS-backed tasks via ECS, Spot via capacity providers.', correct: true },
+      { text: 'Self-managed Kubernetes on EC2 with no managed control plane.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'EKS is the managed option.' } },
+      { text: 'Lambda functions replacing every container workload regardless of duration.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: '15-minute Lambda limit; not for long-running services.' } },
+      { text: 'Beanstalk environments for every container scenario.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Beanstalk is platform-as-a-service, less flexible than ECS/EKS.' } },
+    ],
+    explanation: 'ECS = AWS-native simpler orchestration. EKS = managed Kubernetes (use when k8s ecosystem matters). Fargate = serverless launch type (no node mgmt) usable by both ECS and EKS. EBS-backed ECS tasks for stateful. Capacity providers blend EC2/Fargate/Spot.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-333',
+    conceptSlug: 'fargate-vs-lambda',
+    blueprintTaskId: '3.2',
+    patternTag: 'serverless-vs-container',
+    difficulty: 0.55,
+    slots: {
+      workload: ['HTTP API with sub-100ms cold-start tolerance', 'long-running batch job over 15 minutes', 'WebSocket service holding 10k connections', 'cron-triggered transient task', 'GPU workload for ML inference'],
+    },
+    stem: 'Best serverless compute for: {{workload}}.',
+    options: [
+      { text: 'Lambda for short event-driven functions; Fargate for long-running, persistent connections, GPU, or workloads needing custom container runtime.', correct: true },
+      { text: 'EC2 for any container workload regardless of management overhead.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'Fargate removes node management.' } },
+      { text: 'Lambda for everything including 1-hour batch jobs.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'Lambda hard limit 15 minutes.' } },
+      { text: 'Step Functions as the runtime for both Lambda and Fargate scenarios.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Step Functions orchestrates; does not run containers.' } },
+    ],
+    explanation: 'Lambda: event-driven, ≤15 min, ≤10 GB memory, cold starts mitigated by Provisioned Concurrency. Fargate: long-running, container-native, persistent connections, custom runtimes, supports GPU on certain instance types. Pick by duration and runtime needs.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-334',
+    conceptSlug: 'lambda-patterns',
+    blueprintTaskId: '3.2',
+    patternTag: 'event-driven-decoupling',
+    difficulty: 0.5,
+    slots: {
+      trigger: ['S3 ObjectCreated for image processing', 'API Gateway HTTP request with auth', 'DynamoDB Stream for change-data-capture', 'SQS queue with retry and DLQ', 'EventBridge schedule for cron jobs'],
+    },
+    stem: 'Lambda integration pattern for: {{trigger}}.',
+    options: [
+      { text: 'Native event-source mapping (S3, DDB Streams, SQS, EventBridge) or Lambda authorizer (API Gateway), each with appropriate concurrency, batch size, and DLQ configuration.', correct: true },
+      { text: 'A single polling Lambda querying every source on a 1-minute timer.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Native event triggers are pushed by AWS — no polling needed.' } },
+      { text: 'EC2 cron job triggering Lambdas via the Invoke API.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'EventBridge Scheduler replaces cron-on-EC2.' } },
+      { text: 'A custom EventBridge Pipe in front of every native event source.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Native triggers already exist; Pipes is for source-to-target enrichment.' } },
+    ],
+    explanation: 'Lambda has native event-source mappings for S3, DynamoDB Streams, Kinesis, SQS, MSK, plus push-based integrations (API Gateway, ALB, EventBridge, SNS). Configure batch size, batch window, parallelization factor, max retry attempts, and DLQ per source.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-426',
+    conceptSlug: 'ec2-pricing-models',
+    blueprintTaskId: '4.2',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.5,
+    slots: {
+      profile: ['steady 24/7 production baseline', 'fault-tolerant batch with flexible deadlines', 'unpredictable spiky workload with idle periods', 'compliance-required dedicated tenancy', 'short experiments lasting hours'],
+    },
+    stem: 'EC2 pricing model for: {{profile}}.',
+    options: [
+      { text: 'Savings Plans / RIs for steady, Spot for fault-tolerant batch, On-Demand for unpredictable, Dedicated Hosts/Instances for compliance, On-Demand for short experiments.', correct: true },
+      { text: 'Pure On-Demand for every scenario regardless of cost profile.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Up to 72% savings missed by ignoring commitments and Spot.' } },
+      { text: '3-year all-upfront RIs for spiky and short experiments.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'RIs lock in capacity that goes unused.' } },
+      { text: 'Spot Instances for compliance-required dedicated workloads.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'Spot has no tenancy guarantees.' } },
+    ],
+    explanation: 'Match pricing model to workload shape: Savings Plans (Compute or EC2) and RIs for committed baseline (up to 72% off), Spot for fault-tolerant batch (up to 90% off), Dedicated Hosts/Instances for license-bound or compliance, On-Demand for spiky/short.',
+    maxVariants: 5,
+  },
+
+  {
+    id: 'tpl-427',
+    conceptSlug: 'tag-policies',
+    blueprintTaskId: '4.4',
+    patternTag: 'most-cost-effective',
+    difficulty: 0.45,
+    slots: {
+      goal: ['allocate cost by team across 30 accounts', 'enforce a CostCenter tag on every resource', 'detect untagged resources for cleanup', 'group spend by environment (dev/staging/prod)'],
+    },
+    stem: 'Best AWS-native tool for: {{goal}}.',
+    options: [
+      { text: 'AWS Tag Policies (Organizations) to enforce key/value standards, plus Cost Allocation Tags activated in Billing for showback.', correct: true },
+      { text: 'A spreadsheet maintained by ops listing each resource owner.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Doesn\'t scale; drifts.' } },
+      { text: 'IAM policies denying any tag changes after creation.', correct: false, distractor: { type: 'wrong-encryption-scope', explanation: 'Locks tags but does not enforce taxonomy.' } },
+      { text: 'Trusted Advisor cost checks alone with no tagging strategy.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'TA gives summary; tags drive showback granularity.' } },
+    ],
+    explanation: 'Tag Policies enforce a tag taxonomy across an Organization (mandatory keys, allowed values, capitalization). Activate Cost Allocation Tags in Billing to break down Cost Explorer / CUR by team, project, environment, etc. Combine with AWS Config rules for missing-tag remediation.',
+    maxVariants: 4,
+  },
 ]
 
 export function summarizeExpansion(expanded: ExpandedQuestion[]): {
