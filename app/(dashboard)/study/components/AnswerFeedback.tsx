@@ -5,6 +5,23 @@ import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import type { Question, EvaluationResult } from '@/types/study'
 
+const TASK_LABELS: Record<string, string> = {
+  '1.1': 'Secure access to AWS resources',
+  '1.2': 'Secure workloads and applications',
+  '1.3': 'Appropriate data security controls',
+  '2.1': 'Scalable and loosely coupled architectures',
+  '2.2': 'Highly available / fault-tolerant designs',
+  '3.1': 'High-performing storage solutions',
+  '3.2': 'High-performing compute solutions',
+  '3.3': 'High-performing database solutions',
+  '3.4': 'High-performing network architectures',
+  '3.5': 'High-performing data ingestion & transform',
+  '4.1': 'Cost-optimized storage solutions',
+  '4.2': 'Cost-optimized compute solutions',
+  '4.3': 'Cost-optimized database solutions',
+  '4.4': 'Cost-optimized network architectures',
+}
+
 function DeepDive({ content, tags, questionId, conceptId }: { content: string; tags: string[]; questionId: string; conceptId: string }) {
   const [open, setOpen] = useState(false)
   return (
@@ -108,6 +125,11 @@ export function AnswerFeedback({
               ? 'The system reinforced this concept in your schedule.'
               : 'The system adjusted your schedule — this moves you closer to passing.'}
           </p>
+          {question.blueprintTaskId && (
+            <p className="text-xs text-text-muted mt-0.5">
+              Exam area {question.blueprintTaskId} · {TASK_LABELS[question.blueprintTaskId] ?? ''}
+            </p>
+          )}
         </div>
       </div>
 

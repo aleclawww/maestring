@@ -28,6 +28,9 @@ export const QuestionSchema = z.object({
   keyInsight: z.string().nullable().optional(),
   scenarioContext: ScenarioContextSchema,
   tags: z.array(z.string()).default([]),
+  blueprintTaskId: z.string().nullable().optional(),
+  patternTag: z.string().nullable().optional(),
+  isCanonical: z.boolean().optional(),
 })
 
 export const EvaluationResultSchema = z.object({
