@@ -567,7 +567,7 @@ export const TEMPLATES: Template[] = [
   // ───── Domain 3: Performant (3.2 — Edge & Caching) ─────
   {
     id: 'tpl-304',
-    conceptSlug: 'cloudfront',
+    conceptSlug: 'cloudfront-caching',
     blueprintTaskId: '3.2',
     patternTag: 'lowest-latency',
     difficulty: 0.5,
@@ -690,7 +690,7 @@ export const TEMPLATES: Template[] = [
   // ───── Domain 3: Performant (3.5 — Data) ─────
   {
     id: 'tpl-310',
-    conceptSlug: 'data-lake-foundations',
+    conceptSlug: 'redshift-fundamentals',
     blueprintTaskId: '3.5',
     patternTag: 'least-operational-overhead',
     difficulty: 0.55,
@@ -742,9 +742,9 @@ export const TEMPLATES: Template[] = [
     stem: 'Maximum-discount commitment for: {{mix}}.',
     options: [
       { text: 'Compute Savings Plans for cross-service flexibility; EC2 Standard RIs for fixed family/Region; Convertible RIs for changing families.', correct: true },
-      { text: 'On-Demand only.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Leaves discounts on the table.' } },
-      { text: 'Standard RIs for everything.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Locks family/Region; no flex.' } },
-      { text: 'Spot only.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Spot is for interruptible workloads.' } },
+      { text: 'On-Demand pricing across all workloads with no commitment.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Leaves discounts on the table.' } },
+      { text: 'EC2 Standard Reserved Instances for every workload uniformly.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Locks family/Region; no flex.' } },
+      { text: 'Spot Instances exclusively to maximise hourly discount.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Spot is for interruptible workloads.' } },
     ],
     explanation: 'Compute Savings Plans give the most flexibility (EC2 + Fargate + Lambda, any Region, any OS, any family) at up to 66% off. Standard RIs lock family/Region for max discount when the mix is fixed. Convertible RIs let you swap families for less discount.',
     maxVariants: 3,
@@ -762,9 +762,9 @@ export const TEMPLATES: Template[] = [
     stem: 'Use Spot when running: {{workload}}?',
     options: [
       { text: 'Yes for fault-tolerant batch with capacity-optimized allocation; No for stateful DB; Spot only as a fraction of a mixed-instances ASG for strict-SLA stateless tiers.', correct: true },
-      { text: 'Spot for everything to maximise savings.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Interruption breaks stateful DBs.' } },
-      { text: 'Never use Spot.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Leaves up-to-90% savings on the table for batch.' } },
-      { text: 'Use Spot Blocks (deprecated).', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Spot Blocks are no longer offered.' } },
+      { text: 'Use Spot for every workload to maximise hourly savings.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Interruption breaks stateful DBs.' } },
+      { text: 'Avoid Spot entirely and run everything On-Demand.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Leaves up-to-90% savings on the table for batch.' } },
+      { text: 'Use Spot Blocks for guaranteed durations (deprecated feature).', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Spot Blocks are no longer offered.' } },
     ],
     explanation: 'Spot is for interruption-tolerant work. Capacity-optimized allocation reduces interruption risk. Mixed-instances ASGs let you blend On-Demand baseline + Spot for strict-SLA stateless tiers. Stateful single-instance workloads should not run on Spot alone.',
     maxVariants: 3,
@@ -773,7 +773,7 @@ export const TEMPLATES: Template[] = [
   // ───── Domain 4: Cost (4.3 — Database cost) ─────
   {
     id: 'tpl-404',
-    conceptSlug: 'aurora-serverless',
+    conceptSlug: 'aurora-performance',
     blueprintTaskId: '4.3',
     patternTag: 'most-cost-effective',
     difficulty: 0.55,
@@ -794,7 +794,7 @@ export const TEMPLATES: Template[] = [
   // ───── Domain 4: Cost (4.4 — Cost monitoring) ─────
   {
     id: 'tpl-405',
-    conceptSlug: 'cost-explorer-budgets',
+    conceptSlug: 'aws-budgets-cost-explorer',
     blueprintTaskId: '4.4',
     patternTag: 'monitoring-observability',
     difficulty: 0.45,
