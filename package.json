@@ -44,7 +44,7 @@
     "pdf-parse": "^1.1.1",
     "pino": "^9.3.2",
     "pino-pretty": "^11.2.1",
-    "posthog-js": "^1.148.0",
+    "posthog-js": "^1.372.3",
     "posthog-node": "^4.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
