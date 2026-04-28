@@ -25,7 +25,7 @@
     "setup": "npm install && supabase start && supabase db push && npm run db:types && npm run seed"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.3",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@react-email/components": "^0.0.22",
     "@sentry/nextjs": "^8.19.0",
     "@supabase/ssr": "^0.4.0",
