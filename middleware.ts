@@ -22,6 +22,13 @@ const PUBLIC_PREFIXES = [
   '/sitemap',
   '/api/magic',
   '/legal/',
+  // Blog posts are public marketing content — /blog is in PUBLIC_ROUTES but
+  // only matches the index exactly. Without this prefix, /blog/[slug] SSG pages
+  // redirect unauthenticated visitors to /login.
+  '/blog/',
+  // OG image generation — called by link-unfurl crawlers (Slack, Twitter, etc.)
+  // which are never authenticated.
+  '/api/og/',
   // Test-auth shim is public only when explicitly enabled — the route handler
   // returns 404 otherwise, so this prefix is inert in production.
   ...(process.env['ALLOW_TEST_AUTH'] === '1' ? ['/api/test/'] : []),

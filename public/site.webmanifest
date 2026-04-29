@@ -1,21 +1,44 @@
 {
   "name": "Maestring",
   "short_name": "Maestring",
-  "description": "Master AWS with AI and Spaced Repetition",
+  "description": "Master AWS SAA-C03 with AI and spaced repetition",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "theme_color": "#0f1117",
   "background_color": "#0f1117",
   "display": "standalone",
-  "start_url": "/dashboard"
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/dashboard",
+  "id": "/dashboard",
+  "shortcuts": [
+    {
+      "name": "Study Now",
+      "short_name": "Study",
+      "description": "Jump into a review session",
+      "url": "/study",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Progress",
+      "short_name": "Progress",
+      "description": "View your readiness score",
+      "url": "/progress",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["education", "productivity"]
 }

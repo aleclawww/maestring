@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 // Smoke: marketing homepage renders + login page reachable. Full auth + study
 // flow E2E needs a seeded Supabase test DB — out of scope for this pass.
-test.describe('@smoke marketing', () => {
+test.describe('@public @smoke marketing', () => {
   test('homepage returns 200 and contains brand', async ({ page }) => {
     const response = await page.goto('/')
     expect(response?.status()).toBeLessThan(400)

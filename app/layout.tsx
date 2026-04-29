@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { PostHogProvider } from '@/components/shared/PostHogProvider'
 import { CookieBanner } from '@/components/shared/CookieBanner'
+import { ServiceWorkerRegistration } from '@/components/shared/ServiceWorkerRegistration'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -115,6 +116,7 @@ export default function RootLayout({
         <PostHogProvider>
           {children}
           <CookieBanner />
+          <ServiceWorkerRegistration />
         </PostHogProvider>
       </body>
     </html>

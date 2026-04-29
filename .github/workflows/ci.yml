@@ -129,14 +129,57 @@ jobs:
           key: node-modules-${{ hashFiles('package-lock.json') }}
       - run: npm run build
 
-  e2e-smoke:
-    name: E2E smoke (Playwright)
+  # ── Public smoke: always runs on every PR ─────────────────────────────────
+  # Tests that need no auth, no Supabase, no real API keys. Just an app that
+  # builds and starts. Catches: routing regressions, middleware breakage, static
+  # page removal, API boundary bypasses. Should NEVER be skipped.
+  e2e-public:
+    name: E2E public smoke (always-on)
     runs-on: ubuntu-latest
     needs: build
-    # Only run when a staging Supabase project has been wired up. Flip the
-    # repo variable E2E_ENABLED to 'true' once NEXT_PUBLIC_SUPABASE_URL and
-    # friends point at a non-prod Supabase. Until then, keep CI green instead
-    # of failing on "NEXT_PUBLIC_SUPABASE_URL is empty — CI secrets not configured".
+    env:
+      # Minimal env — public smoke never hits Supabase or external APIs.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+      ANTHROPIC_API_KEY: placeholder
+      OPENAI_API_KEY: placeholder
+      RESEND_API_KEY: placeholder
+      UPSTASH_REDIS_REST_URL: https://placeholder.upstash.io
+      UPSTASH_REDIS_REST_TOKEN: placeholder
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      CRON_SECRET: ci-placeholder
+      MAGIC_LINK_SECRET: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      # Run only the @public tag — no auth, no DB, safe with placeholder env.
+      - run: npm run test:e2e -- --grep "@public"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-public
+          path: playwright-report/
+          retention-days: 7
+
+  # ── Authenticated smoke: gated on staging Supabase ────────────────────────
+  # Flip repo variable E2E_ENABLED to 'true' once a staging Supabase project
+  # is wired up. Tests the full study loop, dashboard, settings.
+  e2e-authenticated:
+    name: E2E authenticated (staging)
+    runs-on: ubuntu-latest
+    needs: build
     if: vars.E2E_ENABLED == 'true'
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -152,10 +195,6 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       CRON_SECRET: ci-placeholder
       MAGIC_LINK_SECRET: ci-placeholder
-      # Enables the test-auth shim (/api/test/login) so authenticated specs
-      # run. MUST point SUPABASE_* at a dedicated CI/staging project — the
-      # shim creates a fixture user (e2e-fixture@maestring.test) via the
-      # service-role key. Never run this against the production project.
       ALLOW_TEST_AUTH: '1'
     steps:
       - uses: actions/checkout@v4
@@ -168,8 +207,6 @@ jobs:
           path: node_modules
           key: node-modules-${{ hashFiles('package-lock.json') }}
       # Guardrail: refuse to run the test-auth shim against production Supabase.
-      # Set repository variable PROD_SUPABASE_URL to the prod project URL; this
-      # step fails loudly if CI secrets were ever pointed at it.
       - name: Assert non-prod Supabase target
         env:
           PROD_SUPABASE_URL: ${{ vars.PROD_SUPABASE_URL }}
@@ -179,15 +216,15 @@ jobs:
             exit 1
           fi
           if [ -n "${PROD_SUPABASE_URL:-}" ] && [ "$NEXT_PUBLIC_SUPABASE_URL" = "$PROD_SUPABASE_URL" ]; then
-            echo "::error::CI Supabase URL matches PROD_SUPABASE_URL — test-auth shim would create fixture users in prod. Point CI at a staging project."
+            echo "::error::CI Supabase URL matches PROD_SUPABASE_URL — test-auth shim would run against prod. Point CI at a staging project."
             exit 1
           fi
       - run: npx playwright install --with-deps chromium
       - run: npm run build
-      - run: npm run test:e2e -- --grep @smoke
+      - run: npm run test:e2e -- --grep "@smoke"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-authenticated
           path: playwright-report/
           retention-days: 7

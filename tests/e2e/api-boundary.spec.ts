@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test'
 // returning an HTML redirect to a JSON fetch, cron endpoints accessible without
 // the bearer). No DB fixtures or LLM stubs needed — we assert on status codes
 // and basic response shape.
-test.describe('@smoke api boundary', () => {
+test.describe('@public @smoke api boundary', () => {
   test('POST /api/study/generate without auth is rejected (no 2xx)', async ({ request }) => {
     const res = await request.post('/api/study/generate', {
       data: { sessionId: '00000000-0000-0000-0000-000000000000', mode: 'review' },
