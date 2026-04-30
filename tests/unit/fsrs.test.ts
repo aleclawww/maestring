@@ -13,11 +13,15 @@ import {
 import { makeState } from './_fixtures'
 
 describe('lib/fsrs — answerToRating', () => {
+  // Any wrong answer → Again regardless of concept difficulty.
+  // Previously the code returned Hard for low-difficulty wrong answers,
+  // which told FSRS the card was nearly known and *extended* the interval —
+  // the opposite of the desired behavior for a missed answer.
   it('Again on wrong answer with high difficulty', () => {
     expect(answerToRating(false, 10_000, 0.9)).toBe(Rating.Again)
   })
-  it('Hard on wrong answer with low difficulty', () => {
-    expect(answerToRating(false, 10_000, 0.4)).toBe(Rating.Hard)
+  it('Again on wrong answer with low difficulty (was incorrectly Hard)', () => {
+    expect(answerToRating(false, 10_000, 0.4)).toBe(Rating.Again)
   })
   it('Easy on fast correct answer', () => {
     expect(answerToRating(true, 5_000, 0.5)).toBe(Rating.Easy)

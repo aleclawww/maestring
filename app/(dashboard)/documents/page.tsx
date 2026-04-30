@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { formatBytes, formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -17,9 +17,25 @@ interface Document {
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load existing documents on mount. Previously this was missing, so a user
+  // who uploaded documents in a previous session would always see the empty
+  // state ("You haven't uploaded any documents yet").
+  useEffect(() => {
+    fetch('/api/documents')
+      .then(async res => {
+        if (!res.ok) return
+        const { data } = await res.json()
+        if (Array.isArray(data)) setDocuments(data as Document[])
+      })
+      .catch(() => {/* fail silently — user can still upload */})
+      .finally(() => setLoading(false))
+  }, [])
 
   async function handleFileUpload(file: File) {
     if (!file.type.includes('pdf')) {
@@ -73,6 +89,23 @@ export default function DocumentsPage() {
       setUploadError('Network error while uploading. Check your connection and try again.')
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function handleDelete(docId: string) {
+    setDeletingId(docId)
+    try {
+      const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string }
+        console.error('Delete failed', j.error)
+        return
+      }
+      setDocuments(prev => prev.filter(d => d.id !== docId))
+    } catch (err) {
+      console.error('Delete network error', err)
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -134,7 +167,13 @@ export default function DocumentsPage() {
       )}
 
       {/* Documents list */}
-      {documents.length > 0 ? (
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2].map(i => (
+            <div key={i} className="h-20 rounded-xl border border-border bg-surface animate-pulse" />
+          ))}
+        </div>
+      ) : documents.length > 0 ? (
         <div className="space-y-3">
           {documents.map(doc => (
             <Card key={doc.id}>
@@ -154,8 +193,17 @@ export default function DocumentsPage() {
                     )}
                   </div>
                 </div>
-                <div className="ml-4 flex-shrink-0">
+                <div className="ml-4 flex-shrink-0 flex items-center gap-3">
                   {statusBadge(doc.processing_status)}
+                  <button
+                    onClick={() => handleDelete(doc.id)}
+                    disabled={deletingId === doc.id}
+                    aria-label={`Delete ${doc.filename}`}
+                    className="text-text-muted hover:text-danger transition-colors disabled:opacity-40 text-sm"
+                    title="Delete document"
+                  >
+                    {deletingId === doc.id ? '…' : '✕'}
+                  </button>
                 </div>
               </CardContent>
             </Card>

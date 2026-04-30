@@ -9,6 +9,15 @@ export const metadata: Metadata = {
   title: "Maestring — Adaptive AWS Certification Prep",
   description:
     "Pass the AWS Solutions Architect Associate exam faster with AI-powered adaptive questions, spaced repetition, and real-time progress analytics.",
+  // Explicit canonical on the homepage reinforces to Google which URL owns
+  // this domain — a prerequisite for the favicon appearing in search results.
+  alternates: {
+    canonical: 'https://maestring.com',
+  },
+  openGraph: {
+    url: 'https://maestring.com',
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
 };
 
 const FEATURES = [
@@ -120,7 +129,6 @@ const FAQS = [
 ];
 
 export default async function LandingPage() {
-  const appUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "";
   const testimonials = await getTestimonials();
 
   return (
@@ -423,8 +431,8 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-xl font-bold gradient-text">Maestring</span>
           <div className="flex gap-8 text-sm text-zinc-500">
-            <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
+            <Link href="/legal/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
+            <Link href="/legal/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
             <a href="mailto:hello@maestring.app" className="hover:text-zinc-300 transition-colors">Contact</a>
           </div>
           <p className="text-zinc-600 text-sm">© {new Date().getFullYear()} Maestring</p>

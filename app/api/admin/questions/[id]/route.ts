@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/admin'
@@ -20,6 +22,10 @@ const PatchSchema = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdmin()
+
+  if (!z.string().uuid().safeParse(params.id).success) {
+    return NextResponse.json({ error: 'invalid_id' }, { status: 400 })
+  }
 
   let parsed
   try {
@@ -52,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from('questions') as any).update(update).eq('id', params.id)
   if (error) {
-    return NextResponse.json({ error: 'update_failed', message: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'update_failed' }, { status: 500 })
   }
 
   await recordAdminAction({
@@ -66,11 +72,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdmin()
+
+  if (!z.string().uuid().safeParse(params.id).success) {
+    return NextResponse.json({ error: 'invalid_id' }, { status: 400 })
+  }
+
   const supabase = createAdminClient()
 
   const { error } = await supabase.from('questions').delete().eq('id', params.id)
   if (error) {
-    return NextResponse.json({ error: 'delete_failed', message: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'delete_failed' }, { status: 500 })
   }
 
   await recordAdminAction({

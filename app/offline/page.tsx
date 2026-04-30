@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ReloadButton } from './ReloadButton'
 
 export const metadata: Metadata = { title: 'You\'re offline' }
 
@@ -11,12 +12,7 @@ export default function OfflinePage() {
         Check your internet connection and try again. Your study progress is saved and will sync
         when you&apos;re back online.
       </p>
-      <button
-        onClick={() => window.location.reload()}
-        className="btn-primary"
-      >
-        Try again
-      </button>
+      <ReloadButton />
     </div>
   )
 }

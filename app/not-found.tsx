@@ -15,10 +15,10 @@ export default function NotFound() {
         </p>
       </div>
 
-      <h1 className="mb-2 text-2xl font-bold text-text-primary">Página no encontrada</h1>
+      <h1 className="mb-2 text-2xl font-bold text-text-primary">Page not found</h1>
       <p className="mb-8 max-w-md text-text-secondary">
-        La ruta que buscas no existe o fue eliminada. Intenta volver al dashboard o
-        comprueba si la URL es correcta.
+        This route doesn&apos;t exist or was removed. Head back to the dashboard or
+        check that the URL is correct.
       </p>
 
       <div className="flex gap-4">
@@ -26,18 +26,18 @@ export default function NotFound() {
           href="/dashboard"
           className="btn-primary"
         >
-          Ir al Dashboard
+          Go to Dashboard
         </Link>
         <Link
           href="/"
           className="btn-outline"
         >
-          Página principal
+          Home
         </Link>
       </div>
 
       <p className="mt-12 text-xs text-text-muted">
-        ¿Crees que esto es un error? Contacta a soporte.
+        Think this is a mistake? Contact support.
       </p>
     </div>
   )

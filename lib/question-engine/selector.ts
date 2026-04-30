@@ -49,7 +49,7 @@ export function enforceInterleaving(
 }
 
 /**
- * Pilar 4 — Optimización de Carga Cognitiva: warm-up → pico → cooldown.
+ * Cognitive load optimisation: warm-up → peak → cooldown.
  * Reorders an already-FSRS-selected queue so the session has a sane cognitive
  * shape: easy/familiar at the start (activate flow state), hard/fragile in the
  * middle (peak attention), light at the end (avoid frustration before close).

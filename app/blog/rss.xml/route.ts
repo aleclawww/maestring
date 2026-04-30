@@ -35,8 +35,8 @@ export async function GET() {
   <channel>
     <title>Maestring — Blog</title>
     <link>${base}/blog</link>
-    <description>Guías profundas sobre AWS SAA-C03 y estudio efectivo con IA + FSRS.</description>
-    <language>es-ES</language>
+    <description>In-depth guides on AWS SAA-C03 and effective studying with AI + spaced repetition.</description>
+    <language>en-US</language>
     <atom:link href="${base}/blog/rss.xml" rel="self" type="application/rss+xml" />
 ${items}
   </channel>

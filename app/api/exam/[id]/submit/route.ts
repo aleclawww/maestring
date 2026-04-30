@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -15,7 +17,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   if (error) {
     logger.error({ err: error, userId: user.id, sessionId: params.id }, "submit_exam_session failed");
-    return NextResponse.json({ error: error.message ?? "Failed to submit" }, { status: 500 });
+    return NextResponse.json({ error: 'submit_failed' }, { status: 500 });
   }
 
   return NextResponse.json({ data });

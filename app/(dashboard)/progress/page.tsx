@@ -7,6 +7,7 @@ import { ReadinessCard, type ReadinessData } from '@/components/dashboard/Readin
 import { BlueprintAccuracyCard, type BlueprintTaskRow } from '@/components/dashboard/BlueprintAccuracyCard'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'My Progress' }
 
 export default async function ProgressPage() {
@@ -26,14 +27,14 @@ export default async function ProgressPage() {
     supabase.rpc('get_study_heatmap', { p_user_id: user.id, p_days: 84 }),
     supabase
       .from('study_sessions')
-      .select('*')
+      .select('id, mode, created_at, total_time_seconds, concepts_studied, correct_count, xp_earned')
       .eq('user_id', user.id)
       .eq('is_completed', true)
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
       .from('knowledge_domains')
-      .select('*, concepts(id)')
+      .select('id, name, color, exam_weight_percent, concepts(id)')
       .eq('certification_id', 'aws-saa-c03'),
     supabase
       .from('user_concept_states')
@@ -81,7 +82,7 @@ export default async function ProgressPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Readiness — mismo componente que el dashboard, con CI + P(aprobar) + trend */}
+      {/* Readiness score — shown once the user has enough history to compute it */}
       {readiness && <ReadinessCard data={readiness} />}
 
       {/* Stats overview */}
@@ -187,35 +188,53 @@ export default async function ProgressPage() {
         <CardHeader>
           <CardTitle>Session history</CardTitle>
         </CardHeader>
-        <div className="divide-y divide-border">
-          {(sessions ?? []).map(s => {
-            const accuracy =
-              s.concepts_studied > 0
-                ? Math.round((s.correct_count / s.concepts_studied) * 100)
-                : 0
-            return (
-              <div key={s.id} className="flex items-center justify-between px-6 py-3">
-                <div>
-                  <p className="text-sm font-medium text-text-primary capitalize">
-                    {s.mode === 'discovery' ? 'Discovery' : s.mode === 'review' ? 'Review' : s.mode === 'intensive' ? 'Intensive' : 'Maintenance'}
-                  </p>
-                  <p className="text-xs text-text-muted">
-                    {formatRelativeTime(s.created_at)} · {formatDuration(s.total_time_seconds)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={accuracy >= 80 ? 'success' : accuracy >= 60 ? 'warning' : 'danger'}>
-                    {accuracy}%
-                  </Badge>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-text-primary">{s.concepts_studied} questions</p>
-                    <p className="text-xs text-primary">+{s.xp_earned} XP</p>
+        {(sessions ?? []).length === 0 ? (
+          <div className="px-6 py-10 text-center">
+            <p className="text-3xl mb-3">📚</p>
+            <p className="text-sm font-medium text-text-primary">No sessions yet</p>
+            <p className="text-xs text-text-muted mt-1">
+              Complete your first study session and it will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {(sessions ?? []).map(s => {
+              const accuracy =
+                s.concepts_studied > 0
+                  ? Math.round((s.correct_count / s.concepts_studied) * 100)
+                  : 0
+              return (
+                <div key={s.id} className="flex items-center justify-between px-6 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-text-primary capitalize">
+                      {s.mode === 'discovery'
+                        ? 'Discovery'
+                        : s.mode === 'review'
+                        ? 'Review'
+                        : s.mode === 'intensive'
+                        ? 'Intensive'
+                        : s.mode === 'exploration'
+                        ? 'Exploration'
+                        : 'Maintenance'}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {formatRelativeTime(s.created_at)} · {formatDuration(s.total_time_seconds)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant={accuracy >= 80 ? 'success' : accuracy >= 60 ? 'warning' : 'danger'}>
+                      {accuracy}%
+                    </Badge>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-text-primary">{s.concepts_studied} questions</p>
+                      <p className="text-xs text-primary">+{s.xp_earned} XP</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </Card>
     </div>
   )

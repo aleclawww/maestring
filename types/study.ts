@@ -49,6 +49,10 @@ export const EvaluationResultSchema = z.object({
       validReasoningHint: z.string(),
     })
     .optional(),
+  // Server-side XP awarded for this answer (0 for wrong answers or duplicates).
+  // Spread into the evaluate response alongside rating/nextReviewDate so the
+  // client can accumulate the real total rather than using a hardcoded formula.
+  xpEarned: z.number().int().min(0).optional(),
 })
 
 export const ConceptStateSchema = z.object({

@@ -7,11 +7,18 @@ import { Redis } from "@upstash/redis";
 // wrappers in ./rate-limit.ts and ./cache.ts instead, which catch and
 // notify via ./outage-alert.notifyRedisOutage.
 //
-// History: this module previously exported Ratelimit instances and a
-// getCache/setCache helper set, but nothing imported them — the real
-// fail-open helpers live in the sibling files above. The dead exports were
-// removed to stop future callers from picking the wrong module.
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+// Exported as `Redis | null`: if UPSTASH env vars are not set the module
+// still loads cleanly (important during builds and in local dev without
+// Redis). Callers must handle the null case — the health check already does.
+
+const _url = process.env["UPSTASH_REDIS_REST_URL"];
+const _token = process.env["UPSTASH_REDIS_REST_TOKEN"];
+
+if (!_url || !_token) {
+  console.warn(
+    "[redis] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN is not set — Redis client unavailable"
+  );
+}
+
+export const redis: Redis | null =
+  _url && _token ? new Redis({ url: _url, token: _token }) : null;

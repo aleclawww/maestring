@@ -1,3 +1,4 @@
+import type { AnchorHTMLAttributes } from 'react'
 import Link from 'next/link'
 import type { MDXComponents } from 'mdx/types'
 
@@ -25,10 +26,9 @@ export const mdxComponents: MDXComponents = {
       {...props}
     />
   ),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  a: ({ href, ...props }: any) => {
-    if (href?.startsWith('/')) {
-      return <Link href={href} className="text-primary hover:underline" {...props} />
+  a: ({ href, children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => {
+    if (typeof href === 'string' && href.startsWith('/')) {
+      return <Link href={href} className="text-primary hover:underline" {...props}>{children}</Link>
     }
     return (
       <a
@@ -37,7 +37,9 @@ export const mdxComponents: MDXComponents = {
         rel="noopener noreferrer"
         className="text-primary hover:underline"
         {...props}
-      />
+      >
+        {children}
+      </a>
     )
   },
   table: props => (

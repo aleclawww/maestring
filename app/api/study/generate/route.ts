@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -208,7 +210,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "daily_quota_exceeded",
-        message: `Llegaste al tope diario del plan ${quotaRow.plan} (${quotaRow.quota} preguntas). Vuelve mañana o pasa a Pro para ilimitado.`,
+        message: `You've reached the daily limit for the ${quotaRow.plan} plan (${quotaRow.quota} questions). Come back tomorrow or upgrade to Pro for unlimited access.`,
         quota: quotaRow.quota,
         used: quotaRow.used,
         plan: quotaRow.plan,
@@ -237,9 +239,24 @@ export async function POST(req: NextRequest) {
       "Question generated"
     );
 
+    // Pad optional rich fields so the LLM-generated shape matches the pool-hit
+    // shape. QuestionCard reads hint/keyInsight/scenarioContext and guards with
+    // `??` or conditional rendering — null is safe and avoids undefined access.
+    const paddedQuestion = {
+      hint: null,
+      explanationDeep: null,
+      keyInsight: null,
+      scenarioContext: null,
+      tags: [] as string[],
+      blueprintTaskId: null,
+      patternTag: null,
+      isCanonical: false,
+      ...question,
+    };
+
     return NextResponse.json(
       {
-        data: question,
+        data: paddedQuestion,
         metadata: {
           conceptId: next.conceptId,
           conceptName: next.conceptName,

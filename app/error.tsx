@@ -26,17 +26,17 @@ export default function Error({
         )}
       </div>
 
-      <h1 className="mb-2 text-2xl font-bold text-text-primary">Algo salió mal</h1>
+      <h1 className="mb-2 text-2xl font-bold text-text-primary">Something went wrong</h1>
       <p className="mb-8 max-w-md text-text-secondary">
-        El error fue reportado automáticamente. Puedes intentar recargar la página.
+        This error was reported automatically. You can try reloading the page.
       </p>
 
       <div className="flex gap-4">
         <button onClick={reset} className="btn-primary">
-          Intentar de nuevo
+          Try again
         </button>
         <a href="/dashboard" className="btn-outline">
-          Ir al Dashboard
+          Go to Dashboard
         </a>
       </div>
     </div>

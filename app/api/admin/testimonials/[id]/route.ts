@@ -1,8 +1,12 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/admin'
+
 import { createAdminClient } from '@/lib/supabase/admin'
 import { recordAdminAction } from '@/lib/admin/rpc'
+import { logger } from '@/lib/logger'
 
 const Body = z.object({
   status: z.enum(['approved', 'rejected', 'pending']).optional(),
@@ -12,6 +16,11 @@ const Body = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdmin()
+
+  if (!z.string().uuid().safeParse(params.id).success) {
+    return NextResponse.json({ error: 'invalid_id' }, { status: 400 })
+  }
+
   const parsed = Body.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
@@ -28,7 +37,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (parsed.data.rejectReason) patch['reject_reason'] = parsed.data.rejectReason
 
   const { error } = await supabase.from('testimonials').update(patch).eq('id', params.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error({ err: error, testimonialId: params.id, adminEmail: admin.email }, 'testimonial update failed')
+    return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+  }
 
   await recordAdminAction({
     adminEmail: admin.email!,
@@ -40,11 +52,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ ok: true })
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdmin()
+
+  if (!z.string().uuid().safeParse(params.id).success) {
+    return NextResponse.json({ error: 'invalid_id' }, { status: 400 })
+  }
+
   const supabase = createAdminClient()
   const { error } = await supabase.from('testimonials').delete().eq('id', params.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    logger.error({ err: error, testimonialId: params.id, adminEmail: admin.email }, 'testimonial delete failed')
+    return NextResponse.json({ error: 'delete_failed' }, { status: 500 })
+  }
 
   await recordAdminAction({
     adminEmail: admin.email!,

@@ -1,11 +1,13 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runIngestionPipeline } from "@/lib/ingestion/ingestion-pipeline";
 import { logger } from "@/lib/logger";
+import { verifyCronSecret } from "@/lib/auth/verify-cron-secret";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env["CRON_SECRET"]}`) {
+  if (!verifyCronSecret(req.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

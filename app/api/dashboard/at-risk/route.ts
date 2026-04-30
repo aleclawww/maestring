@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // Drill-down for the "at risk" chip on ReadinessCard. Returns concepts
 // scheduled within 7 days with stability < 14d, ordered by urgency

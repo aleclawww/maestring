@@ -2,6 +2,10 @@ import { withSentryConfig } from '@sentry/nextjs'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Don't leak the framework name via the X-Powered-By response header.
+  poweredByHeader: false,
+  // Ensure HTTP compression is always on (it's the default, but explicit is better).
+  compress: true,
   pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
   experimental: {
     mdxRs: true,
@@ -41,8 +45,13 @@ const nextConfig = {
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://app.posthog.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://*.supabase.co https://api.stripe.com https://app.posthog.com https://o*.ingest.sentry.io wss://*.supabase.co",
+              // img-src: enumerate known external image hosts rather than allowing all https:.
+              // Mirrors the remotePatterns list above so <Image> and raw <img> tags
+              // both stay within the same set of trusted origins.
+              "img-src 'self' data: blob: https://*.supabase.co https://avatars.githubusercontent.com https://lh3.googleusercontent.com",
+              // connect-src: includes Sentry ingest (org-specific subdomain pattern),
+              // PostHog, Stripe, and Supabase REST + Realtime WebSocket endpoints.
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://app.posthog.com https://o*.ingest.sentry.io",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "worker-src blob:",
             ].join('; '),

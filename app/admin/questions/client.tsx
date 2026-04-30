@@ -69,7 +69,7 @@ export function QuestionsAdminClient({
   }
 
   async function remove(id: string) {
-    if (!confirm('¿Eliminar definitivamente?')) return
+    if (!confirm('Delete permanently?')) return
     setErr(null)
     try {
       const res = await fetch(`/api/admin/questions/${id}`, { method: 'DELETE' })
@@ -113,7 +113,7 @@ export function QuestionsAdminClient({
         <div className="space-y-3">
           {pending.length === 0 && (
             <div className="rounded-xl border border-border bg-surface p-10 text-center text-text-muted">
-              Cola vacía. Nada que aprobar.
+              Empty queue. Nothing to approve.
             </div>
           )}
           {pending.map((q) => (
@@ -137,7 +137,7 @@ export function QuestionsAdminClient({
         <div className="space-y-3">
           {rejected.length === 0 && (
             <div className="rounded-xl border border-border bg-surface p-10 text-center text-text-muted">
-              Nada rechazado.
+              Nothing rejected.
             </div>
           )}
           {rejected.map((q) => (
@@ -148,7 +148,7 @@ export function QuestionsAdminClient({
               </p>
               <p className="text-sm text-text-secondary mb-2">{q.question_text}</p>
               {q.reject_reason && (
-                <p className="text-xs text-danger mb-2">Razón: {q.reject_reason}</p>
+                <p className="text-xs text-danger mb-2">Reason: {q.reject_reason}</p>
               )}
               <div className="flex gap-2">
                 <button
@@ -156,14 +156,14 @@ export function QuestionsAdminClient({
                   disabled={busy}
                   className="btn-outline text-xs px-3 py-1.5"
                 >
-                  Restaurar
+                  Restore
                 </button>
                 <button
                   onClick={() => remove(q.id)}
                   disabled={busy}
                   className="btn-outline text-xs px-3 py-1.5 text-danger hover:bg-danger/10"
                 >
-                  Eliminar
+                  Delete
                 </button>
               </div>
             </div>
@@ -263,10 +263,10 @@ function QuestionCard({
             onChange={(e) => setExpl(e.target.value)}
             rows={3}
             className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
-            placeholder="Explicación"
+            placeholder="Explanation"
           />
           <label className="text-xs text-text-muted flex items-center gap-2">
-            Dificultad
+            Difficulty
             <input
               type="number"
               step="0.05"
@@ -284,12 +284,12 @@ function QuestionCard({
         {!editing ? (
           <>
             <button onClick={onApprove} disabled={busy} className="btn-primary text-xs px-3 py-1.5">
-              Aprobar
+              Approve
             </button>
             <input
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Razón (opcional)"
+              placeholder="Reason (optional)"
               className="text-xs rounded border border-border bg-surface-2 px-2 py-1"
             />
             <button
@@ -297,17 +297,17 @@ function QuestionCard({
               disabled={busy}
               className="btn-outline text-xs px-3 py-1.5"
             >
-              Rechazar
+              Reject
             </button>
             <button onClick={onEditToggle} disabled={busy} className="btn-outline text-xs px-3 py-1.5">
-              Editar
+              Edit
             </button>
             <button
               onClick={onDelete}
               disabled={busy}
               className="btn-outline text-xs px-3 py-1.5 text-danger hover:bg-danger/10"
             >
-              Eliminar
+              Delete
             </button>
           </>
         ) : (
@@ -325,10 +325,10 @@ function QuestionCard({
               disabled={busy}
               className="btn-primary text-xs px-3 py-1.5"
             >
-              Guardar cambios
+              Save changes
             </button>
             <button onClick={onEditToggle} disabled={busy} className="btn-outline text-xs px-3 py-1.5">
-              Cancelar
+              Cancel
             </button>
           </>
         )}
@@ -391,11 +391,11 @@ function BatchGenerate({ concepts, onDone }: { concepts: Concept[]; onDone: () =
     <div className="rounded-xl border border-border bg-surface p-5 max-w-xl">
       <h2 className="font-semibold mb-2">Generate batch</h2>
       <p className="text-xs text-text-muted mb-4">
-        Dispara generación de preguntas vía Claude Haiku. Aparecerán en &ldquo;Pending&rdquo; para revisión.
+        Triggers question generation via Claude Haiku. Questions will appear in &ldquo;Pending&rdquo; for review.
       </p>
       <div className="space-y-3">
         <div>
-          <label className="text-xs text-text-muted">Concepto (ordenado por pool más vacío)</label>
+          <label className="text-xs text-text-muted">Concept (ordered by emptiest pool)</label>
           <select
             value={conceptId}
             onChange={(e) => setConceptId(e.target.value)}
@@ -409,7 +409,7 @@ function BatchGenerate({ concepts, onDone }: { concepts: Concept[]; onDone: () =
           </select>
         </div>
         <div>
-          <label className="text-xs text-text-muted">Cantidad (1–20)</label>
+          <label className="text-xs text-text-muted">Quantity (1–20)</label>
           <input
             type="number"
             min={1}
@@ -420,12 +420,12 @@ function BatchGenerate({ concepts, onDone }: { concepts: Concept[]; onDone: () =
           />
         </div>
         <button onClick={run} disabled={running || !conceptId} className="btn-primary text-sm">
-          {running ? 'Generando…' : 'Generar'}
+          {running ? 'Generating…' : 'Generate'}
         </button>
         {err && <div className="text-danger text-sm">{err}</div>}
         {result && (
           <div className="text-sm text-success">
-            Generadas: {result.generated} · Fallidas: {result.failed}
+            Generated: {result.generated} · Failed: {result.failed}
           </div>
         )}
       </div>

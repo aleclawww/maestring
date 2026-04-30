@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,7 +20,7 @@ export async function GET() {
 
   const { data: session, error } = await supabase
     .from("study_sessions")
-    .select("*")
+    .select("id, mode, status, domain_id, started_at, target_questions, questions_answered, correct_answers")
     .eq("user_id", user.id)
     .eq("status", "active")
     .order("started_at", { ascending: false })
@@ -102,11 +104,11 @@ export async function PATCH(req: NextRequest) {
   const supabase = createAdminClient();
 
   const body = await req.json().catch(() => ({}));
-  const sessionId = body.sessionId as string | undefined;
-
-  if (!sessionId) {
-    return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+  const sessionIdParsed = z.string().uuid().safeParse(body.sessionId);
+  if (!sessionIdParsed.success) {
+    return NextResponse.json({ error: "sessionId must be a valid UUID" }, { status: 400 });
   }
+  const sessionId = sessionIdParsed.data;
 
   // Calculate stats
   const { data: attempts, error: attemptsErr } = await supabase
@@ -161,11 +163,12 @@ export async function DELETE(req: NextRequest) {
 
   // Accept sessionId from body or query for fetch DELETE compatibility
   const body = await req.json().catch(() => ({}));
-  const sessionId =
-    (body.sessionId as string | undefined) ?? req.nextUrl.searchParams.get("sessionId");
-  if (!sessionId) {
-    return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+  const rawSessionId = (body.sessionId as string | undefined) ?? req.nextUrl.searchParams.get("sessionId");
+  const sessionIdParsed = z.string().uuid().safeParse(rawSessionId);
+  if (!sessionIdParsed.success) {
+    return NextResponse.json({ error: "sessionId must be a valid UUID" }, { status: 400 });
   }
+  const sessionId = sessionIdParsed.data;
 
   const { error } = await supabase
     .from("study_sessions")

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 interface SessionProgressProps {
@@ -16,6 +17,7 @@ export function SessionProgress({
   answered = [],
   onAbandon,
 }: SessionProgressProps) {
+  const [confirmingAbandon, setConfirmingAbandon] = useState(false)
   const progress = Math.round((current / total) * 100)
 
   return (
@@ -26,23 +28,43 @@ export function SessionProgress({
         </span>
         <div className="flex items-center gap-3">
           <span className="text-xs text-text-muted">{progress}%</span>
-          {onAbandon && (
+          {onAbandon && !confirmingAbandon && (
             <button
-              onClick={() => {
-                if (confirm('Abandon the session? You will lose this session’s progress.')) {
-                  onAbandon()
-                }
-              }}
+              onClick={() => setConfirmingAbandon(true)}
               className="text-xs text-text-muted hover:text-danger transition-colors"
             >
               Abandon
             </button>
           )}
+          {onAbandon && confirmingAbandon && (
+            <span className="flex items-center gap-2 text-xs">
+              <span className="text-text-muted">Abandon session?</span>
+              <button
+                onClick={() => { setConfirmingAbandon(false); onAbandon() }}
+                className="text-danger font-semibold hover:underline"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setConfirmingAbandon(false)}
+                className="text-text-muted hover:text-text-primary"
+              >
+                Cancel
+              </button>
+            </span>
+          )}
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden mb-2">
+      <div
+        role="progressbar"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Session progress: ${progress}%`}
+        className="h-1.5 rounded-full bg-surface-2 overflow-hidden mb-2"
+      >
         <div
           className="h-full rounded-full bg-primary transition-all duration-300"
           style={{ width: `${progress}%` }}
@@ -50,7 +72,7 @@ export function SessionProgress({
       </div>
 
       {/* Dots for answered questions */}
-      <div className="flex gap-1">
+      <div className="flex gap-1" aria-hidden="true">
         {Array.from({ length: total }).map((_, i) => (
           <div
             key={i}

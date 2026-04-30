@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
@@ -102,7 +104,7 @@ export async function GET(request: NextRequest) {
       // Fetch onboarding + welcome-email state in one round trip.
       let { data: profile, error: profileErr } = await supabase
         .from('profiles')
-        .select('onboarding_completed, welcome_email_sent_at, full_name, exam_date')
+        .select('onboarding_completed, welcome_email_sent_at, full_name, exam_target_date')
         .eq('id', data.user.id)
         .single()
 
@@ -126,7 +128,7 @@ export async function GET(request: NextRequest) {
         } else {
           const retry = await supabase
             .from('profiles')
-            .select('onboarding_completed, welcome_email_sent_at, full_name, exam_date')
+            .select('onboarding_completed, welcome_email_sent_at, full_name, exam_target_date')
             .eq('id', data.user.id)
             .single()
           profile = retry.data
@@ -179,7 +181,7 @@ export async function GET(request: NextRequest) {
               react: WelcomeEmail({
                 firstName,
                 studyUrl,
-                examDate: profile.exam_date ?? undefined,
+                examDate: profile.exam_target_date ?? undefined,
               }),
               tags: [{ name: 'type', value: 'welcome' }],
             })

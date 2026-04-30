@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/admin'
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
     .eq('id', documentId)
   if (updErr) {
     logger.error({ err: updErr, documentId }, 'retry-document reset failed')
-    return NextResponse.json({ error: updErr.message }, { status: 500 })
+    return NextResponse.json({ error: 'update_failed' }, { status: 500 })
   }
 
   await recordAdminAction({

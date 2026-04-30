@@ -66,6 +66,28 @@ export function UpgradeButton({
         setLoading(false);
         return;
       }
+
+      // Validate the redirect URL is a legitimate Stripe-hosted page before
+      // following it. The URL comes from our own API, but a defence-in-depth
+      // check ensures a compromised server response can't redirect the user to
+      // an arbitrary phishing domain.
+      const ALLOWED_STRIPE_HOSTS = ['checkout.stripe.com', 'billing.stripe.com']
+      let parsedUrl: URL
+      try {
+        parsedUrl = new URL(data.url)
+      } catch {
+        console.error("UpgradeButton: checkout URL is not a valid URL", { url: data.url })
+        setError("Unexpected checkout response. Please try again.")
+        setLoading(false)
+        return
+      }
+      if (parsedUrl.protocol !== 'https:' || !ALLOWED_STRIPE_HOSTS.includes(parsedUrl.hostname)) {
+        console.error("UpgradeButton: checkout URL failed origin check", { url: data.url })
+        setError("Unexpected checkout response. Please try again.")
+        setLoading(false)
+        return
+      }
+
       window.location.href = data.url;
     } catch (err) {
       console.error("UpgradeButton checkout network error", { err, plan });

@@ -54,7 +54,12 @@ function structuralChecks(q: CandidateQuestion): string[] {
     if (min > 0 && max / min > 2.2) reasons.push('option_length_skew')
     const normalized = q.options.map(o => o.trim().toLowerCase())
     if (new Set(normalized).size !== 4) reasons.push('duplicate_options')
-    if (normalized.some(o => o.includes('todas las anteriores') || o.includes('ninguna de las anteriores'))) {
+    if (normalized.some(o =>
+      o.includes('all of the above') ||
+      o.includes('none of the above') ||
+      o.includes('all the above') ||
+      o.includes('none of these')
+    )) {
       reasons.push('meta_option_present')
     }
   }
@@ -70,34 +75,34 @@ export async function validateQuestion(
     return { valid: false, reasons: structural, score: 0 }
   }
 
-  const prompt = `Eres un evaluador experto de exámenes de AWS SAA-C03. Tu trabajo es rechazar preguntas defectuosas aplicando criterios pedagógicos estrictos.
+  const prompt = `You are an expert AWS SAA-C03 exam question reviewer. Your job is to reject defective questions by applying strict pedagogical criteria.
 
-CONCEPTO OBJETIVO:
-- Nombre: ${concept.name}
-- Descripción: ${concept.description}
-- Servicios AWS: ${concept.awsServices.join(', ')}
-- Se confunde con: ${concept.confusedWith.join(', ')}
+TARGET CONCEPT:
+- Name: ${concept.name}
+- Description: ${concept.description}
+- AWS Services: ${concept.awsServices.join(', ')}
+- Commonly confused with: ${concept.confusedWith.join(', ')}
 
-PREGUNTA A EVALUAR:
+QUESTION TO EVALUATE:
 Stem: ${q.questionText}
-Opciones:
+Options:
   0) ${q.options[0]}
   1) ${q.options[1]}
   2) ${q.options[2]}
   3) ${q.options[3]}
-Marcada como correcta: índice ${q.correctIndex} — "${q.options[q.correctIndex]}"
-Explicación: ${q.explanation}
+Marked correct: index ${q.correctIndex} — "${q.options[q.correctIndex]}"
+Explanation: ${q.explanation}
 
-CRITERIOS (marca cada uno como pass/fail):
-1. single_correct — ¿Hay exactamente UNA opción defendible como la mejor? (fail si dos son igual de válidas o ninguna es claramente correcta)
-2. correct_is_best — ¿La opción marcada como correcta es realmente la óptima según AWS best practices? (fail si otra opción es mejor)
-3. distractors_plausible — ¿Los distractores son errores técnicos plausibles, no absurdos ni irrelevantes?
-4. on_topic — ¿La pregunta evalúa directamente el concepto "${concept.name}", no un tema adyacente?
-5. no_lexical_cues — ¿La opción correcta NO repite palabras únicas del stem que los distractores no usan?
-6. unambiguous — ¿El stem es lo suficientemente específico para tener una única interpretación razonable?
-7. factually_correct — ¿Todos los hechos técnicos sobre AWS son correctos en 2026?
+CRITERIA (mark each as pass/fail):
+1. single_correct — Is there exactly ONE option that can be defended as best? (fail if two are equally valid or none is clearly correct)
+2. correct_is_best — Is the marked-correct option truly optimal per AWS best practices? (fail if another option is better)
+3. distractors_plausible — Are the distractors plausible technical mistakes, not absurd or irrelevant?
+4. on_topic — Does the question directly test the concept "${concept.name}", not an adjacent topic?
+5. no_lexical_cues — Does the correct option NOT repeat unique words from the stem that the distractors do not use?
+6. unambiguous — Is the stem specific enough to have a single reasonable interpretation?
+7. factually_correct — Are all AWS technical facts in the question correct as of 2026?
 
-Responde SOLO con JSON (sin markdown):
+Respond with JSON ONLY (no markdown):
 {
   "single_correct": true,
   "correct_is_best": true,
@@ -106,7 +111,7 @@ Responde SOLO con JSON (sin markdown):
   "no_lexical_cues": true,
   "unambiguous": true,
   "factually_correct": true,
-  "reasons": ["si algún criterio falla, explica brevemente cuál y por qué"]
+  "reasons": ["if any criterion fails, briefly explain which one and why"]
 }`
 
   const t0 = Date.now()

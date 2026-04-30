@@ -4,7 +4,14 @@ import { UpgradeButton } from "@/components/billing/UpgradeButton";
 
 export const metadata: Metadata = {
   title: "Pricing — Maestring",
-  description: "Simple, transparent pricing for AWS certification prep.",
+  description: "Simple, transparent pricing for AWS SAA-C03 certification prep. Free forever, Pro unlocks unlimited AI questions.",
+  alternates: { canonical: '/pricing' },
+  openGraph: {
+    title: "Pricing — Maestring",
+    description: "Free forever. Pro plan unlocks unlimited AI questions, PDF uploads, and the full 65-question exam simulator.",
+    url: '/pricing',
+    type: 'website',
+  },
 };
 
 export default function PricingPage() {

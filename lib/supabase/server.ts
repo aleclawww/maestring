@@ -4,27 +4,28 @@ import { redirect } from 'next/navigation'
 import type { Database } from '@/types/database'
 
 export function createClient() {
+  const url = process.env['NEXT_PUBLIC_SUPABASE_URL']
+  const key = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
+  if (!url) throw new Error('NEXT_PUBLIC_SUPABASE_URL is required but not set')
+  if (!key) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is required but not set')
+
   const cookieStore = cookies()
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Can be safely ignored in Server Components
-          }
-        },
+  return createServerClient<Database>(url, key, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
       },
-    }
-  )
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        } catch {
+          // Can be safely ignored in Server Components
+        }
+      },
+    },
+  })
 }
 
 export async function getAuthenticatedUser() {

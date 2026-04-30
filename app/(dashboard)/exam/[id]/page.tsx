@@ -42,6 +42,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [answerError, setAnswerError] = useState<string | null>(null)
+  const [confirmingSubmit, setConfirmingSubmit] = useState(false)
   const submittedRef = useRef(false)
 
   const submitExam = useCallback(async () => {
@@ -212,6 +213,8 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
           <span className="text-xs text-text-muted">{answeredCount} answered</span>
         </div>
         <div
+          aria-live="polite"
+          aria-label={`Time remaining: ${String(mins).padStart(2, '0')} minutes ${String(secs).padStart(2, '0')} seconds`}
           className={cn(
             'flex items-center gap-2 font-mono text-lg font-bold',
             isLowTime ? 'text-danger animate-pulse' : 'text-text-primary'
@@ -219,17 +222,31 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
         >
           ⏱️ {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
         </div>
-        <button
-          onClick={() => {
-            if (confirm(`Submit exam? You've answered ${answeredCount}/${items.length} questions.`)) {
-              void submitExam()
-            }
-          }}
-          disabled={submitting}
-          className="btn-danger text-sm"
-        >
-          {submitting ? 'Submitting…' : 'Submit'}
-        </button>
+        {!confirmingSubmit ? (
+          <button
+            onClick={() => setConfirmingSubmit(true)}
+            disabled={submitting}
+            className="btn-danger text-sm"
+          >
+            {submitting ? 'Submitting…' : 'Submit'}
+          </button>
+        ) : (
+          <span className="flex items-center gap-2 text-sm">
+            <span className="text-text-muted">{answeredCount}/{items.length} answered. Submit?</span>
+            <button
+              onClick={() => { setConfirmingSubmit(false); void submitExam() }}
+              className="text-danger font-semibold hover:underline"
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setConfirmingSubmit(false)}
+              className="text-text-muted hover:text-text-primary"
+            >
+              Cancel
+            </button>
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -259,6 +276,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
                 <button
                   key={i}
                   onClick={() => selectAnswer(i)}
+                  aria-pressed={current.user_answer_index === i}
                   className={cn(
                     'w-full text-left rounded-xl border px-4 py-3 text-sm transition-all',
                     current.user_answer_index === i
@@ -286,6 +304,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
               <button
                 disabled={currentIdx === 0}
                 onClick={() => setCurrentIdx((i) => i - 1)}
+                aria-label="Previous question"
                 className="btn-outline flex-1 disabled:opacity-40"
               >
                 ← Previous
@@ -293,6 +312,7 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
               <button
                 disabled={currentIdx === items.length - 1}
                 onClick={() => setCurrentIdx((i) => i + 1)}
+                aria-label="Next question"
                 className="btn-primary flex-1 disabled:opacity-40"
               >
                 Next →
@@ -306,24 +326,35 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
             Navigation
           </p>
           <div className="grid grid-cols-5 gap-1.5">
-            {items.map((it, i) => (
-              <button
-                key={it.position}
-                onClick={() => setCurrentIdx(i)}
-                className={cn(
-                  'h-8 w-8 rounded-md text-xs font-semibold transition-colors',
-                  i === currentIdx
-                    ? 'bg-primary text-white'
-                    : it.flagged
-                    ? 'bg-warning/20 text-warning border border-warning/30'
-                    : it.user_answer_index !== null
-                    ? 'bg-success/20 text-success'
-                    : 'bg-surface-2 text-text-muted hover:bg-surface-2/80'
-                )}
-              >
-                {i + 1}
-              </button>
-            ))}
+            {items.map((it, i) => {
+              const state = i === currentIdx
+                ? 'current'
+                : it.flagged
+                ? 'flagged'
+                : it.user_answer_index !== null
+                ? 'answered'
+                : 'unanswered'
+              return (
+                <button
+                  key={it.position}
+                  onClick={() => setCurrentIdx(i)}
+                  aria-label={`Question ${i + 1} — ${state}`}
+                  aria-current={i === currentIdx ? 'true' : undefined}
+                  className={cn(
+                    'h-8 w-8 rounded-md text-xs font-semibold transition-colors',
+                    i === currentIdx
+                      ? 'bg-primary text-white'
+                      : it.flagged
+                      ? 'bg-warning/20 text-warning border border-warning/30'
+                      : it.user_answer_index !== null
+                      ? 'bg-success/20 text-success'
+                      : 'bg-surface-2 text-text-muted hover:bg-surface-2/80'
+                  )}
+                >
+                  {i + 1}
+                </button>
+              )
+            })}
           </div>
           <div className="mt-4 space-y-2 text-xs text-text-muted">
             <div className="flex items-center gap-2">

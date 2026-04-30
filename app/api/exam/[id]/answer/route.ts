@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -29,9 +31,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   });
 
   if (error) {
-    const msg = error.message ?? "Failed to record answer";
-    const status = /deadline|not in progress|not found/i.test(msg) ? 409 : 500;
-    return NextResponse.json({ error: msg }, { status });
+    const msg = error.message ?? ''
+    const isConflict = /deadline|not in progress|not found/i.test(msg)
+    const status = isConflict ? 409 : 500
+    // Return a code-based error rather than the raw DB/RPC message so Postgres
+    // internals (table names, constraint names) are never exposed to clients.
+    return NextResponse.json(
+      { error: isConflict ? 'exam_not_active' : 'record_failed' },
+      { status }
+    )
   }
 
   return NextResponse.json({ ok: true });

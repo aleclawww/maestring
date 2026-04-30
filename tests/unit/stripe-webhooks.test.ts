@@ -4,13 +4,45 @@ import type Stripe from 'stripe'
 
 // Chainable Supabase-style builder used by the handler tests below. We hoist
 // so the vi.mock factory can reach it without TDZ errors.
+//
+// Design: all chaining methods return `builder` itself. `builder` is made
+// thenable (has a `.then()`) so `await builder` resolves to { data, error }
+// regardless of where in the chain the `await` lands. This allows the mock to
+// support both short chains (`await .update().eq(...)`) and extended chains
+// (`await .update().eq().select().maybeSingle()`).
 const supabaseMock = vi.hoisted(() => {
   const state: { updateError: { message: string } | null } = { updateError: null }
-  const builder: Record<string, (...args: unknown[]) => unknown> = {}
-  builder['update'] = vi.fn(() => builder)
-  builder['eq'] = vi.fn(async () => ({ error: state.updateError }))
+
+  const builder: Record<string, unknown> = {}
+
+  // Thenable: makes `await builder` resolve to { data: null, error }.
+  builder['then'] = (
+    resolve: (v: { data: null; error: typeof state.updateError }) => void,
+    reject: (e: unknown) => void
+  ) => {
+    Promise.resolve({ data: null, error: state.updateError }).then(resolve, reject)
+  }
+  builder['catch'] = (onRejected: (e: unknown) => void) =>
+    Promise.resolve({ data: null, error: state.updateError }).catch(onRejected)
+  builder['finally'] = (onFinally: () => void) =>
+    Promise.resolve({ data: null, error: state.updateError }).finally(onFinally)
+
+  // All chaining methods return builder so calls can be arbitrarily composed.
+  for (const method of [
+    'from', 'update', 'eq', 'neq', 'select', 'insert', 'upsert', 'delete',
+    'is', 'lt', 'lte', 'gte', 'gt', 'in', 'order', 'limit',
+    'single', 'maybeSingle', 'count',
+  ]) {
+    builder[method] = vi.fn(() => builder)
+  }
+
   const from = vi.fn(() => builder)
-  return { state, builder, from, client: { from } as unknown as { from: typeof from } }
+  return {
+    state,
+    builder,
+    from,
+    client: { from } as unknown as { from: typeof from },
+  }
 })
 
 vi.mock('@/lib/supabase/admin', () => ({

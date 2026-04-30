@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 
 interface DangerZoneProps {
-  userId: string
   email: string
 }
 

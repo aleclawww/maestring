@@ -1,17 +1,25 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import {
   handleCheckoutCompleted,
   handleSubscriptionUpdated,
   handleSubscriptionDeleted,
   handleInvoicePaymentFailed,
   handleInvoicePaymentSucceeded,
+  handleTrialWillEnd,
 } from "@/lib/stripe/webhooks";
+import { getStripe } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { captureApiException } from "@/lib/sentry/capture";
 
-const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"]!, { apiVersion: "2024-06-20" });
+// Use the shared singleton rather than creating a second Stripe instance here.
+// Two separate instances meant different HTTP connection pools and a risk of
+// apiVersion drift if one was bumped without the other.
+const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"];
+if (!webhookSecret) throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -23,11 +31,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env["STRIPE_WEBHOOK_SECRET"]!
-    );
+    event = getStripe().webhooks.constructEvent(body, sig, webhookSecret as string);
   } catch (err) {
     logger.error({ err }, "Stripe webhook signature verification failed");
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
@@ -94,6 +98,9 @@ export async function POST(req: NextRequest) {
         break;
       case "invoice.payment_succeeded":
         await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        break;
+      case "customer.subscription.trial_will_end":
+        await handleTrialWillEnd(event.data.object as Stripe.Subscription);
         break;
       default:
         logger.info({ type: event.type }, "Unhandled Stripe event");

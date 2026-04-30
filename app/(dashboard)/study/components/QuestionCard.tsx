@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import type { Question } from '@/types/study'
@@ -24,6 +24,12 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
   const [hintRequestedBeforeAnswer, setHintRequestedBeforeAnswer] = useState(false)
   const [firstAttempt, setFirstAttempt] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Ref-based lock prevents double-submit within a single React batch cycle.
+  // useState alone has a race window: React hasn't flushed the state update yet
+  // by the time a second tap (≤200ms on mobile) checks the lock, so both taps
+  // read locked=false and queue a setTimeout. The ref is set synchronously and
+  // is visible to the very next microtask, closing the window entirely.
+  const submittingRef = useRef(false)
 
   const hasHint = Boolean(question.hint)
   const locked = submitting
@@ -43,6 +49,10 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
     // First attempt correct, or no hint available, or on second attempt,
     // or user already consumed the hint proactively → submit.
     if (isCorrect || !hasHint || attempt === 2 || hintRequestedBeforeAnswer) {
+      // Set ref synchronously before any async work so a second tap in the
+      // same render cycle sees the lock immediately, before React re-renders.
+      if (submittingRef.current) return
+      submittingRef.current = true
       setSubmitting(true)
       // Proactive hint use forfeits first-try bonus even when correct.
       const firstCorrect = attempt === 1 && isCorrect && !hintRequestedBeforeAnswer
@@ -181,6 +191,7 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
               key={index}
               onClick={() => handleSelect(index)}
               disabled={locked || isDisabledByRetry}
+              aria-pressed={isSelected}
               className={cn(
                 'w-full text-left rounded-xl border px-4 py-3 text-sm transition-all',
                 locked && 'cursor-default',

@@ -1,8 +1,10 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateAnswerLocal } from "@/lib/question-engine/generator";
-import { scheduleReview, answerToRating } from "@/lib/fsrs";
+import { scheduleReview, answerToRating, calculateXpForAnswer } from "@/lib/fsrs";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
       .select("question_text, options, correct_index, explanation")
       .eq("id", questionId)
       .maybeSingle(),
-    supabase.from("user_concept_states").select("*").eq("user_id", user.id).eq("concept_id", conceptId).maybeSingle(),
+    supabase.from("user_concept_states").select("next_review_date, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review").eq("user_id", user.id).eq("concept_id", conceptId).maybeSingle(),
     supabase.from("concepts").select("id, name, difficulty").eq("id", conceptId).maybeSingle(),
   ]);
 
@@ -98,7 +100,28 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
   if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
 
+  // Guard against corrupt DB rows where options is null/non-array.
+  // Supabase types declare this as Json, so a botched admin insert could
+  // leave it null — `null.length` would be an unhandled TypeError here.
+  if (!Array.isArray(question.options) || question.options.length === 0) {
+    logger.error(
+      { questionId: parsed.data.questionId, options: question.options },
+      "evaluate: corrupt question — options is null or non-array, skipping"
+    );
+    return NextResponse.json({ error: "corrupt_question" }, { status: 422 });
+  }
   const options = question.options as string[];
+
+  // Guard against corrupt DB rows where correct_index is out of bounds.
+  // options[5] silently becomes undefined which propagates as the string
+  // "undefined" into explanation text and breaks scoring.
+  if (question.correct_index < 0 || question.correct_index >= options.length) {
+    logger.error(
+      { questionId: parsed.data.questionId, correctIndex: question.correct_index, optionsLen: options.length },
+      "evaluate: corrupt question — correct_index out of bounds, skipping"
+    );
+    return NextResponse.json({ error: "corrupt_question" }, { status: 422 });
+  }
   const evaluation = evaluateAnswerLocal(
     options,
     question.correct_index,
@@ -112,9 +135,8 @@ export async function POST(req: NextRequest) {
   const effectiveCorrect = evaluation.isCorrect && firstAttemptCorrect;
   const rating = answerToRating(effectiveCorrect, timeTakenMs, difficulty);
 
-  // Pilar 3 — Modo Exploración: el usuario explora sin que sus respuestas
-  // distorsionen el schedule FSRS. Saltamos el update de user_concept_states
-  // y no derivamos un próximo review.
+  // Exploration mode: user explores without distorting the FSRS schedule.
+  // Skip the user_concept_states update and do not derive a next review date.
   const isExploration = (session as { mode?: string } | null)?.mode === "exploration";
 
   // --------------------------------------------------------------------------
@@ -129,23 +151,26 @@ export async function POST(req: NextRequest) {
   //     evaluation — no double-update of user_concept_states (which would
   //     drift the schedule) and no double-increment of questions_answered.
   // --------------------------------------------------------------------------
+  // evaluation_result is a jsonb column; the generated types don't match the
+  // runtime shape, so we cast the whole insert payload.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const attemptPayload: any = {
+    session_id: sessionId,
+    question_id: questionId,
+    user_id: user.id,
+    concept_id: conceptId,
+    user_answer_index: selectedIndex,
+    is_correct: effectiveCorrect,
+    time_taken_ms: timeTakenMs,
+    evaluation_result: {
+      ...evaluation,
+      fsrs_rating: rating,
+      first_attempt_correct: firstAttemptCorrect,
+    },
+  }
   const { error: insertErr } = await supabase
     .from("question_attempts")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .insert({
-      session_id: sessionId,
-      question_id: questionId,
-      user_id: user.id,
-      concept_id: conceptId,
-      user_answer_index: selectedIndex,
-      is_correct: effectiveCorrect,
-      time_taken_ms: timeTakenMs,
-      evaluation_result: {
-        ...evaluation,
-        fsrs_rating: rating,
-        first_attempt_correct: firstAttemptCorrect,
-      },
-    } as any);
+    .insert(attemptPayload);
 
   if (insertErr) {
     if ((insertErr as { code?: string }).code === "23505") {
@@ -177,12 +202,17 @@ export async function POST(req: NextRequest) {
         { userId: user.id, sessionId, questionId },
         "Duplicate evaluate request — returning cached attempt"
       );
+      // Spread evaluation fields flat into data so the client's
+      // `const { data: evaluation }` destructure gets isCorrect/explanation
+      // at the top level (matching EvaluationResult shape).
+      const canonicalEval = (existingEval ?? evaluation) as Record<string, unknown>
       return NextResponse.json({
         data: {
-          evaluation: existingEval ?? evaluation,
+          ...canonicalEval,
           rating: (existingEval?.["fsrs_rating"] as number | undefined) ?? rating,
           nextReviewDate: null,
           exploration: isExploration,
+          xpEarned: 0,
           duplicate: true,
         },
       });
@@ -222,21 +252,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Bump session counters. Same severity as the FSRS update: the attempt
-  // is already recorded, so a retry goes to the duplicate path and does
-  // NOT re-bump. A silent failure here leaves the session header stuck
-  // behind the attempts count — the user sees wrong progress in the UI
-  // and any "session complete at N questions" trigger may never fire.
-  // Log so operators can correlate a stuck-progress ticket to a concrete
-  // update error.
-  const { error: sessionCountErr } = await supabase
-    .from("study_sessions")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .update({
-      questions_answered: (session.questions_answered ?? 0) + 1,
-      correct_answers: (session.correct_answers ?? 0) + (effectiveCorrect ? 1 : 0),
-    } as any)
-    .eq("id", sessionId);
+  // Bump session counters atomically with a SQL-level increment.
+  // The previous approach read session.questions_answered then wrote +1,
+  // which races if two answers are submitted concurrently for the same session
+  // (both reads see the same value and one increment is silently lost).
+  // Using `questions_answered + 1` in SQL pushes the arithmetic into Postgres
+  // where it executes as a single atomic update, preventing the race.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: sessionCountErr } = await (supabase as any)
+    .rpc("increment_session_counters", {
+      p_session_id: sessionId,
+      p_is_correct: effectiveCorrect,
+      p_session_owner: user.id,   // ownership guard added in migration 047
+    });
   if (sessionCountErr) {
     logger.error(
       { err: sessionCountErr, userId: user.id, sessionId, conceptId },
@@ -245,6 +273,23 @@ export async function POST(req: NextRequest) {
   }
 
   logger.info({ userId: user.id, conceptId, isCorrect: evaluation.isCorrect, rating }, "Answer evaluated");
+
+  // Award XP for correct first-attempt answers. Fire-and-forget: a failed XP
+  // write is annoying but non-fatal — the user answered correctly and should
+  // see the session summary without a 500. Log so we can detect systematic
+  // failures (e.g. missing total_xp column after a schema change).
+  const xpEarned = calculateXpForAnswer(effectiveCorrect, timeTakenMs, difficulty, 0);
+  if (xpEarned > 0) {
+    // SQL-level increment avoids a race between two concurrent evaluate calls
+    // both reading total_xp and writing total_xp + delta, which would silently
+    // drop one increment (last-write-wins instead of add-add).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(supabase as any)
+      .rpc("increment_profile_xp", { p_user_id: user.id, p_xp: xpEarned })
+      .then(({ error: xpErr }: { error: unknown }) => {
+        if (xpErr) logger.warn({ err: xpErr, userId: user.id, xpEarned }, "XP increment failed — profile total_xp not updated");
+      });
+  }
 
   // Every 10th question, refresh cognitive fingerprint in the background.
   // Fire-and-forget: never block the response or propagate errors to the client.
@@ -258,7 +303,11 @@ export async function POST(req: NextRequest) {
       });
   }
 
+  // Spread evaluation fields flat into data. The client does:
+  //   const { data: evaluation } = await res.json()
+  // and then accesses evaluation.isCorrect, evaluation.explanation, etc.
+  // directly — so EvaluationResult fields must be at the top level of `data`.
   return NextResponse.json({
-    data: { evaluation, rating, nextReviewDate, exploration: isExploration },
+    data: { ...evaluation, rating, nextReviewDate, exploration: isExploration, xpEarned },
   });
 }

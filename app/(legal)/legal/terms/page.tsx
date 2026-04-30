@@ -1,91 +1,88 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Términos de Servicio — Maestring",
-  description: "Términos y condiciones de uso de Maestring.",
+  title: "Terms of Service — Maestring",
+  description: "Terms and conditions for using Maestring.",
 };
 
-const LAST_UPDATED = "19 de abril de 2026";
+const LAST_UPDATED = "April 19, 2026";
 
 export default function TermsPage() {
   return (
     <article>
-      <h1>Términos de Servicio</h1>
-      <p className="text-sm text-zinc-500">Última actualización: {LAST_UPDATED}</p>
+      <h1>Terms of Service</h1>
+      <p className="text-sm text-zinc-500">Last updated: {LAST_UPDATED}</p>
 
-      <h2>1. Quiénes somos</h2>
+      <h2>1. Who We Are</h2>
       <p>
-        Maestring es un servicio operado por un autónomo en España que ofrece
-        herramientas de preparación adaptativa para certificaciones técnicas
-        (actualmente AWS Certified Solutions Architect — Associate).
+        Maestring is a service operated by a sole trader in Spain that provides
+        adaptive preparation tools for technical certifications
+        (currently AWS Certified Solutions Architect — Associate).
       </p>
 
-      <h2>2. Aceptación</h2>
+      <h2>2. Acceptance</h2>
       <p>
-        Al crear una cuenta o utilizar el servicio aceptas estos términos. Si no
-        estás de acuerdo, no utilices Maestring.
+        By creating an account or using the service you accept these terms. If you
+        disagree, do not use Maestring.
       </p>
 
-      <h2>3. Cuenta y elegibilidad</h2>
+      <h2>3. Account and Eligibility</h2>
       <p>
-        Debes tener al menos 16 años. Eres responsable de la confidencialidad de
-        tus credenciales. Notifícanos inmediatamente cualquier uso no autorizado
-        en <a href="mailto:soporte@maestring.com">soporte@maestring.com</a>.
+        You must be at least 16 years old. You are responsible for keeping your
+        credentials confidential. Notify us immediately of any unauthorized use at{" "}
+        <a href="mailto:support@maestring.com">support@maestring.com</a>.
       </p>
 
-      <h2>4. Planes y pago</h2>
+      <h2>4. Plans and Payment</h2>
       <ul>
-        <li><strong>Free:</strong> 20 preguntas IA al día, sin coste.</li>
-        <li><strong>Pro:</strong> suscripción mensual de pago, preguntas ilimitadas. Cancelable en cualquier momento desde la sección Ajustes.</li>
+        <li><strong>Free:</strong> 20 AI questions per day, no charge.</li>
+        <li><strong>Pro:</strong> paid monthly subscription, unlimited questions. Cancel any time from Settings.</li>
       </ul>
       <p>
-        Los pagos los procesa Stripe. Maestring no almacena datos de tarjetas.
-        El periodo de prueba (cuando aplica) se convierte en suscripción de pago
-        salvo cancelación previa.
+        Payments are processed by Stripe. Maestring does not store card data.
+        Any trial period converts to a paid subscription unless cancelled beforehand.
       </p>
 
-      <h2>5. Reembolsos</h2>
+      <h2>5. Refunds</h2>
       <p>
-        Devolución íntegra dentro de los <strong>14 días</strong> posteriores a
-        la primera compra (derecho de desistimiento, art. 102 RDL 1/2007).
-        Solicita el reembolso por email.
+        Full refund within <strong>14 days</strong> of the first purchase
+        (right of withdrawal, Art. 102 RDL 1/2007).
+        Request a refund by email.
       </p>
 
-      <h2>6. Uso aceptable</h2>
+      <h2>6. Acceptable Use</h2>
       <p>
-        No está permitido: hacer scraping del contenido generado, revender el
-        acceso, o utilizar el servicio para entrenar modelos de terceros.
+        The following are not permitted: scraping generated content, reselling access,
+        or using the service to train third-party models.
       </p>
 
-      <h2>7. Propiedad intelectual</h2>
+      <h2>7. Intellectual Property</h2>
       <p>
-        El contenido generado por la IA durante tus sesiones es para tu uso
-        personal de estudio. Maestring conserva los derechos sobre la
-        plataforma, prompts, y grafo de conocimiento.
+        AI-generated content during your study sessions is for your personal study use.
+        Maestring retains rights over the platform, prompts, and knowledge graph.
       </p>
 
-      <h2>8. Limitación de responsabilidad</h2>
+      <h2>8. Limitation of Liability</h2>
       <p>
-        Maestring es una herramienta de estudio. No garantizamos aprobar el
-        examen. Las preguntas generadas por IA pueden contener errores; no
-        sustituyen la documentación oficial de AWS.
+        Maestring is a study tool. We do not guarantee passing any exam. AI-generated
+        questions may contain errors; they do not replace official AWS documentation.
       </p>
 
-      <h2>9. Modificaciones</h2>
+      <h2>9. Modifications</h2>
       <p>
-        Podemos actualizar estos términos. Cambios materiales se notifican por
-        email con al menos 30 días de antelación.
+        We may update these terms. Material changes are notified by email
+        at least 30 days in advance.
       </p>
 
-      <h2>10. Ley aplicable</h2>
+      <h2>10. Governing Law</h2>
       <p>
-        Legislación española. Tribunales competentes: los del domicilio del
-        consumidor cuando este sea persona física en la UE.
+        Spanish law applies. Competent courts: those of the consumer's domicile
+        when the consumer is an individual resident in the EU.
       </p>
 
-      <h2>11. Contacto</h2>
+      <h2>11. Contact</h2>
       <p>
-        <a href="mailto:soporte@maestring.com">soporte@maestring.com</a>
+        <a href="mailto:support@maestring.com">support@maestring.com</a>
       </p>
     </article>
   );

@@ -19,9 +19,9 @@ type NudgeEmailProps = {
   studyUrl: string;
   examDate?: string;
   daysUntilExam?: number;
-  // Pilar 5 — reactivación con contexto real (no genérico).
-  // Si están presentes, el email muestra la pérdida concreta de readiness:
-  // "tu Readiness bajó de 68 a 58, 3 sesiones de 15 min y vuelves al 65+".
+  // When present, the email shows a concrete readiness drop rather than a
+  // generic message: "Your readiness dropped from 68 to 58 — 3 sessions of
+  // 15 minutes and you'll be back above 65."
   readinessNow?: number;
   readinessPrev?: number;
   weakestDomain?: string;
@@ -70,9 +70,9 @@ export function NudgeEmail({
           </Text>
           {readinessDelta !== null && readinessDelta < 0 && (
             <Text style={text}>
-              Tu <strong>Readiness Score</strong> bajó de {readinessPrev} a {readinessNow}
-              {weakestDomain ? ` — el dominio más afectado es ${weakestDomain}.` : "."}{" "}
-              3 sesiones de 15 min esta semana lo recuperan.
+              Your <strong>Readiness Score</strong> dropped from {readinessPrev} to {readinessNow}
+              {weakestDomain ? ` — most affected domain: ${weakestDomain}.` : "."}{" "}
+              Three 15-minute sessions this week will get it back up.
             </Text>
           )}
           {readinessDelta === null && (
@@ -93,7 +93,7 @@ export function NudgeEmail({
           )}
           <Hr style={hr} />
           <Text style={footer}>
-            Maestring · <a href="{studyUrl}/settings/notifications" style={{ color: "#6366f1" }}>Manage email preferences</a>
+            Maestring · <a href={`${studyUrl}/settings/notifications`} style={{ color: "#6366f1" }}>Manage email preferences</a>
           </Text>
         </Container>
       </Body>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { track } from '@/lib/analytics'
+import { createClient } from '@/lib/supabase/client'
 
 interface Domain {
   id: string
@@ -111,8 +112,8 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
   const days = examTargetDate
     ? Math.ceil((new Date(examTargetDate).getTime() - Date.now()) / 86_400_000)
     : null
-  const pace: 'sprint' | 'crucero' | null =
-    days === null ? null : days <= 21 ? 'sprint' : 'crucero'
+  const pace: 'sprint' | 'cruise' | null =
+    days === null ? null : days <= 21 ? 'sprint' : 'cruise'
 
   async function submit() {
     setLoading(true)
@@ -147,8 +148,28 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
           minutes_per_day: studyMinutesPerDay,
         },
       })
+
+      // Refresh the Supabase session BEFORE navigating. The calibrate API
+      // sets `user_metadata.onboarding_completed = true` via admin.updateUserById,
+      // but the browser's JWT cookie is stale until the session is refreshed.
+      // Without this, middleware reads the old JWT (where onboarding_completed
+      // is still false) and immediately redirects back to /onboarding — a
+      // one-page redirect loop that resolves only on the next token refresh.
+      const supabase = createClient()
+      const { error: refreshErr } = await supabase.auth.refreshSession()
+      if (refreshErr) {
+        // refreshSession failing means the new JWT won't carry the
+        // onboarding_completed flag and middleware will bounce us straight back.
+        // Retry once after a short delay — if it still fails, surface the error
+        // so the user knows to reload rather than silently looping.
+        await new Promise(r => setTimeout(r, 800))
+        const { error: retryErr } = await supabase.auth.refreshSession()
+        if (retryErr) {
+          throw new Error('Session refresh failed — please reload the page and try again.')
+        }
+      }
+
       router.push('/dashboard')
-      router.refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
@@ -220,8 +241,8 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
               }`}>
                 {days} days → <strong>{pace}</strong> mode
                 {pace === 'sprint'
-                  ? ': daily sessions, focus on high-weight domains.'
-                  : ': 3-4 sessions/week, broad exploration.'}
+                  ? ': daily sessions — focus on high-weight domains.'
+                  : ': 3–4 sessions/week, broad exploration.'}
               </div>
             )}
             <label className="text-sm font-medium text-text-secondary mb-2 block">

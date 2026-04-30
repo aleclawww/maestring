@@ -1,17 +1,34 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
+import { DOMAINS } from '@/lib/knowledge-graph/aws-saa'
 
 const Background = z.enum(['developer', 'sysadmin', 'business', 'student', 'other'])
+
+// Allowlist of valid domain slugs — prevents arbitrary key injection into the
+// cognitive_fingerprint JSONB column which is spread into LLM context on every
+// question generation call.
+const VALID_DOMAIN_SLUGS = new Set(DOMAINS.map(d => d.slug))
 
 const Schema = z.object({
   certificationId: z.string().default('aws-saa-c03'),
   examTargetDate: z.string().nullable(),
   studyMinutesPerDay: z.number().int().min(5).max(240),
   background: Background,
-  selfLevels: z.record(z.string(), z.number().int().min(0).max(4)),
+  selfLevels: z
+    .record(z.string(), z.number().int().min(0).max(4))
+    .refine(
+      v => Object.keys(v).length <= 20,
+      { message: 'selfLevels exceeds maximum entry count' }
+    )
+    .refine(
+      v => Object.keys(v).every(k => VALID_DOMAIN_SLUGS.has(k)),
+      { message: 'selfLevels contains unknown domain slug' }
+    ),
   diagnosticResults: z
     .array(z.object({ domainSlug: z.string(), isCorrect: z.boolean() }))
     .optional()
@@ -70,15 +87,18 @@ export async function POST(req: NextRequest) {
     calibrated_at: new Date().toISOString(),
   }
 
+  // cognitive_fingerprint is a jsonb column added in migration 013; the generated
+  // Supabase types don't include it yet, so the cast is required.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profilePayload: any = {
+    onboarding_completed: true,
+    exam_target_date: examTargetDate,
+    study_minutes_per_day: studyMinutesPerDay,
+    cognitive_fingerprint: fingerprint,
+  }
   const { error: profileErr } = await supabase
     .from('profiles')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .update({
-      onboarding_completed: true,
-      exam_target_date: examTargetDate,
-      study_minutes_per_day: studyMinutesPerDay,
-      cognitive_fingerprint: fingerprint,
-    } as any)
+    .update(profilePayload)
     .eq('id', user.id)
 
   if (profileErr) {

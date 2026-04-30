@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/admin'
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
   })
   if (error) {
     logger.error({ err: error, userId, adminEmail: admin.email }, 'admin_grant_pro failed')
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'grant_failed' }, { status: 500 })
   }
 
   await recordAdminAction({

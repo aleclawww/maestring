@@ -5,6 +5,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { cn } from '@/lib/utils'
 
+import type { Metadata } from 'next'
+
+export const dynamic = 'force-dynamic'
+export const metadata: Metadata = { title: 'Exam Results' }
+
 const PASSING_SCORE = 720
 const MAX_SCORE = 1000
 

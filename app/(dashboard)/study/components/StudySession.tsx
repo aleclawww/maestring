@@ -1,6 +1,6 @@
 'use client'
 
-import { useReducer, useCallback, useEffect, useRef } from 'react'
+import { useReducer, useCallback, useEffect, useRef, useState } from 'react'
 import { QuestionCard } from './QuestionCard'
 import { SessionProgress } from './SessionProgress'
 import { SessionSummary } from './SessionSummary'
@@ -73,12 +73,22 @@ interface StudySessionProps {
   dueCount: number
 }
 
-export function StudySession({ userId, activeSessionId, dueCount }: StudySessionProps) {
+export function StudySession({ userId: _userId, activeSessionId, dueCount }: StudySessionProps) {
   const [state, dispatch] = useReducer(reducer, { phase: 'setup' })
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const sessionIdRef = useRef<string | null>(activeSessionId ?? null)
   const answersRef = useRef<Array<{ conceptId: string; isCorrect: boolean; timeTaken: number }>>([])
+  const totalXpRef = useRef<number>(0)
   const prefetchedRef = useRef<Question | null>(null)
   const modeRef = useRef<StudyMode>('review')
+
+  // Dispatch RESET and surface a user-visible error message simultaneously.
+  // Both setErrorMsg (useState) and dispatch (useReducer) are guaranteed
+  // stable references, so this callback has a stable identity with [] deps.
+  const resetWithError = useCallback((msg: string) => {
+    setErrorMsg(msg)
+    dispatch({ type: 'RESET' })
+  }, [])
 
   // Guard against accidental page close during active study
   useEffect(() => {
@@ -92,6 +102,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
   }, [state.phase])
 
   const startSession = useCallback(async (mode: StudyMode = 'review') => {
+    setErrorMsg(null)
     dispatch({ type: 'LOADING' })
     modeRef.current = mode
 
@@ -118,13 +129,13 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           msg: j.message ?? j.error ?? `HTTP ${sessionRes.status}`,
           mode,
         })
-        dispatch({ type: 'RESET' })
+        resetWithError("Couldn't start your session — please try again.")
         return
       }
       const { data: session } = await sessionRes.json()
       if (!session?.id) {
         console.error('StudySession startSession returned malformed body', { mode })
-        dispatch({ type: 'RESET' })
+        resetWithError("Session setup returned an unexpected response — please try again.")
         return
       }
       sessionIdRef.current = session.id
@@ -135,9 +146,13 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
       await loadNextQuestion(mode, 1)
     } catch (err) {
       console.error('Failed to start session', err)
-      dispatch({ type: 'RESET' })
+      resetWithError("Network error — please check your connection and try again.")
     }
-  }, [])
+    // loadNextQuestion is defined after startSession in component scope; listing it
+    // in deps here would cause a TDZ ReferenceError. It is stable (its own dep is
+    // resetWithError which never changes), so the stale-closure risk is zero.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetWithError])
 
   const loadNextQuestion = useCallback(async (mode: StudyMode = 'review', questionNumber: number) => {
     dispatch({ type: 'LOADING' })
@@ -181,7 +196,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           questionNumber,
           sessionId: sessionIdRef.current,
         })
-        dispatch({ type: 'RESET' })
+        resetWithError("Couldn't load the next question — your session was reset. Please start a new one.")
         return
       }
       const { data: question } = await res.json()
@@ -191,15 +206,15 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           questionNumber,
           sessionId: sessionIdRef.current,
         })
-        dispatch({ type: 'RESET' })
+        resetWithError("Question data was invalid — your session was reset. Please start a new one.")
         return
       }
       dispatch({ type: 'QUESTION_LOADED', question, questionNumber, total: SESSION_LENGTH })
     } catch (err) {
       console.error('Failed to load question', err)
-      dispatch({ type: 'RESET' })
+      resetWithError("Network error loading question — please check your connection and try again.")
     }
-  }, [])
+  }, [resetWithError])
 
   const submitAnswer = useCallback(async (selectedIndex: number, firstAttemptCorrect: boolean) => {
     if (state.phase !== 'question') return
@@ -223,7 +238,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
       fetch('/api/study/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'review', sessionId: sessionIdRef.current }),
+        body: JSON.stringify({ mode: modeRef.current, sessionId: sessionIdRef.current }),
       })
         .then(async r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -273,7 +288,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           sessionId: sessionIdRef.current,
           conceptId: state.question.conceptId,
         })
-        dispatch({ type: 'RESET' })
+        resetWithError("There was a problem checking your answer — your session was reset.")
         return
       }
       const { data: evaluation } = await res.json()
@@ -283,7 +298,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           sessionId: sessionIdRef.current,
           conceptId: state.question.conceptId,
         })
-        dispatch({ type: 'RESET' })
+        resetWithError("Answer evaluation returned an unexpected response — your session was reset.")
         return
       }
 
@@ -292,6 +307,9 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
         isCorrect: evaluation.isCorrect && firstAttemptCorrect,
         timeTaken,
       })
+      // Accumulate XP from server so the summary shows the actual awarded value
+      // rather than the `correct * 12` stub that was hardcoded before.
+      totalXpRef.current += (evaluation.xpEarned ?? 0)
       track({
         name: 'question_answered',
         properties: {
@@ -314,9 +332,9 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
         questionId: state.question.id,
         conceptId: state.question.conceptId,
       })
-      dispatch({ type: 'RESET' })
+      resetWithError("Network error submitting your answer — please check your connection and try again.")
     }
-  }, [state])
+  }, [state, resetWithError])
 
   const continueSession = useCallback(async () => {
     if (state.phase !== 'feedback') return
@@ -369,13 +387,13 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
           totalQuestions: SESSION_LENGTH,
           accuracy: correct / SESSION_LENGTH,
           totalTimeSeconds: 0,
-          xpEarned: correct * 12,
+          xpEarned: totalXpRef.current,
           conceptsStudied: answersRef.current.map(a => a.conceptId),
           streakBonus: 0,
         },
       })
     } else {
-      await loadNextQuestion('review', nextNumber)
+      await loadNextQuestion(modeRef.current, nextNumber)
     }
   }, [state, loadNextQuestion])
 
@@ -391,6 +409,11 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
               ? `You have ${dueCount} concepts ready to review.`
               : 'Nice — all caught up. Let’s explore new concepts.'}
           </p>
+          {errorMsg && (
+            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 text-center">
+              {errorMsg}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 mb-3">
             {[
               { mode: 'review' as const, label: 'Review', desc: 'Due concepts', icon: '🔄' },
@@ -409,7 +432,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
               </button>
             ))}
           </div>
-          {/* Pilar 3 — Modo Exploración: ZDP segura, sin penalización FSRS */}
+          {/* Exploration mode: safe zone of proximal development — no FSRS penalty */}
           <button
             onClick={() => startSession('exploration')}
             className="w-full flex items-center gap-3 rounded-xl border border-dashed border-warning/40 bg-warning/5 p-4 hover:bg-warning/10 transition-colors text-left mb-4"
@@ -524,7 +547,7 @@ export function StudySession({ userId, activeSessionId, dueCount }: StudySession
         {explorationBanner}
         <div className="flex flex-1 items-center justify-center p-4 sm:p-6">
           <div className="w-full max-w-2xl">
-            <QuestionCard question={state.question} onAnswer={submitAnswer} />
+            <QuestionCard key={state.question.id} question={state.question} onAnswer={submitAnswer} />
           </div>
         </div>
       </div>

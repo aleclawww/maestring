@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger'
 import { StudySession } from './components/StudySession'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Study Session' }
 
 export default async function StudyPage() {
@@ -18,7 +19,7 @@ export default async function StudyPage() {
   // support tickets about "I lost my session" get a trail.
   const { data: activeSession, error: activeSessionErr } = await supabase
     .from('study_sessions')
-    .select('*')
+    .select('id')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .order('started_at', { ascending: false })
@@ -34,7 +35,7 @@ export default async function StudyPage() {
   // Get due count for display
   const { count: dueCount } = await supabase
     .from('user_concept_states')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .or('reps.eq.0,next_review_date.lte.' + new Date().toISOString())
 

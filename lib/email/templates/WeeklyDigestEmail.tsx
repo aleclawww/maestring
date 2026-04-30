@@ -75,54 +75,61 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
       ? `${readinessDelta}`
       : "±0";
   const deltaColor =
-    readinessDelta == null ? "#a1a1aa" : readinessDelta > 0 ? "#10b981" : readinessDelta < 0 ? "#ef4444" : "#a1a1aa";
+    readinessDelta == null
+      ? "#a1a1aa"
+      : readinessDelta > 0
+      ? "#10b981"
+      : readinessDelta < 0
+      ? "#ef4444"
+      : "#a1a1aa";
 
-  const subject =
+  const previewText =
     sessionsWeek === 0
-      ? `${firstName}, tu semana de estudio está vacía (${dueNext7d} reviews esperando)`
-      : `Tu semana en Maestring — ${questionsWeek} preguntas, ${accuracyPct}% aciertos`;
+      ? `${firstName}, your study week was empty (${dueNext7d} reviews waiting)`
+      : `Your Maestring week — ${questionsWeek} questions, ${accuracyPct}% correct`;
 
   return (
     <Html>
       <Head />
-      <Preview>{subject}</Preview>
+      <Preview>{previewText}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>Resumen semanal, {firstName}</Heading>
+          <Heading style={h1}>Weekly recap, {firstName}</Heading>
           {daysUntilExam != null && (
             <Text style={dim}>
-              📅 Examen en <strong style={{ color: "#ffffff" }}>{daysUntilExam} días</strong>
+              📅 Exam in{" "}
+              <strong style={{ color: "#ffffff" }}>{daysUntilExam} days</strong>
               {passPct != null ? ` · P(pass) ${passPct}%` : ""}
             </Text>
           )}
 
-          {/* 2x2 stats grid */}
+          {/* 2×2 stats grid */}
           <Section style={statsWrap}>
             <Row>
               <Column style={statCell}>
                 <Text style={statValue}>{sessionsWeek}</Text>
-                <Text style={statLabel}>Sesiones</Text>
+                <Text style={statLabel}>Sessions</Text>
               </Column>
               <Column style={statCell}>
                 <Text style={statValue}>{questionsWeek}</Text>
-                <Text style={statLabel}>Preguntas</Text>
+                <Text style={statLabel}>Questions</Text>
               </Column>
             </Row>
             <Row>
               <Column style={statCell}>
                 <Text style={statValue}>{accuracyPct}%</Text>
-                <Text style={statLabel}>Aciertos</Text>
+                <Text style={statLabel}>Accuracy</Text>
               </Column>
               <Column style={statCell}>
                 <Text style={statValue}>{minutesWeek} min</Text>
-                <Text style={statLabel}>Tiempo</Text>
+                <Text style={statLabel}>Time studied</Text>
               </Column>
             </Row>
           </Section>
 
           {currentStreak > 0 && (
             <Section style={streakPill}>
-              <Text style={streakText}>🔥 Racha de {currentStreak} días</Text>
+              <Text style={streakText}>🔥 {currentStreak}-day streak</Text>
             </Section>
           )}
 
@@ -133,7 +140,7 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
                 {readinessNow}
                 {deltaLabel && (
                   <span style={{ color: deltaColor, fontSize: "14px", marginLeft: "8px" }}>
-                    ({deltaLabel} esta semana)
+                    ({deltaLabel} this week)
                   </span>
                 )}
               </Text>
@@ -142,17 +149,18 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
 
           {weakestDomainName && weakestDomainAccuracy != null && (
             <Section style={weakBox}>
-              <Text style={cardLabel}>Dominio más flojo esta semana</Text>
+              <Text style={cardLabel}>Weakest domain this week</Text>
               <Text style={weakDomainName}>{weakestDomainName}</Text>
               <Text style={dim}>
-                Aciertos: {Math.round(weakestDomainAccuracy * 100)}% — invierte 2 sesiones aquí y subes tu Readiness rápido.
+                Accuracy: {Math.round(weakestDomainAccuracy * 100)}% — two focused sessions here
+                will lift your Readiness fast.
               </Text>
             </Section>
           )}
 
           {weakestTaskId && weakestTaskLabel && (
             <Section style={weakTaskBox}>
-              <Text style={cardLabel}>Tarea del examen más débil</Text>
+              <Text style={cardLabel}>Weakest exam task</Text>
               <Text style={weakTaskId}>{weakestTaskId}</Text>
               <Text style={weakDomainName}>{weakestTaskLabel}</Text>
             </Section>
@@ -160,10 +168,11 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
 
           {bestExamScaled != null && (
             <Section style={examBox}>
-              <Text style={cardLabel}>Mejor simulacro de las últimas 4 semanas</Text>
+              <Text style={cardLabel}>Best practice exam (last 4 weeks)</Text>
               <Text style={examScore}>
-                {bestExamScaled} <span style={{ color: bestExamPassed ? "#10b981" : "#ef4444", fontSize: "14px" }}>
-                  {bestExamPassed ? "· Aprobado" : "· Reprobado"}
+                {bestExamScaled}{" "}
+                <span style={{ color: bestExamPassed ? "#10b981" : "#ef4444", fontSize: "14px" }}>
+                  {bestExamPassed ? "· Passed" : "· Not yet"}
                 </span>
               </Text>
             </Section>
@@ -171,16 +180,16 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
 
           <Section style={btnSection}>
             <Button href={studyUrl} style={button}>
-              {dueNext7d > 0 ? `Estudiar (${dueNext7d} reviews)` : "Abrir Maestring"} →
+              {dueNext7d > 0 ? `Study now (${dueNext7d} reviews)` : "Open Maestring"} →
             </Button>
           </Section>
 
           <Hr style={hr} />
           <Text style={footer}>
-            Maestring · spaced repetition con IA adaptativa.
+            Maestring · AI-powered adaptive AWS prep.
             <br />
             <a href={`${studyUrl}/settings/notifications`} style={{ color: "#6366f1" }}>
-              Desactivar resumen semanal
+              Unsubscribe from weekly digest
             </a>
           </Text>
         </Container>
@@ -191,7 +200,7 @@ export function WeeklyDigestEmail(props: WeeklyDigestProps) {
 
 export default WeeklyDigestEmail;
 
-// ---- styles ----
+// ── styles ────────────────────────────────────────────────────────────────────
 const main = { backgroundColor: "#0f1117", fontFamily: "Inter, -apple-system, sans-serif" };
 const container = { maxWidth: "560px", margin: "0 auto", padding: "40px 24px" };
 const h1 = { color: "#ffffff", fontSize: "26px", fontWeight: "700", marginBottom: "4px" };

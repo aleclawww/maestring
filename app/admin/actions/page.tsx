@@ -12,14 +12,14 @@ export default async function AdminActionsLogPage() {
       <header>
         <h1 className="text-xl font-bold">Audit Log</h1>
         <p className="text-xs text-text-muted">
-          Toda acción destructiva (grant_pro, retry_doc, etc.) queda aquí. Read-only.
+          Every destructive action (grant_pro, retry_doc, etc.) is recorded here. Read-only.
         </p>
       </header>
 
       <Section title={`Last ${rows.length} actions`}>
         <Table
           rows={rows}
-          empty="No hay acciones registradas."
+          empty="No actions recorded yet."
           columns={[
             { key: 'when', label: 'When', render: r => <span className="text-[11px] text-text-muted">{formatDateTime(r.created_at)}</span> },
             { key: 'admin', label: 'Admin', render: r => <span className="text-xs">{r.admin_email ?? 'unknown'}</span> },

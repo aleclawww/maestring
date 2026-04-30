@@ -2,11 +2,17 @@ import { SignJWT, jwtVerify } from "jose";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
-const SECRET = new TextEncoder().encode(
-  process.env["MAGIC_LINK_SECRET"] ?? "fallback-dev-secret-change-in-production"
-);
+const rawMagicLinkSecret = process.env["MAGIC_LINK_SECRET"];
+if (!rawMagicLinkSecret) {
+  throw new Error("MAGIC_LINK_SECRET environment variable is required but not set");
+}
+const SECRET = new TextEncoder().encode(rawMagicLinkSecret);
 
-const EXPIRY_SECONDS = 60 * 60 * 24; // 24 hours
+// 20-minute expiry. Magic link tokens embedded in emails are single-factor
+// auth credentials — a 24-hour window gives a stolen/forwarded email a full
+// day to be replayed. 20 minutes is long enough to survive slow email
+// delivery while tight enough to limit exposure of an intercepted token.
+const EXPIRY_SECONDS = 60 * 20; // 20 minutes
 
 export type MagicLinkPayload = {
   userId: string;

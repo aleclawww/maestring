@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { verifyMagicLink } from "@/lib/magic-links";
 import { createAdminClient } from "@/lib/supabase/admin";

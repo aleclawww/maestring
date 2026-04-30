@@ -6,6 +6,7 @@ import { formatRelativeTime } from '@/lib/utils'
 import { ShareBlock } from './ShareBlock'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Referrals' }
 
 export default async function ReferralsPage() {
@@ -18,7 +19,8 @@ export default async function ReferralsPage() {
       .from('referrals')
       .select('id, created_at, referred_id, converted_at, credit_applied')
       .eq('referrer_id', user.id)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(200),
   ])
 
   const referralCode = profile?.referral_code ?? ''
@@ -83,7 +85,7 @@ export default async function ReferralsPage() {
               <div key={r.id} className="flex items-center justify-between px-6 py-3">
                 <div>
                   <p className="text-sm text-text-primary">
-                    User <span className="font-mono">{r.referred_id.slice(0, 8)}…</span>
+                    User <span className="font-mono">{r.referred_id?.slice(0, 8) ?? '—'}…</span>
                   </p>
                   <p className="text-xs text-text-muted">
                     Signed up {formatRelativeTime(r.created_at)}

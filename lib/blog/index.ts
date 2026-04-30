@@ -39,8 +39,19 @@ function estimateReadingMinutes(markdown: string): number {
   return Math.max(1, Math.round(words / 220))
 }
 
+// Allowlist: only lowercase letters, digits, and hyphens.
+// Blocks path traversal via "../", "%2e%2e", null bytes, etc.
+const SAFE_SLUG_RE = /^[a-z0-9-]+$/
+
 async function readRaw(slug: string): Promise<BlogPost | null> {
+  if (!SAFE_SLUG_RE.test(slug)) return null
+
   const filePath = path.join(BLOG_DIR, `${slug}.mdx`)
+
+  // Belt-and-suspenders: even with the regex, verify the resolved path is
+  // still inside BLOG_DIR to prevent any future double-extension tricks.
+  if (!filePath.startsWith(BLOG_DIR + path.sep) && filePath !== BLOG_DIR) return null
+
   try {
     const source = await fs.readFile(filePath, 'utf8')
     const parsed = matter(source)
@@ -95,7 +106,7 @@ export async function getFeaturedPosts(limit = 3): Promise<BlogPostMeta[]> {
   return (featured.length ? featured : all).slice(0, limit)
 }
 
-export function formatPublishedDate(date: string, locale = 'es-ES'): string {
+export function formatPublishedDate(date: string, locale = 'en-US'): string {
   return new Date(date + 'T00:00:00Z').toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',

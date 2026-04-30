@@ -12,13 +12,13 @@ export default async function AdminDocumentsPage() {
     <div className="p-6 space-y-6 max-w-[1400px]">
       <header>
         <h1 className="text-xl font-bold">Failed Documents</h1>
-        <p className="text-xs text-text-muted">{rows.length} failed · hoy puedes re-procesar manualmente</p>
+        <p className="text-xs text-text-muted">{rows.length} failed · retry individually via the button on each row</p>
       </header>
 
       <Section title="Failures (most recent first)">
         <Table
           rows={rows}
-          empty="Ningún documento fallido."
+          empty="No failed documents."
           columns={[
             {
               key: 'file',

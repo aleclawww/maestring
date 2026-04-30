@@ -8,8 +8,8 @@ export default function LegalLayout({ children }: { children: ReactNode }) {
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="text-xl font-bold gradient-text">Maestring</Link>
           <div className="flex items-center gap-4 text-sm text-zinc-400">
-            <Link href="/legal/terms" className="hover:text-white">Términos</Link>
-            <Link href="/legal/privacy" className="hover:text-white">Privacidad</Link>
+            <Link href="/legal/terms" className="hover:text-white">Terms</Link>
+            <Link href="/legal/privacy" className="hover:text-white">Privacy</Link>
             <Link href="/login" className="hover:text-white">Sign in</Link>
           </div>
         </div>

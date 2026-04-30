@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -50,6 +51,19 @@ export function ProfileSettings({ userId, email, fullName, avatarUrl }: ProfileS
         Profile
       </h2>
       <div className="space-y-4">
+        {avatarUrl && (
+          <div className="flex items-center gap-3">
+            <Image
+              src={avatarUrl}
+              alt="Profile picture"
+              width={40}
+              height={40}
+              className="rounded-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <p className="text-xs text-text-muted">Profile picture synced from your sign-in provider</p>
+          </div>
+        )}
         <Input
           label="Email"
           value={email}

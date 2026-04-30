@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <defs>
+    <!-- Main brand gradient: indigo → violet → cyan, bottom-left to top-right -->
+    <linearGradient id="brandGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#6366f1"/>
+      <stop offset="50%"  stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+
+    <!-- Subtle background shimmer overlay -->
+    <linearGradient id="bgShimmer" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#6366f1" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.04"/>
+    </linearGradient>
+
+    <!-- Glow filter for the M stroke -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="0.6 0 0.5 0 0.1
+                0   0 0.8 0 0.1
+                0   0 1   0 0.5
+                0   0 0   1 0" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Clip to rounded square -->
+    <clipPath id="roundedClip">
+      <rect x="0" y="0" width="100" height="100" rx="22" ry="22"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background: deep dark -->
+  <rect x="0" y="0" width="100" height="100" rx="22" ry="22" fill="#0f1117"/>
+
+  <!-- Subtle gradient overlay on background -->
+  <rect x="0" y="0" width="100" height="100" rx="22" ry="22" fill="url(#bgShimmer)"/>
+
+  <!-- Gradient border (1.5px stroke inside the rounded rect) -->
+  <rect x="0.75" y="0.75" width="98.5" height="98.5" rx="21.5" ry="21.5"
+        fill="none"
+        stroke="url(#brandGrad)"
+        stroke-width="1.5"
+        stroke-opacity="0.55"/>
+
+  <!-- M lettermark: two outer pillars + twin diagonals meeting at a center valley -->
+  <!-- Path breakdown:
+       - Left leg: (17, 76) straight up to (17, 26)
+       - Diagonal: (17, 26) → center peak (50, 46)
+       - Diagonal: (50, 46) → (83, 26)
+       - Right leg: (83, 26) straight down to (83, 76)
+       All with rounded caps/joins for a premium feel -->
+  <path
+    d="M 17,76 L 17,26 L 50,46 L 83,26 L 83,76"
+    fill="none"
+    stroke="url(#brandGrad)"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#glow)"
+  />
+</svg>

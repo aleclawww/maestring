@@ -1,16 +1,18 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateQuestion } from "@/lib/question-engine/generator";
 import { logger } from "@/lib/logger";
 import { runCron } from "@/lib/cron/run";
+import { verifyCronSecret } from "@/lib/auth/verify-cron-secret";
 
 const MIN_POOL_SIZE = 10;
 const QUESTIONS_PER_REFILL = 3;
 const MAX_CONCEPTS_PER_RUN = 5;
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyCronSecret(req.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -76,4 +78,10 @@ export async function GET(req: NextRequest) {
 
   if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: 500 });
   return NextResponse.json(outcome.result);
+}
+
+// Vercel Cron uses GET; expose POST as an alias so manual triggers / admin
+// tooling can hit the same endpoint without method mismatch errors.
+export async function POST(req: NextRequest) {
+  return GET(req)
 }

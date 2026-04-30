@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -61,7 +63,7 @@ export async function POST() {
       // in logs and clean up via cron if it recurs.
     }
     return NextResponse.json(
-      { error: "insufficient_question_pool", message: "No hay suficientes preguntas en el pool para un simulacro completo. Estudia más temas primero." },
+      { error: "insufficient_question_pool", message: "Not enough questions in the pool for a full mock exam. Study more topics first." },
       { status: 409 }
     );
   }

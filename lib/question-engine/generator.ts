@@ -8,8 +8,11 @@ import logger from '@/lib/logger'
 import { recordLlmUsage } from '@/lib/llm/usage'
 import type { GenerateQuestionRequest, EvaluationResult } from '@/types/study'
 
+const _anthropicApiKey = process.env['ANTHROPIC_API_KEY']
+if (!_anthropicApiKey) throw new Error('ANTHROPIC_API_KEY environment variable is required but not set')
+
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+  apiKey: _anthropicApiKey,
 })
 
 const MODEL = 'claude-haiku-4-5-20251001'
@@ -68,12 +71,16 @@ export async function generateQuestion(
   // dedup. Every cron run of refill-pool with a broken read goes straight to
   // Haiku — a measurable LLM cost blind spot. Log warn so cost spikes get
   // tied to DB/RLS incidents rather than blamed on the model.
+  // Use ilike for a case-insensitive substring match on the concept name.
+  // The previous `.contains()` call used PostgREST's JSON/array containment
+  // operator (@>) on a text column, which always returned empty results and
+  // silently disabled deduplication on every generation run.
   const { data: existingQuestions, error: cacheErr } = await supabase
     .from('questions')
     .select('id, question_text, options, correct_index, explanation, difficulty, question_type')
     .eq('is_active', true)
-    .contains('question_text', [concept.name])
-    .limit(5)
+    .ilike('question_text', `%${concept.name}%`)
+    .limit(20)
   if (cacheErr) {
     logger.warn(
       { err: cacheErr, conceptSlug: req.conceptSlug, conceptId },
@@ -122,11 +129,16 @@ export async function generateQuestion(
       const raw = extractJSON(content.text) as Record<string, unknown>
 
       // Validate structure
+      const rawOptions = raw['options'] as unknown[]
+      const rawCorrectIndex = raw['correctIndex'] as number
       if (
         typeof raw['questionText'] !== 'string' ||
-        !Array.isArray(raw['options']) ||
-        (raw['options'] as unknown[]).length !== 4 ||
-        typeof raw['correctIndex'] !== 'number' ||
+        !Array.isArray(rawOptions) ||
+        rawOptions.length !== 4 ||
+        typeof rawCorrectIndex !== 'number' ||
+        !Number.isInteger(rawCorrectIndex) ||
+        rawCorrectIndex < 0 ||
+        rawCorrectIndex > 3 ||
         typeof raw['explanation'] !== 'string'
       ) {
         throw new Error('Invalid question structure from AI')
@@ -206,16 +218,16 @@ export function evaluateAnswerLocal(
     isCorrect,
     score: isCorrect ? 1.0 : 0.0,
     explanation: isCorrect
-      ? `Correcto. ${explanation}`
-      : `La opción óptima en este escenario es: "${options[correctIndex] ?? ''}". ${explanation}`,
+      ? `Correct. ${explanation}`
+      : `The best answer in this scenario is: "${options[correctIndex] ?? ''}". ${explanation}`,
     keyInsight: explanation.split('.')[0] ?? explanation,
     relatedConcepts: [],
     ...(isCorrect
       ? {}
       : {
           elaboration: {
-            prompt: '¿En qué escenario sería tu elección la correcta?',
-            validReasoningHint: 'Tu razonamiento puede ser válido en otro contexto — pensar por qué te ayuda a discriminar la siguiente vez.',
+            prompt: 'In what scenario would your choice be correct?',
+            validReasoningHint: 'Your reasoning may be valid in another context — thinking through why helps you discriminate next time.',
           },
         }),
   }

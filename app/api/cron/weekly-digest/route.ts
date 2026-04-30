@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
@@ -6,6 +8,7 @@ import { createMagicLink } from "@/lib/magic-links";
 import { logger } from "@/lib/logger";
 import { runCron } from "@/lib/cron/run";
 import * as React from "react";
+import { verifyCronSecret } from "@/lib/auth/verify-cron-secret";
 
 type DigestRow = {
   user_id: string;
@@ -33,8 +36,7 @@ type DigestRow = {
 };
 
 export async function POST(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env["CRON_SECRET"]}`) {
+  if (!verifyCronSecret(req.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -64,8 +66,8 @@ export async function POST(req: NextRequest) {
           to: r.email,
           subject:
             r.sessions_week === 0
-              ? `${r.first_name}, tu semana de estudio está vacía`
-              : `Tu semana en Maestring — ${r.questions_week} preguntas, ${Math.round((r.accuracy_week ?? 0) * 100)}% aciertos`,
+              ? `${r.first_name}, your study week was empty — ${r.due_next_7d} reviews waiting`
+              : `Your Maestring week — ${r.questions_week} questions, ${Math.round((r.accuracy_week ?? 0) * 100)}% accuracy`,
           react: React.createElement(WeeklyDigestEmail, {
             firstName: r.first_name,
             studyUrl: magicUrl,

@@ -10,6 +10,14 @@ import {
 } from '@/lib/blog'
 import { mdxComponents } from '@/components/blog/mdx'
 
+// JSON.stringify does NOT escape `</script>`, so a frontmatter title containing
+// `</script><script>alert(1)</script>` would break out of the JSON-LD context
+// and execute as a script. Replacing `<` with its Unicode escape fixes this
+// without affecting JSON parsers (both < and < decode identically).
+function safeJsonLd(obj: unknown): string {
+  return JSON.stringify(obj).replace(/</g, '\\u003c')
+}
+
 export const dynamicParams = false
 export const revalidate = 3600
 
@@ -24,7 +32,7 @@ export async function generateMetadata({
   params: { slug: string }
 }): Promise<Metadata> {
   const post = await getPostBySlug(params.slug)
-  if (!post) return { title: 'Artículo no encontrado' }
+  if (!post) return { title: 'Post not found' }
   const { title, description, publishedAt, updatedAt, ogImage, tags } = post.frontmatter
   const canonical = canonicalUrl(params.slug)
   const og = ogImage ?? `/api/og/blog?slug=${encodeURIComponent(params.slug)}`
@@ -86,12 +94,12 @@ export default async function BlogPostPage({
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
       <article className="mx-auto max-w-3xl px-6 py-16">
         <nav className="mb-8 text-xs text-text-muted">
           <Link href="/blog" className="hover:text-primary">
-            ← Volver al blog
+            ← Back to blog
           </Link>
         </nav>
 
@@ -103,7 +111,7 @@ export default async function BlogPostPage({
             {frontmatter.readingMinutes && (
               <>
                 <span>·</span>
-                <span>{frontmatter.readingMinutes} min lectura</span>
+                <span>{frontmatter.readingMinutes} min read</span>
               </>
             )}
             {frontmatter.tags.map(t => (
@@ -127,20 +135,20 @@ export default async function BlogPostPage({
 
         <aside className="mt-16 rounded-xl border border-primary/40 bg-primary/5 p-6">
           <p className="text-xs uppercase tracking-wider text-primary font-semibold">
-            Prueba Maestring
+            Try Maestring
           </p>
           <h2 className="mt-2 text-xl font-bold">
-            Aprueba AWS SAA-C03 en menos tiempo
+            Pass AWS SAA-C03 in less time
           </h2>
           <p className="mt-2 text-sm text-text-secondary">
-            Preguntas generadas por IA sobre tus puntos débiles reales + spaced repetition FSRS.
-            No memorices — entiende.
+            AI-generated questions targeting your real weak spots + FSRS spaced repetition.
+            Don&apos;t memorize — understand.
           </p>
           <Link
             href="/signup"
             className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
           >
-            Empezar gratis →
+            Start for free →
           </Link>
         </aside>
       </article>

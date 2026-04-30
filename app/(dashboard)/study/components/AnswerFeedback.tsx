@@ -71,12 +71,11 @@ interface AnswerFeedbackProps {
   isLast?: boolean
 }
 
-// Pilar 3 — Entorno de Experimentación Seguro:
-// El feedback negativo NO es rojo brillante con "¡Fallaste!". Es ámbar
-// (construcción, no alarma), tipografía regular, lenguaje no-punitivo. La
-// micro-pregunta de elaboración (Bjork generation effect) se muestra ANTES
-// de revelar el razonamiento completo, invitando al usuario a procesar
-// activamente el error.
+// Safe experimentation environment: negative feedback is NOT bright red with
+// "You failed!". It's amber (constructive, not alarming), regular typography,
+// non-punitive language. The micro-elaboration question (Bjork generation
+// effect) is shown BEFORE revealing the full reasoning, prompting the user
+// to actively process the error.
 export function AnswerFeedback({
   question,
   selectedIndex,
@@ -183,8 +182,8 @@ export function AnswerFeedback({
         })}
       </div>
 
-      {/* Pilar 3 — Micro-elaboración: invita al usuario a procesar el error
-          ANTES de servirle la explicación completa (efecto de generación). */}
+      {/* Micro-elaboration: prompt the user to process the error BEFORE
+          showing the full explanation (Bjork generation effect). */}
       {showElaborationStep && evaluation.elaboration && (
         <div className="border-t border-border/30 px-6 py-4 space-y-3 bg-warning/5">
           <p className="text-xs font-semibold text-warning uppercase tracking-wide">

@@ -85,9 +85,9 @@ describe('lib/question-engine/generator — elaborateAnswer', () => {
       'user-2',
     )
 
-    // Correct answer → deterministic local path prefixes with "Correcto."
+    // Correct answer → deterministic local path prefixes with "Correct."
     expect(result.isCorrect).toBe(true)
-    expect(result.explanation).toContain('Correcto')
+    expect(result.explanation).toContain('Correct')
 
     const warnMock = logger.warn as unknown as { mock: { calls: unknown[][] } }
     expect(warnMock.mock.calls.length).toBeGreaterThanOrEqual(1)

@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
@@ -6,10 +8,10 @@ import { createMagicLink } from "@/lib/magic-links";
 import { logger } from "@/lib/logger";
 import { runCron } from "@/lib/cron/run";
 import * as React from "react";
+import { verifyCronSecret } from "@/lib/auth/verify-cron-secret";
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env["CRON_SECRET"]}`) {
+  if (!verifyCronSecret(req.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

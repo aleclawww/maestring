@@ -1,13 +1,15 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runCron } from '@/lib/cron/run'
+import { verifyCronSecret } from '@/lib/auth/verify-cron-secret'
 
 // Snapshots daily readiness for every active user. Powers the trend sparkline
 // and the velocity calculation (slope over last 14 snapshots).
 // Idempotent per (user_id, snapshot_date) thanks to ON CONFLICT.
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env['CRON_SECRET']}`) {
+  if (!verifyCronSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

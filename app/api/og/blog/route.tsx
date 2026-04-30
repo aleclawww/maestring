@@ -4,8 +4,16 @@ import { getPostBySlug } from '@/lib/blog'
 
 export const runtime = 'nodejs'
 
+// Belt-and-suspenders slug validation at this call site, even though
+// getPostBySlug() also validates internally via SAFE_SLUG_RE.
+// Keeps the guard visible here so future callers of getPostBySlug()
+// don't accidentally skip it and expose the filesystem path-join.
+const SAFE_SLUG_RE = /^[a-z0-9-]+$/
+
 export async function GET(req: NextRequest) {
-  const slug = req.nextUrl.searchParams.get('slug')
+  const rawSlug = req.nextUrl.searchParams.get('slug')
+  const slug = rawSlug && SAFE_SLUG_RE.test(rawSlug) ? rawSlug : null
+
   let title = 'Maestring — AWS SAA-C03'
   let tags: string[] = []
   if (slug) {
@@ -102,7 +110,7 @@ export async function GET(req: NextRequest) {
             color: '#9ca3af',
           }}
         >
-          <div>AWS SAA-C03 · IA + Spaced Repetition</div>
+          <div>AWS SAA-C03 · AI + Spaced Repetition</div>
           <div style={{ color: '#818cf8', fontWeight: 600 }}>maestring.com</div>
         </div>
       </div>

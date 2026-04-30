@@ -40,22 +40,24 @@ export function estimateCostUsd(
 export function recordLlmUsage(u: LlmUsageRecord): void {
   const cost = estimateCostUsd(u.model, u.inputTokens, u.outputTokens, u.cachedInputTokens ?? 0)
   const admin = createAdminClient()
+  // llm_usage table columns don't yet appear in the generated types; cast required.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const usagePayload: any = {
+    user_id: u.userId,
+    route: u.route,
+    model: u.model,
+    input_tokens: u.inputTokens,
+    output_tokens: u.outputTokens,
+    cached_input_tokens: u.cachedInputTokens ?? 0,
+    cost_usd: cost,
+    latency_ms: u.latencyMs ?? null,
+    success: u.success ?? true,
+    error_code: u.errorCode ?? null,
+    metadata: u.metadata ?? null,
+  }
   void admin
     .from('llm_usage')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .insert({
-      user_id: u.userId,
-      route: u.route,
-      model: u.model,
-      input_tokens: u.inputTokens,
-      output_tokens: u.outputTokens,
-      cached_input_tokens: u.cachedInputTokens ?? 0,
-      cost_usd: cost,
-      latency_ms: u.latencyMs ?? null,
-      success: u.success ?? true,
-      error_code: u.errorCode ?? null,
-      metadata: u.metadata ?? null,
-    } as any)
+    .insert(usagePayload)
     .then(({ error }) => {
       if (error) logger.warn({ error: error.message }, 'llm_usage insert failed')
     })

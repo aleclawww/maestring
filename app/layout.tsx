@@ -13,6 +13,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maestring.com'),
+  // Canonical tells Google which URL is the definitive version of this domain —
+  // without it Google may pick an arbitrary indexed URL for favicon association.
+  alternates: {
+    canonical: '/',
+  },
   title: {
     template: '%s | Maestring',
     default: 'Maestring — Master AWS with AI and Spaced Repetition',
@@ -71,9 +76,13 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
   icons: {
     icon: [
+      // SVG first — modern browsers use the scalable version
+      { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/favicon.ico', sizes: 'any' },
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      // 48×48 is Google Search's minimum size for displaying a favicon in SERPs
+      { url: '/android-chrome-48x48.png', sizes: '48x48', type: 'image/png' },
       { url: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
@@ -99,6 +108,26 @@ const organizationJsonLd = {
   sameAs: [],
 }
 
+// WebSite schema is the signal Google uses to associate a favicon with a domain.
+// Without it, Google relies solely on the <link rel="icon"> tags — this adds a
+// second, authoritative signal that explicitly links the logo to the domain URL.
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Maestring',
+  url: 'https://maestring.com',
+  description:
+    'Pass the AWS SAA-C03 exam faster with AI-powered adaptive questions and spaced repetition.',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: 'https://maestring.com/blog?q={search_term_string}',
+    },
+    'query-input': 'required name=search_term_string',
+  },
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -110,6 +139,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
       </head>
       <body className="min-h-screen bg-background text-text-primary antialiased">

@@ -82,7 +82,7 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
   const priceId = subscription.items.data[0]?.price.id ?? ''
   const plan = mapStripePlan(priceId)
 
-  const { error } = await supabase.from('subscriptions')
+  const { data, error } = await supabase.from('subscriptions')
     .update({
       plan,
       status: mapStripeStatus(subscription.status),
@@ -90,15 +90,37 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
       current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
       current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
       cancel_at_period_end: subscription.cancel_at_period_end,
+      // trial_end must be synced here: when Stripe transitions trialing → active,
+      // the trial_end timestamp is set on the subscription object. Without syncing
+      // it, the DB column stays NULL forever and any UI reading it to show
+      // "your trial ends in X days" would never render correctly.
+      trial_end: subscription.trial_end
+        ? new Date(subscription.trial_end * 1000).toISOString()
+        : null,
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscription.id)
+    .select('user_id')
+    .maybeSingle()
 
   if (error) {
     logger.error({ err: error, subscriptionId: subscription.id }, 'Failed to update subscription')
     // Throw so the webhook route returns 5xx and Stripe retries — otherwise
     // plan/status changes get silently dropped on transient DB failures.
     throw error
+  }
+
+  // If the row doesn't exist yet (e.g. customer.subscription.updated fired
+  // before checkout.session.completed due to out-of-order delivery), the
+  // UPDATE touches 0 rows and returns no error — the plan/status change is
+  // silently dropped. Throw so Stripe retries; checkout.session.completed
+  // will eventually create the row and this event will succeed on replay.
+  if (!data) {
+    logger.warn(
+      { subscriptionId: subscription.id, plan, status: subscription.status },
+      'handleSubscriptionUpdated: no matching subscription row — throwing to force Stripe retry'
+    )
+    throw new Error(`No subscription row found for stripe_subscription_id=${subscription.id}`)
   }
 }
 
@@ -124,6 +146,110 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
 
   if (data?.user_id) {
     await trackServer(data.user_id, { name: 'subscription_cancelled' })
+  }
+}
+
+export async function handleTrialWillEnd(subscription: Stripe.Subscription) {
+  // customer.subscription.trial_will_end fires 3 days before trial expiry.
+  // Look up the user linked to this subscription and send them a heads-up email
+  // so they can decide whether to upgrade before losing access to premium features.
+  const supabase = createAdminClient()
+
+  const { data: row, error } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle()
+
+  if (error) {
+    logger.error({ err: error, subscriptionId: subscription.id }, 'handleTrialWillEnd: failed to find subscription')
+    throw error
+  }
+  if (!row?.user_id) {
+    logger.warn({ subscriptionId: subscription.id }, 'handleTrialWillEnd: no matching subscription row — skipping email')
+    return
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, email_nudges_enabled')
+    .eq('id', row.user_id)
+    .maybeSingle()
+
+  // Respect the user's email preference — trial ending is a transactional
+  // notice so we still send it even if nudges are disabled, but we check the
+  // `email_nudges_enabled` flag as a courtesy opt-out signal for very noisy
+  // users who have explicitly turned off all emails.
+  if (profile?.email_nudges_enabled === false) {
+    logger.info({ userId: row.user_id }, 'handleTrialWillEnd: user opted out of emails — skipping')
+    return
+  }
+
+  const { data: authUser } = await supabase.auth.admin.getUserById(row.user_id)
+  const email = authUser?.user?.email
+  if (!email) {
+    logger.warn({ userId: row.user_id }, 'handleTrialWillEnd: no email on auth user — skipping')
+    return
+  }
+
+  const trialEnd = subscription.trial_end
+    ? new Date(subscription.trial_end * 1000)
+    : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+
+  const now = new Date()
+  const daysRemaining = Math.max(
+    1,
+    Math.round((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  )
+  const trialEndDate = trialEnd.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+
+  const firstName = profile?.full_name
+    ? profile.full_name.split(' ')[0]
+    : 'there'
+
+  const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://maestring.com'
+
+  // Wrap email in try/catch: a transient Resend outage must NOT cause Stripe
+  // to retry the webhook endlessly. The subscription state is already correct
+  // (we're just sending a notification). Log the failure so ops can manually
+  // trigger the email if needed, but return cleanly so the event is marked
+  // processed and Stripe backs off.
+  try {
+    const { TrialEndingEmail } = await import('@/lib/email/templates/TrialEndingEmail')
+    const { sendEmail } = await import('@/lib/email')
+
+    await sendEmail({
+      to: email,
+      subject: daysRemaining <= 1
+        ? 'Your Maestring trial ends today'
+        : `Your Maestring trial ends in ${daysRemaining} days`,
+      react: TrialEndingEmail({
+        firstName,
+        daysRemaining,
+        trialEndDate,
+        upgradeUrl: `${siteUrl}/pricing?ref=trial-ending`,
+        studyUrl: `${siteUrl}/study`,
+      }),
+      tags: [{ name: 'type', value: 'trial-ending' }],
+    })
+
+    logger.info(
+      { userId: row.user_id, daysRemaining, subscriptionId: subscription.id },
+      'Trial-ending email sent'
+    )
+  } catch (emailErr) {
+    // Non-fatal: log but do not rethrow. The webhook must still succeed so
+    // Stripe stops retrying — a failed reminder email is recoverable via
+    // manual resend, a Stripe retry loop is not.
+    logger.error(
+      { err: emailErr, userId: row.user_id, subscriptionId: subscription.id },
+      'handleTrialWillEnd: email send failed — webhook will still succeed'
+    )
   }
 }
 
@@ -156,11 +282,35 @@ export async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   const supabase = createAdminClient()
   const subscriptionId = invoice.subscription as string
 
-  // Flip the user back to active after a successful retry. Same reasoning as
-  // handleInvoicePaymentFailed: we cannot leave the user stuck in past_due
-  // just because a transient DB error silently dropped the update.
+  // Retrieve the subscription from Stripe to get the updated period boundaries.
+  // `invoice.payment_succeeded` fires on every renewal but does not embed the
+  // new `current_period_end` directly. Without this, if `customer.subscription.updated`
+  // is delayed or dropped, the DB keeps the old (past) current_period_end, and
+  // any gate that checks `current_period_end < now()` would wrongly block a
+  // paying user who renewed successfully.
+  //
+  // Note: getStripe() is inside the try block intentionally. If STRIPE_SECRET_KEY
+  // is not configured (misconfigured env, test environment), we degrade to a
+  // status-only update rather than throwing before reaching the DB write.
+  let periodEnd: string | undefined
+  try {
+    const stripe = (await import('./index')).getStripe()
+    const sub = await stripe.subscriptions.retrieve(subscriptionId)
+    periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+  } catch (stripeErr) {
+    // Non-fatal: log and proceed with status-only update. The subscription.updated
+    // event that Stripe also fires will carry the correct period boundaries.
+    logger.warn({ err: stripeErr, subscriptionId }, 'invoice.payment_succeeded: failed to retrieve subscription for period_end sync')
+  }
+
+  const update: Record<string, unknown> = {
+    status: 'active',
+    updated_at: new Date().toISOString(),
+  }
+  if (periodEnd) update['current_period_end'] = periodEnd
+
   const { error } = await supabase.from('subscriptions')
-    .update({ status: 'active', updated_at: new Date().toISOString() })
+    .update(update)
     .eq('stripe_subscription_id', subscriptionId)
 
   if (error) {

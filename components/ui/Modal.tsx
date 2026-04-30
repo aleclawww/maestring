@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,15 @@ const sizeClasses = {
   xl: 'max-w-xl',
 }
 
+const FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
+
 export function Modal({
   isOpen,
   onClose,
@@ -30,18 +39,47 @@ export function Modal({
   className,
   size = 'md',
 }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      // Focus trap: keep Tab / Shift+Tab cycling inside the modal panel.
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusable = Array.from(
+          panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)
+        )
+        if (focusable.length === 0) return
+        const first = focusable[0]!
+        const last = focusable[focusable.length - 1]!
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
+      }
     },
     [onClose]
   )
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'hidden'
-    }
+    if (!isOpen) return
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+    // Move focus into the modal on open so screen readers announce it.
+    requestAnimationFrame(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)
+      first?.focus()
+    })
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = ''
@@ -66,6 +104,7 @@ export function Modal({
 
       {/* Modal */}
       <div
+        ref={panelRef}
         className={cn(
           'relative z-10 w-full rounded-2xl border border-border bg-surface shadow-card animate-fade-in-up',
           sizeClasses[size],
@@ -90,7 +129,7 @@ export function Modal({
             <button
               onClick={onClose}
               className="ml-4 rounded-lg p-1.5 text-text-muted hover:bg-surface-2 hover:text-text-primary transition-colors"
-              aria-label="Cerrar"
+              aria-label="Close"
             >
               <svg
                 className="h-4 w-4"

@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import LoginForm from './LoginForm'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Sign in',
   description: 'Sign in to Maestring to continue your AWS prep.',

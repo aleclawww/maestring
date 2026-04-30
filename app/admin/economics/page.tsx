@@ -98,7 +98,7 @@ export default async function AdminEconomicsPage({
       <Section title="By plan">
         <Table
           rows={data.by_plan}
-          empty="Sin datos por plan."
+          empty="No data by plan yet."
           columns={[
             { key: 'plan', label: 'Plan', render: r => <PlanPill plan={r.plan} /> },
             { key: 'subs', label: 'Subs', render: r => r.subscribers },
@@ -131,7 +131,7 @@ export default async function AdminEconomicsPage({
       <Section title="Signup cohorts (last 12 months)">
         <Table
           rows={data.cohorts}
-          empty="Sin cohortes aún."
+          empty="No cohorts yet."
           columns={[
             { key: 'month', label: 'Cohort', render: r => <span className="font-mono text-xs">{r.cohort_month}</span> },
             { key: 'signups', label: 'Signups', render: r => r.signups },

@@ -45,6 +45,18 @@ export function SubscriptionSettings({
         setLoading(false)
         return
       }
+      // Validate the portal URL is a legitimate Stripe-hosted page.
+      try {
+        const parsed = new URL(body.url)
+        if (parsed.protocol !== 'https:' || !['billing.stripe.com', 'checkout.stripe.com', 'invoice.stripe.com'].includes(parsed.hostname)) {
+          throw new Error('unexpected hostname')
+        }
+      } catch {
+        console.error('SubscriptionSettings: portal URL failed origin check', { url: body.url })
+        setPortalError("Unexpected portal response. Please try again.")
+        setLoading(false)
+        return
+      }
       window.location.href = body.url
     } catch (err) {
       console.error('SubscriptionSettings portal network error', err)

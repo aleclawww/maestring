@@ -7,6 +7,7 @@ import { TestimonialForm } from './components/TestimonialForm'
 import { DangerZone } from './components/DangerZone'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Settings' }
 
 export default async function SettingsPage() {
@@ -14,8 +15,8 @@ export default async function SettingsPage() {
   const supabase = createClient()
 
   const [{ data: profile }, { data: subscription }, { data: existingTestimonial }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('subscriptions').select('*').eq('user_id', user.id).single(),
+    supabase.from('profiles').select('full_name, avatar_url, study_minutes_per_day, email_nudges_enabled').eq('id', user.id).single(),
+    supabase.from('subscriptions').select('plan, status, stripe_customer_id, current_period_end, cancel_at_period_end').eq('user_id', user.id).single(),
     supabase
       .from('testimonials')
       .select('status, content, display_name, role')
@@ -36,7 +37,11 @@ export default async function SettingsPage() {
         avatarUrl={profile?.avatar_url ?? ''}
       />
 
-      <NotificationSettings userId={user.id} studyMinutesPerDay={profile?.study_minutes_per_day ?? 30} />
+      <NotificationSettings
+        userId={user.id}
+        studyMinutesPerDay={profile?.study_minutes_per_day ?? 30}
+        emailNudgesEnabled={profile?.email_nudges_enabled ?? true}
+      />
 
       <TestimonialForm
         existing={existingTestimonial as { status: 'pending' | 'approved' | 'rejected'; content: string; display_name: string; role: string | null } | null}
@@ -51,7 +56,7 @@ export default async function SettingsPage() {
         cancelAtPeriodEnd={subscription?.cancel_at_period_end ?? false}
       />
 
-      <DangerZone userId={user.id} email={user.email ?? ''} />
+      <DangerZone email={user.email ?? ''} />
     </div>
   )
 }

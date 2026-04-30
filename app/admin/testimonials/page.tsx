@@ -51,21 +51,21 @@ export default async function AdminTestimonialsPage() {
     <div className="p-8 max-w-6xl">
       <h1 className="text-2xl font-bold mb-2">Testimonials</h1>
       <p className="text-sm text-text-muted mb-6">
-        Aprueba manualmente cada testimonio antes de que aparezca en la landing.
-        Publica solo cuotas reales y verificadas (compliance FTC).
+        Manually approve each testimonial before it appears on the landing page.
+        Only publish real, verified quotes (FTC compliance).
       </p>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
-          <p className="text-xs text-warning uppercase tracking-wide">Pendientes</p>
+          <p className="text-xs text-warning uppercase tracking-wide">Pending</p>
           <p className="text-2xl font-bold text-warning">{counts.pending}</p>
         </div>
         <div className="rounded-xl border border-success/30 bg-success/10 p-4">
-          <p className="text-xs text-success uppercase tracking-wide">Aprobados</p>
+          <p className="text-xs text-success uppercase tracking-wide">Approved</p>
           <p className="text-2xl font-bold text-success">{counts.approved}</p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-xs text-text-muted uppercase tracking-wide">Rechazados</p>
+          <p className="text-xs text-text-muted uppercase tracking-wide">Rejected</p>
           <p className="text-2xl font-bold text-text-primary">{counts.rejected}</p>
         </div>
       </div>

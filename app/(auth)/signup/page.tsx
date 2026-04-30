@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import SignupForm from './SignupForm'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Create account',
   description: 'Join Maestring and start your AWS prep today.',
@@ -66,9 +68,9 @@ export default async function SignupPage({
 
         <p className="mt-4 text-center text-xs text-text-muted">
           By signing up, you agree to our{' '}
-          <a href="/terms" className="hover:underline">Terms of Service</a>{' '}
+          <a href="/legal/terms" className="hover:underline">Terms of Service</a>{' '}
           and{' '}
-          <a href="/privacy" className="hover:underline">Privacy Policy</a>.
+          <a href="/legal/privacy" className="hover:underline">Privacy Policy</a>.
         </p>
       </div>
     </div>

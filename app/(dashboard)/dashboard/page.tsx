@@ -9,6 +9,7 @@ import { OutcomeCaptureBanner } from '@/components/dashboard/OutcomeCaptureBanne
 import { logger } from '@/lib/logger'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Dashboard' }
 
 export default async function DashboardPage() {
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
     supabase.rpc('get_user_stats', { p_user_id: user.id }),
     supabase
       .from('study_sessions')
-      .select('*')
+      .select('id, mode, created_at, concepts_studied, correct_count')
       .eq('user_id', user.id)
       .eq('is_completed', true)
       .order('created_at', { ascending: false })
@@ -80,8 +81,8 @@ export default async function DashboardPage() {
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Learner'
 
-  // Pilar 7 — outcome capture: fecha de examen pasó y todavía no sabemos cómo
-  // fue. Mostrar el banner por encima de todo (la decisión de hoy es esa).
+  // Outcome capture: exam date has passed and we still don't know the result.
+  // Show the banner above everything else — that's the most important action today.
   const examOutcome = (profile as { exam_outcome?: string | null } | null)?.exam_outcome ?? null
   const needsOutcome =
     !!profile?.exam_target_date &&
@@ -103,13 +104,26 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Pilar 7: outcome capture (gana prioridad sobre readiness) */}
+      {/* Outcome capture banner — higher priority than readiness score */}
       {needsOutcome && profile?.exam_target_date && (
         <OutcomeCaptureBanner examDate={profile.exam_target_date} />
       )}
 
-      {/* Pilar 1: Readiness Score */}
+      {/* Readiness Score — placeholder for new users with no computed score yet */}
       {readiness && !needsOutcome && <ReadinessCard data={readiness} />}
+      {!readiness && !needsOutcome && (
+        <Card>
+          <CardContent className="flex items-center gap-4 py-5">
+            <span className="text-3xl">📊</span>
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Readiness score unlocks after your first sessions</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                Answer a few questions and your exam readiness estimate will appear here.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Action Card */}
       <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-transparent">
@@ -220,6 +234,8 @@ export default async function DashboardPage() {
                         ? 'Review'
                         : session.mode === 'intensive'
                         ? 'Intensive'
+                        : session.mode === 'exploration'
+                        ? 'Exploration'
                         : 'Maintenance'}
                     </p>
                     <p className="text-xs text-text-muted">

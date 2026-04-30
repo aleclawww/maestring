@@ -1,8 +1,58 @@
-import { NextResponse } from "next/server";
+export const runtime = 'nodejs'
+
+import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser, createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { logger } from "@/lib/logger";
+import { z } from "zod";
+
+export async function GET() {
+  const user = await requireAuthenticatedUser();
+  const supabase = createAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from("profiles") as any)
+    .select("study_minutes_per_day, email_nudges_enabled")
+    .eq("id", user.id)
+    .single();
+  if (error) {
+    logger.error({ err: error, userId: user.id }, "GET /api/profile/me failed");
+    return NextResponse.json({ error: "Failed to load profile" }, { status: 500 });
+  }
+  return NextResponse.json({ data });
+}
+
+const PatchSchema = z.object({
+  study_minutes_per_day: z.number().int().min(5).max(240).optional(),
+  email_nudges_enabled: z.boolean().optional(),
+}).refine(data => Object.keys(data).length > 0, { message: "Nothing to update" });
+
+export async function PATCH(req: NextRequest) {
+  const user = await requireAuthenticatedUser();
+  const body = await req.json().catch(() => ({}));
+  const parsed = PatchSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request", details: parsed.error.format() }, { status: 400 });
+  }
+
+  const supabase = createAdminClient();
+  const update: Record<string, unknown> = {};
+  if (parsed.data.study_minutes_per_day !== undefined) {
+    update["study_minutes_per_day"] = parsed.data.study_minutes_per_day;
+  }
+  if (parsed.data.email_nudges_enabled !== undefined) {
+    update["email_nudges_enabled"] = parsed.data.email_nudges_enabled;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from("profiles") as any).update(update).eq("id", user.id);
+  if (error) {
+    logger.error({ err: error, userId: user.id }, "Failed to update profile settings");
+    return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
 
 export async function DELETE() {
   const user = await requireAuthenticatedUser();

@@ -24,7 +24,7 @@ export default async function AdminCronRunsPage({
 
   let query = supabase
     .from('cron_runs')
-    .select('*')
+    .select('id, name, started_at, ended_at, status, rows_affected, error, metadata')
     .order('started_at', { ascending: false })
     .limit(200)
 

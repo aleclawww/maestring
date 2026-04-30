@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth/admin'
@@ -6,6 +8,7 @@ import { generateQuestion } from '@/lib/question-engine/generator'
 import { recordAdminAction } from '@/lib/admin/rpc'
 import { logger } from '@/lib/logger'
 import { captureApiException } from '@/lib/sentry/capture'
+import { checkLlmRateLimit } from '@/lib/redis/rate-limit'
 
 export const maxDuration = 120
 
@@ -22,6 +25,15 @@ export async function POST(req: NextRequest) {
     parsed = BodySchema.parse(await req.json())
   } catch {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
+  }
+
+  // Rate-limit admin batch generation the same way as user-facing LLM routes.
+  // A compromised admin account or a UI retry loop could otherwise fire 20
+  // Haiku calls/request with no throttle. Fail-open on Redis errors so a
+  // Redis outage doesn't block legitimate admin operations.
+  const rl = await checkLlmRateLimit(admin.id)
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 
   const supabase = createAdminClient()

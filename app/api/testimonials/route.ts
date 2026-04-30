@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) {
     return NextResponse.json(
-      { error: "already_submitted", message: "Ya enviaste un testimonio esta semana. Espera unos días." },
+      { error: "already_submitted", message: "You already submitted a testimonial this week. Please wait a few days." },
       { status: 409 }
     );
   }

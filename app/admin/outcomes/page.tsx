@@ -15,7 +15,7 @@ export default async function AdminOutcomesPage() {
       <header>
         <h1 className="text-xl font-bold">Exam outcomes</h1>
         <p className="text-xs text-text-muted">
-          Signal para calibrar P(pass). Con ≥500 outcomes podemos reemplazar la sigmoide heurística por un modelo regresivo real.
+          Signal for calibrating P(pass). With ≥500 outcomes we can replace the heuristic sigmoid with a real regression model.
         </p>
       </header>
 
@@ -35,14 +35,14 @@ export default async function AdminOutcomesPage() {
         </div>
         <p className="text-xs text-text-muted mt-2">
           {total < 500
-            ? `Faltan ${500 - total} outcomes más para recalibrar P(pass) con modelo real.`
-            : '✓ Umbral alcanzado — es momento de entrenar modelo real.'}
+            ? `${500 - total} more outcomes needed to recalibrate P(pass) with the real model.`
+            : '✓ Threshold reached — time to train the real model.'}
         </p>
       </Section>
 
       <Section title="Score distribution (AWS scaled)">
         {data.by_score.length === 0 ? (
-          <p className="text-xs text-text-muted">Sin scores reportados aún.</p>
+          <p className="text-xs text-text-muted">No scores reported yet.</p>
         ) : (
           <div className="space-y-1">
             {data.by_score.map(b => (
@@ -66,7 +66,7 @@ export default async function AdminOutcomesPage() {
       <Section title="Recent reported outcomes">
         <Table
           rows={data.recent}
-          empty="Sin outcomes reportados."
+          empty="No outcomes reported yet."
           columns={[
             {
               key: 'user',

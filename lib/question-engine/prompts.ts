@@ -3,43 +3,43 @@ import type { ConceptDefinition } from '@/lib/knowledge-graph/aws-saa'
 export const FEW_SHOT_EXAMPLES = `
 EXAMPLE 1 — S3 Cross-Region Replication scenario:
 {
-  "questionText": "Una empresa almacena archivos de cumplimiento normativo en S3 us-east-1. Regulaciones exigen que los datos estén disponibles en us-west-2 con máximo 15 minutos de lag garantizado. ¿Cuál es la configuración óptima?",
+  "questionText": "A company stores compliance files in S3 us-east-1. Regulations require that data be available in us-west-2 with a guaranteed maximum lag of 15 minutes. What is the optimal configuration?",
   "options": [
-    "S3 CRR con Replication Time Control (RTC) habilitado",
-    "S3 SRR con versioning habilitado en ambos buckets",
-    "S3 CRR sin RTC y notificaciones SNS para monitoring",
-    "Lambda que copie objetos cada 10 minutos via S3 Event Notifications"
+    "S3 CRR with Replication Time Control (RTC) enabled",
+    "S3 SRR with versioning enabled on both buckets",
+    "S3 CRR without RTC and SNS notifications for monitoring",
+    "A Lambda function that copies objects every 10 minutes via S3 Event Notifications"
   ],
   "correctIndex": 0,
-  "explanation": "CRR con RTC garantiza que el 99.99% de objetos se replican en 15 minutos con un SLA formal. SRR es Same-Region (incorrecto para cross-region). Sin RTC no hay garantía de tiempo. Lambda es solución manual innecesaria cuando CRR+RTC es el servicio diseñado para este caso.",
+  "explanation": "CRR with RTC guarantees that 99.99% of objects are replicated within 15 minutes under a formal SLA. SRR is Same-Region (not applicable for cross-region). Without RTC there is no time guarantee. Lambda is a manual workaround when CRR+RTC is the purpose-built AWS feature for this case.",
   "difficulty": 0.7
 }
 
 EXAMPLE 2 — VPC Endpoint types:
 {
-  "questionText": "Una empresa tiene instancias EC2 en subnets privadas que acceden frecuentemente a S3 y KMS. El equipo quiere eliminar la dependencia de NAT Gateway para reducir costos y mejorar seguridad. ¿Qué tipo de endpoints debe usar para cada servicio?",
+  "questionText": "A company has EC2 instances in private subnets that frequently access S3 and KMS. The team wants to eliminate the NAT Gateway dependency to reduce costs and improve security. Which endpoint type should be used for each service?",
   "options": [
-    "Gateway Endpoint para S3, Interface Endpoint para KMS",
-    "Interface Endpoint para S3, Gateway Endpoint para KMS",
-    "Gateway Endpoint para ambos S3 y KMS",
-    "Interface Endpoint para ambos S3 y KMS"
+    "Gateway Endpoint for S3, Interface Endpoint for KMS",
+    "Interface Endpoint for S3, Gateway Endpoint for KMS",
+    "Gateway Endpoint for both S3 and KMS",
+    "Interface Endpoint for both S3 and KMS"
   ],
   "correctIndex": 0,
-  "explanation": "Gateway Endpoints solo existen para S3 y DynamoDB (gratuitos, modifican route table). KMS usa Interface Endpoint (PrivateLink) que crea un ENI privado en la subnet. Interface Endpoints cuestan por hora y por GB, pero Gateway Endpoints son gratuitos.",
+  "explanation": "Gateway Endpoints exist only for S3 and DynamoDB (free, modify the route table). KMS uses an Interface Endpoint (PrivateLink) that creates a private ENI in the subnet. Interface Endpoints incur per-hour and per-GB charges; Gateway Endpoints are free.",
   "difficulty": 0.6
 }
 
 EXAMPLE 3 — SQS vs SNS decision:
 {
-  "questionText": "Un sistema de e-commerce necesita procesar pedidos garantizando que cada pedido sea procesado exactamente una vez, en orden FIFO. Simultáneamente, múltiples microservicios (inventario, facturación, envíos) deben recibir una copia de cada pedido. ¿Cuál es la arquitectura correcta?",
+  "questionText": "An e-commerce system must process orders guaranteeing each order is processed exactly once, in FIFO order. At the same time, multiple microservices (inventory, billing, shipping) must each receive a copy of every order. What is the correct architecture?",
   "options": [
-    "SNS topic → múltiples SQS FIFO queues suscritas, un consumer por queue",
-    "SQS Standard queue con múltiples consumers en parallel",
-    "SNS topic → múltiples SQS Standard queues suscritas",
-    "SQS FIFO queue única con múltiples consumers en polling"
+    "SNS topic → multiple subscribed SQS FIFO queues, one consumer per queue",
+    "SQS Standard queue with multiple consumers in parallel",
+    "SNS topic → multiple subscribed SQS Standard queues",
+    "Single SQS FIFO queue with multiple polling consumers"
   ],
   "correctIndex": 0,
-  "explanation": "El patrón fan-out (SNS→SQS) es correcto para distribuir a múltiples servicios. Necesitamos SQS FIFO para garantizar orden y exactamente-una-vez entrega por servicio. SQS Standard no garantiza orden. Un única FIFO queue con múltiples consumers no distribuye independientemente a cada servicio.",
+  "explanation": "The fan-out pattern (SNS→SQS) is correct for distributing to multiple services. SQS FIFO is required to guarantee ordering and exactly-once delivery per service. SQS Standard does not guarantee ordering. A single FIFO queue with multiple consumers does not deliver independently to each downstream service.",
   "difficulty": 0.75
 }
 `
@@ -58,81 +58,87 @@ export function formatQuestionPrompt(
   fingerprint?: CognitiveFingerprint
 ): string {
   const difficultyLabel =
-    difficulty < 0.3 ? 'básica' : difficulty < 0.6 ? 'intermedia' : difficulty < 0.8 ? 'avanzada' : 'experta'
+    difficulty < 0.3 ? 'basic' : difficulty < 0.6 ? 'intermediate' : difficulty < 0.8 ? 'advanced' : 'expert'
 
   const modeInstructions = {
-    discovery: 'Genera una pregunta introductoria que cubra el concepto fundamental. Opciones claramente distintas.',
-    review: 'Genera una pregunta de revisión que refuerce el conocimiento. Puede incluir escenarios prácticos.',
-    intensive: 'Genera una pregunta difícil con escenario complejo. Incluye opciones de distracción convincentes.',
-    maintenance: 'Genera una pregunta de mantenimiento para retener conocimiento. Equilibra familiaridad con variación.',
+    discovery: 'Generate an introductory question covering the core concept. Options should be clearly distinct.',
+    review: 'Generate a review question that reinforces knowledge. Practical scenarios are encouraged.',
+    intensive: 'Generate a challenging question with a complex scenario. Include convincing distractors.',
+    maintenance: 'Generate a maintenance question to retain knowledge. Balance familiarity with variation.',
   }[mode]
 
+  // Quote each concept name to prevent DB-stored strings from injecting
+  // additional instructions into the prompt (defense against prompt injection
+  // if concept names ever contain special characters or instruction-like text).
+  const safeMistakes = recentMistakes.map(
+    m => `"${m.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  )
   const mistakesContext =
-    recentMistakes.length > 0
-      ? `\n\nConceptos donde el usuario comete errores frecuentes: ${recentMistakes.join(', ')}. Considera crear distractores relacionados con estos conceptos.`
+    safeMistakes.length > 0
+      ? `\n\nConcepts the user frequently misses: ${safeMistakes.join(', ')}. Consider building distractors around these concepts.`
       : ''
 
-  // Hiperpersonalización (Pilar 2): adapta tono y profundidad de la explicación
-  // según el background del usuario y patrón de debilidad observado.
+  // Hyperpersonalisation: adapt tone and explanation depth based on the user's
+  // background and observed weakness pattern.
   const userContext = (() => {
     if (!fingerprint) return ''
     const parts: string[] = []
     if (fingerprint.background === 'developer' || fingerprint.background === 'sysadmin') {
-      parts.push('USUARIO: perfil técnico (developer/sysadmin) — usa terminología precisa, referencias a APIs/SDKs/CLI, omite definiciones básicas.')
+      parts.push('USER PROFILE: technical (developer/sysadmin) — use precise terminology, API/SDK/CLI references; skip basic definitions.')
     } else if (fingerprint.background === 'business') {
-      parts.push('USUARIO: perfil business — incluye analogías de negocio (coste, SLA, riesgo) en la explicación, evita jerga de bajo nivel.')
+      parts.push('USER PROFILE: business background — include cost/SLA/risk analogies in the explanation; avoid low-level jargon.')
     } else if (fingerprint.background === 'student') {
-      parts.push('USUARIO: estudiante sin experiencia profesional — explica el "por qué" antes del "cómo", normaliza la dificultad del concepto.')
+      parts.push('USER PROFILE: student with no professional experience — explain the "why" before the "how"; normalise the difficulty of the concept.')
     }
     if (fingerprint.explanation_depth === 'concise') {
-      parts.push('Explicación: concisa, máximo 3 oraciones, foco en el matiz que diferencia opciones similares.')
+      parts.push('Explanation style: concise, 3 sentences maximum, focus on the nuance that separates similar options.')
     } else if (fingerprint.explanation_depth === 'deep') {
-      parts.push('Explicación: incluye contexto conceptual y conexión con principios de arquitectura.')
+      parts.push('Explanation style: include conceptual context and connect to architectural principles.')
     }
     if (fingerprint.weakness_pattern) {
-      parts.push(`Patrón de debilidad observado: ${fingerprint.weakness_pattern}.`)
+      parts.push(`Observed weakness pattern: ${fingerprint.weakness_pattern}.`)
     }
     return parts.length ? `\n\n${parts.join(' ')}` : ''
   })()
 
-  return `Eres un experto en AWS Solutions Architect Associate (SAA-C03) que crea preguntas de examen de alta calidad.
+  return `You are an AWS Solutions Architect Associate (SAA-C03) expert who creates high-quality exam questions.
 
 ${FEW_SHOT_EXAMPLES}
 
-CONCEPTO A CUBRIR:
-- Nombre: ${concept.name}
-- Descripción: ${concept.description}
+CONCEPT TO COVER:
+- Name: ${concept.name}
+- Description: ${concept.description}
 - Key Facts: ${concept.keyFacts.join('; ')}
 - Exam Tips: ${concept.examTips.join('; ')}
-- AWS Services involucrados: ${concept.awsServices.join(', ')}
-- Se confunde con: ${concept.confusedWith.join(', ')}
+- AWS Services involved: ${concept.awsServices.join(', ')}
+- Commonly confused with: ${concept.confusedWith.join(', ')}
 
-INSTRUCCIONES:
-1. Dificultad objetivo: ${difficultyLabel} (${difficulty.toFixed(1)}/1.0)
-2. Modo: ${mode} — ${modeInstructions}
-3. La pregunta DEBE ser práctica/escenario (no puramente teórica)
-4. Exactamente 4 opciones, solo UNA correcta
-5. Opciones incorrectas deben ser plausibles, basadas en malentendidos comunes
-6. Explicación clara del POR QUÉ cada opción es correcta o incorrecta
-7. Longitud de explicación: 3-5 oraciones concisas${mistakesContext}${userContext}
+INSTRUCTIONS:
+1. Target difficulty: ${difficultyLabel} (${difficulty.toFixed(1)}/1.0)
+2. Mode: ${mode} — ${modeInstructions}
+3. The question MUST be practical/scenario-based (not purely theoretical)
+4. Exactly 4 options, only ONE correct
+5. Incorrect options must be plausible, grounded in common misconceptions
+6. Clearly explain WHY each option is correct or incorrect
+7. Explanation length: 3–5 concise sentences${mistakesContext}${userContext}
 
-STYLE GUIDE (Pilar 4 — Optimización de Carga Cognitiva, no negociable):
-- UNA SOLA idea central por pregunta. Nunca mezclar "¿qué servicio Y cómo lo configurarías?"
-- El escenario en el stem debe ser ESPECÍFICO con números cuando aplique
-  ("workload de 10,000 req/s pico, P99 < 100ms" es mejor que "alto tráfico").
-- Las 4 opciones DEBEN ser paralelas en estructura: misma longitud aproximada
-  (±30% en caracteres entre la más corta y la más larga), mismo nivel de detalle.
-  El contraste de longitud es un cue falso de respuesta — eliminalo.
-- Distractores plausibles, claramente incorrectos por una razón TÉCNICA específica
-  (no por ser absurdos ni por mencionar servicios irrelevantes).
-- Sin pistas léxicas: la opción correcta no debe usar palabras del stem que las
-  incorrectas no usen.
-- Sin "todas las anteriores" ni "ninguna de las anteriores".
+STYLE GUIDE (Cognitive Load Optimisation — non-negotiable):
+- ONE central idea per question. Never mix "which service AND how would you configure it?"
+- The scenario stem must be SPECIFIC with numbers where applicable
+  ("workload of 10,000 req/s peak, P99 < 100ms" is better than "high traffic").
+- All 4 options MUST be parallel in structure: similar length (±30% in characters
+  between shortest and longest), same level of detail.
+  Length contrast is a false answer cue — eliminate it.
+- Plausible distractors that are clearly wrong for a SPECIFIC TECHNICAL reason
+  (not because they are absurd or mention irrelevant services).
+- No lexical cues: the correct option must not reuse words from the stem that the
+  incorrect options do not.
+- No "all of the above" or "none of the above".
 
-RESPONDE ÚNICAMENTE con JSON válido, sin markdown, sin texto extra:
+RESPOND WITH VALID JSON ONLY, no markdown, no extra text:
 {
   "questionText": "...",
-  "options": ["opción A", "opción B", "opción C", "opción D"],
+  "options": ["option A", "option B", "option C", "option D"],
   "correctIndex": 0,
   "explanation": "...",
   "difficulty": ${difficulty.toFixed(2)}
@@ -150,40 +156,40 @@ export function formatEvaluationPrompt(
   const selectedOption = options[selectedIndex] ?? 'Unknown'
   const correctOption = options[correctIndex] ?? 'Unknown'
 
-  // Pilar 3 — Entorno de Experimentación Seguro:
-  // Lenguaje no-punitivo. NUNCA usar "incorrecto/fallo/error/mal" para errores.
-  // Validar la lógica interna del razonamiento ANTES de explicar por qué la
-  // opción óptima es otra. En errores, generar micro-pregunta de elaboración
-  // que activa el efecto de generación (Bjork) — no servir la respuesta lista.
+  // Safe learning environment: non-punitive language. NEVER use
+  // "wrong/incorrect/failed/bad" for errors. Validate the internal logic of
+  // the user's reasoning BEFORE explaining why the optimal option is better.
+  // On incorrect answers, generate an elaboration micro-prompt that activates
+  // the generation effect (Bjork) — don't just hand over the answer.
   const elaborationBlock = isCorrect
     ? ''
     : `,
   "elaboration": {
-    "prompt": "una micro-pregunta de 1 línea que invite al usuario a elaborar (ej: '¿En qué escenario sería tu elección la correcta?')",
-    "validReasoningHint": "una frase que reconozca la lógica interna de la opción elegida (ej: 'Tu elección prioriza X, lo cual es válido cuando Y')"
+    "prompt": "a one-line micro-question inviting the user to elaborate (e.g. 'In what scenario would your choice actually be correct?')",
+    "validReasoningHint": "a phrase acknowledging the internal logic of the chosen option (e.g. 'Your choice prioritises X, which is valid when Y')"
   }`
 
-  return `Eres un tutor de AWS SAA-C03 que evalúa respuestas siguiendo principios de aprendizaje productivo.
+  return `You are an AWS SAA-C03 tutor who evaluates answers using productive learning principles.
 
-PREGUNTA: ${questionText}
+QUESTION: ${questionText}
 
-OPCIÓN SELECCIONADA: "${selectedOption}" (índice ${selectedIndex})
-OPCIÓN ÓPTIMA: "${correctOption}" (índice ${correctIndex})
-RESULTADO: ${isCorrect ? 'OPTIMO' : 'NO_OPTIMO'}
-CONTEXTO BASE: ${explanation}
+SELECTED OPTION: "${selectedOption}" (index ${selectedIndex})
+OPTIMAL OPTION: "${correctOption}" (index ${correctIndex})
+RESULT: ${isCorrect ? 'CORRECT' : 'NOT_OPTIMAL'}
+BASE CONTEXT: ${explanation}
 
-REGLAS DE TONO:
-- Nunca uses "incorrecto", "fallo", "error", "mal", "fallaste". Usa "no es la opción óptima", "el escenario pide otra arquitectura", "esa elección encaja en otro contexto".
-- Si NO_OPTIMO, primero valida la lógica interna del razonamiento, luego explica por qué la otra opción es preferible aquí.
-- Tono directo y técnico, no motivacional vacío.
+TONE RULES:
+- Never use "wrong", "incorrect", "failed", "mistake", "bad". Use phrases like "not the optimal option", "the scenario calls for a different architecture", "that choice fits a different context".
+- If NOT_OPTIMAL, first validate the internal logic of the reasoning, then explain why the other option is preferable here.
+- Direct and technical tone — no hollow motivational filler.
 
-Responde con JSON válido (sin markdown):
+Respond with valid JSON (no markdown):
 {
   "isCorrect": ${isCorrect},
   "score": ${isCorrect ? 1.0 : 0.0},
-  "explanation": "${isCorrect ? 'reafirma el por qué la opción es óptima en 2-3 frases concretas' : 'valida la lógica del razonamiento del usuario y luego explica por qué la opción óptima es preferible en este escenario específico (3-4 frases)'}",
-  "keyInsight": "el insight más importante para recordar (1 frase memorable)",
-  "relatedConcepts": ["concepto1", "concepto2"],
-  "studyTip": "consejo específico para retener este conocimiento"${elaborationBlock}
+  "explanation": "${isCorrect ? 'reinforce why the option is optimal in 2-3 concrete sentences' : 'validate the logic of the user reasoning, then explain why the optimal option is preferable in this specific scenario (3-4 sentences)'}",
+  "keyInsight": "the most important insight to remember (1 memorable sentence)",
+  "relatedConcepts": ["concept1", "concept2"],
+  "studyTip": "a specific tip for retaining this knowledge"${elaborationBlock}
 }`
 }

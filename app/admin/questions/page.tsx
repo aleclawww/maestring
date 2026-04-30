@@ -52,9 +52,12 @@ export default async function QuestionsAdminPage() {
   }
 
   // Pool counts per concept (approved only) for the sidebar.
-  const { data: counts, error: countsErr } = await supabase
+  // Uses an aggregate GROUP BY query to avoid fetching every row to the server
+  // for an in-memory count — the previous approach scanned the whole table and
+  // transferred tens of thousands of concept_id strings to Node.js.
+  const { data: countRows, error: countsErr } = await supabase
     .from('questions')
-    .select('concept_id')
+    .select('concept_id, count:concept_id.count()')
     .eq('review_status', 'approved')
     .eq('is_active', true)
   if (countsErr) {
@@ -65,9 +68,9 @@ export default async function QuestionsAdminPage() {
   }
 
   const countByConcept = new Map<string, number>()
-  for (const row of counts ?? []) {
-    const id = (row as { concept_id: string }).concept_id
-    countByConcept.set(id, (countByConcept.get(id) ?? 0) + 1)
+  for (const row of countRows ?? []) {
+    const r = row as { concept_id: string; count: number }
+    countByConcept.set(r.concept_id, Number(r.count))
   }
 
   const conceptList = (concepts ?? []).map((c) => ({

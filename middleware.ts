@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { verifyCronSecret } from '@/lib/auth/verify-cron-secret'
 
 const PUBLIC_ROUTES = [
   '/',
@@ -43,14 +44,15 @@ function isPublic(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Expose pathname to server components / layouts (they can't read the URL
-  // directly in RSC). Layouts conditionally render chrome based on this.
+  // Expose the real pathname to server components / layouts. We delete any
+  // client-supplied x-pathname first so a crafted request header cannot spoof
+  // routing decisions made by layouts that read this value.
+  request.headers.delete('x-pathname')
   request.headers.set('x-pathname', pathname)
 
-  // Protect cron routes
+  // Protect cron routes — use constant-time comparison to prevent timing attacks.
   if (pathname.startsWith('/api/cron/')) {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!verifyCronSecret(request.headers.get('authorization'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     return NextResponse.next()
@@ -68,12 +70,41 @@ export async function middleware(request: NextRequest) {
   // Route handlers that accept CRON_SECRET perform their own auth check
   // (e.g. documents/[id]/process checks the bearer before doing anything),
   // so passing through here is defense-in-depth, not a bypass.
-  if (
-    pathname.startsWith('/api/') &&
-    process.env['CRON_SECRET'] &&
-    request.headers.get('authorization') === `Bearer ${process.env['CRON_SECRET']}`
-  ) {
+  if (pathname.startsWith('/api/') && verifyCronSecret(request.headers.get('authorization'))) {
     return NextResponse.next()
+  }
+
+  // CSRF: reject state-changing requests from unexpected origins.
+  // Supabase sets SameSite=Lax cookies which already blocks most CSRF, but
+  // adding an Origin check is belt-and-suspenders for sensitive mutations.
+  // Rules:
+  //   - Only check mutating methods (POST/PATCH/PUT/DELETE).
+  //   - Skip public routes (webhooks validated by payload sig, magic links, etc.).
+  //   - If no Origin header: allow (server-to-server, curl — rely on auth gate below).
+  //   - If Origin present and doesn't match this app's host: block with 403.
+  const isMutating = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method)
+  if (
+    isMutating &&
+    pathname.startsWith('/api/') &&
+    // Cron routes are server-to-server (Vercel infra or manual scripts) — they
+    // never send an Origin header and are already protected by CRON_SECRET.
+    // Exclude them from the CSRF origin check so the cron gate fires first.
+    !pathname.startsWith('/api/cron/') &&
+    !PUBLIC_PREFIXES.some(p => pathname.startsWith(p))
+  ) {
+    const origin = request.headers.get('origin')
+    if (origin) {
+      try {
+        const originHost = new URL(origin).host
+        const appHost = request.nextUrl.host // e.g. maestring.com or localhost:3000
+        if (originHost !== appHost) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+      } catch {
+        // Malformed Origin header → block
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
   }
 
   // Refresh Supabase session

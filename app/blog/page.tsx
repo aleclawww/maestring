@@ -3,15 +3,23 @@ import type { Metadata } from 'next'
 import { getAllPosts, formatPublishedDate } from '@/lib/blog'
 
 export const metadata: Metadata = {
-  title: 'Blog — Guías AWS SAA-C03 y Estudio con IA',
+  title: 'Blog — AWS SAA-C03 Guides & AI Study Methods',
   description:
-    'Guías, planes de estudio y explicaciones profundas para aprobar AWS SAA-C03. Publicamos sobre cloud, certificaciones y aprendizaje efectivo con spaced repetition.',
+    'In-depth guides, study plans, and walkthroughs for passing AWS SAA-C03. We cover cloud, certifications, and effective learning with spaced repetition.',
   alternates: { canonical: '/blog' },
   openGraph: {
-    title: 'Blog de Maestring — AWS SAA-C03',
+    title: 'Maestring Blog — AWS SAA-C03',
     description:
-      'Guías profundas sobre AWS SAA-C03 y el método de estudio más efectivo con IA + FSRS.',
+      'Deep-dive guides on AWS SAA-C03 and the most effective study method with AI + FSRS.',
     type: 'website',
+    url: 'https://maestring.com/blog',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Maestring Blog' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Maestring Blog — AWS SAA-C03',
+    description: 'Deep-dive guides on AWS SAA-C03 and the most effective study method with AI + FSRS.',
+    images: ['/og-image.png'],
   },
 }
 
@@ -26,15 +34,15 @@ export default async function BlogIndexPage() {
       <div className="mx-auto max-w-3xl px-6 py-16">
         <header className="mb-12">
           <p className="text-xs uppercase tracking-wider text-primary font-semibold">Blog</p>
-          <h1 className="mt-2 text-4xl font-bold">Guías AWS y métodos de estudio</h1>
+          <h1 className="mt-2 text-4xl font-bold">AWS guides &amp; study methods</h1>
           <p className="mt-4 text-text-secondary max-w-xl">
-            Contenido profundo sobre AWS SAA-C03, spaced repetition, FSRS y cómo preparar
-            certificaciones sin perder meses repasando lo que ya sabes.
+            In-depth content on AWS SAA-C03, spaced repetition, FSRS, and how to prep for
+            certifications without wasting months reviewing what you already know.
           </p>
         </header>
 
         {posts.length === 0 ? (
-          <p className="text-text-muted italic">Aún no hay artículos publicados. Vuelve pronto.</p>
+          <p className="text-text-muted italic">No posts published yet. Check back soon.</p>
         ) : (
           <div className="space-y-8">
             {posts.map(p => (
@@ -50,7 +58,7 @@ export default async function BlogIndexPage() {
                     {p.frontmatter.readingMinutes && (
                       <>
                         <span>·</span>
-                        <span>{p.frontmatter.readingMinutes} min lectura</span>
+                        <span>{p.frontmatter.readingMinutes} min read</span>
                       </>
                     )}
                     {p.frontmatter.tags.slice(0, 2).map(t => (
@@ -69,7 +77,7 @@ export default async function BlogIndexPage() {
                     {p.frontmatter.description}
                   </p>
                   <p className="mt-3 text-sm text-primary font-medium">
-                    Leer artículo →
+                    Read article →
                   </p>
                 </Link>
               </article>

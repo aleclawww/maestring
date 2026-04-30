@@ -15,7 +15,14 @@ function stateToCard(state: UserConceptState) {
     reps: state.reps,
     lapses: state.lapses,
     state: state.state as State,
-    last_review: state.last_review ? new Date(state.last_review) : undefined,
+    // ts-fsrs expects undefined only for brand-new cards (State.New = 0).
+    // A null last_review on a card with reps > 0 means a data integrity gap —
+    // default to now() so the scheduler doesn't treat a re-learner as new.
+    last_review: state.last_review
+      ? new Date(state.last_review)
+      : state.state > 0
+        ? new Date()
+        : undefined,
   }
 }
 
@@ -53,11 +60,16 @@ export function scheduleReview(state: UserConceptState, rating: Rating) {
 export function answerToRating(
   isCorrect: boolean,
   timeTakenMs: number,
-  difficulty: number
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _difficulty: number
 ): Rating {
-  if (!isCorrect) {
-    return difficulty > 0.7 ? Rating.Again : Rating.Hard
-  }
+  // Any wrong answer → Again (1). FSRS resets the interval regardless of how
+  // "easy" the concept is supposed to be. The previous logic returned Hard for
+  // low-difficulty wrong answers — that tells FSRS the card is nearly known and
+  // *extends* the next review interval, which is exactly backwards.
+  if (!isCorrect) return Rating.Again
+
+  // Correct answer: rate by response speed only.
   if (timeTakenMs < 15_000) return Rating.Easy
   if (timeTakenMs < 45_000) return Rating.Good
   return Rating.Hard

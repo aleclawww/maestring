@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       filename: file.name,
       storage_path: filename,
-      file_size_bytes: file.size,
+      file_size: file.size,
       title: title ?? file.name.replace(/\.pdf$/i, ""),
       processing_status: "pending",
     })

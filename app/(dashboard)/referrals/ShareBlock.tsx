@@ -4,14 +4,19 @@ import { useState } from 'react'
 
 export function ShareBlock({ url, code }: { url: string; code: string }) {
   const [copied, setCopied] = useState<'link' | 'code' | null>(null)
+  const [copyFailed, setCopyFailed] = useState(false)
 
   async function copy(value: string, which: 'link' | 'code') {
+    setCopyFailed(false)
     try {
       await navigator.clipboard.writeText(value)
       setCopied(which)
       setTimeout(() => setCopied(null), 1500)
     } catch {
-      // clipboard blocked — user can select+copy manually
+      // Clipboard API blocked (mobile Safari on HTTP, iframe sandbox, etc.)
+      // Show fallback message so the user knows to select + copy manually.
+      setCopyFailed(true)
+      setTimeout(() => setCopyFailed(false), 3000)
     }
   }
 
@@ -49,6 +54,11 @@ export function ShareBlock({ url, code }: { url: string; code: string }) {
           </button>{' '}
           {copied === 'code' && <span className="text-success">✓ copied</span>}
         </p>
+        {copyFailed && (
+          <p className="text-xs text-amber-400 mt-1" role="alert">
+            Clipboard access blocked — select the text above and copy manually.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">

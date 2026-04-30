@@ -56,7 +56,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
   }
 
   async function remove(id: string) {
-    if (!confirm('¿Eliminar definitivamente?')) return
+    if (!confirm('Delete permanently?')) return
     setErr(null)
     try {
       const res = await fetch(`/api/admin/testimonials/${id}`, { method: 'DELETE' })
@@ -94,7 +94,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
 
       {filtered.length === 0 && (
         <div className="rounded-xl border border-border bg-surface p-10 text-center text-text-muted">
-          Nada en esta categoría.
+          Nothing in this category.
         </div>
       )}
 
@@ -137,7 +137,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
                   disabled={busy}
                   className="btn-primary text-xs px-3 py-1.5"
                 >
-                  Aprobar
+                  Approve
                 </button>
               )}
               {r.status !== 'rejected' && (
@@ -146,7 +146,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
                   disabled={busy}
                   className="btn-outline text-xs px-3 py-1.5"
                 >
-                  Rechazar
+                  Reject
                 </button>
               )}
               {r.status === 'approved' && (
@@ -155,7 +155,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
                   disabled={busy}
                   className="btn-outline text-xs px-3 py-1.5"
                 >
-                  {r.featured ? 'Quitar featured' : 'Marcar featured'}
+                  {r.featured ? 'Remove featured' : 'Mark featured'}
                 </button>
               )}
               <button
@@ -163,7 +163,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
                 disabled={busy}
                 className="btn-outline text-xs px-3 py-1.5 text-danger hover:bg-danger/10"
               >
-                Eliminar
+                Delete
               </button>
             </div>
           </div>

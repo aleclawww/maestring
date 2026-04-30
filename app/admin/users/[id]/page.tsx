@@ -79,7 +79,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
               <Row k="Stripe sub id" v={sub['stripe_subscription_id'] ?? '—'} />
             </dl>
           ) : (
-            <p className="text-xs text-text-muted">Sin suscripción activa.</p>
+            <p className="text-xs text-text-muted">No active subscription.</p>
           )}
           <div className="mt-4">
             <GrantProButton userId={params.id} />

@@ -5,6 +5,7 @@ import { CERTIFICATION_ID } from '@/lib/knowledge-graph/aws-saa'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // Returns one pool question per domain (max one per domain). The wizard shows
 // these as a quick diagnostic — correct/wrong on each shifts the self-report

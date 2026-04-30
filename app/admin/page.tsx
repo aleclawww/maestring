@@ -44,22 +44,22 @@ export default async function AdminOverviewPage() {
 
       {/* Health row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Sessions 7d" value={o.sessions_7d} hint={`${completionRate}% completadas`} />
+        <Stat label="Sessions 7d" value={o.sessions_7d} hint={`${completionRate}% completed`} />
         <Stat label="LLM error rate 24h" value={`${o.llm_error_rate_24h}%`} tone={errToneWarn ? 'danger' : 'success'} />
-        <Stat label="Docs processing" value={o.docs_processing} hint={`${o.docs_failed_7d} fallidos 7d`} tone={o.docs_failed_7d > 0 ? 'warning' : 'default'} />
-        <Stat label="Pool coverage" value={`${o.pool_coverage}%`} hint={`${o.pool_size} preguntas activas`} tone={poolToneWarn ? 'warning' : 'success'} />
+        <Stat label="Docs processing" value={o.docs_processing} hint={`${o.docs_failed_7d} failed 7d`} tone={o.docs_failed_7d > 0 ? 'warning' : 'default'} />
+        <Stat label="Pool coverage" value={`${o.pool_coverage}%`} hint={`${o.pool_size} active questions`} tone={poolToneWarn ? 'warning' : 'success'} />
       </div>
 
       {/* Outcomes row (for calibration) */}
       <Section
         title="Exam outcomes (calibration signal)"
-        action={<Link href="/admin/outcomes" className="text-xs text-primary hover:underline">Ver detalle →</Link>}
+        action={<Link href="/admin/outcomes" className="text-xs text-primary hover:underline">View detail →</Link>}
       >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Stat label="Passed" value={o.outcomes_passed} tone="success" />
           <Stat label="Failed" value={o.outcomes_failed} tone="danger" />
-          <Stat label="Pending capture" value={o.outcomes_pending} hint="Examen pasó, outcome desconocido" tone={o.outcomes_pending > 0 ? 'warning' : 'default'} />
-          <Stat label="Total signal" value={o.outcomes_passed + o.outcomes_failed} hint="≥500 para recalibrar P(pass)" />
+          <Stat label="Pending capture" value={o.outcomes_pending} hint="Exam date passed, outcome unknown" tone={o.outcomes_pending > 0 ? 'warning' : 'default'} />
+          <Stat label="Total signal" value={o.outcomes_passed + o.outcomes_failed} hint="≥500 to recalibrate P(pass)" />
         </div>
       </Section>
 
@@ -67,22 +67,22 @@ export default async function AdminOverviewPage() {
       <div className="space-y-2">
         {poolToneWarn && (
           <AlertRow tone="warning">
-            <strong>Pool coverage {o.pool_coverage}%</strong> — por debajo de 80% significa que users agotan preguntas del pool y caen a generación on-the-fly. Correr <code className="px-1 bg-surface-2 rounded">seed-question-pool</code>.
+            <strong>Pool coverage {o.pool_coverage}%</strong> — below 80% means users exhaust pool questions and fall back to on-the-fly generation. Run <code className="px-1 bg-surface-2 rounded">seed-question-pool</code>.
           </AlertRow>
         )}
         {spendToneWarn && (
           <AlertRow tone="warning">
-            <strong>LLM spend hoy ≥ ${o.llm_spend_today_usd.toFixed(2)}</strong> — revisar top spenders en /admin/llm.
+            <strong>LLM spend today ≥ ${o.llm_spend_today_usd.toFixed(2)}</strong> — check top spenders at /admin/llm.
           </AlertRow>
         )}
         {errToneWarn && (
           <AlertRow tone="danger">
-            <strong>LLM error rate {o.llm_error_rate_24h}%</strong> en las últimas 24h. Investigar en Sentry.
+            <strong>LLM error rate {o.llm_error_rate_24h}%</strong> in the last 24h. Investigate in Sentry.
           </AlertRow>
         )}
         {o.outcomes_pending > 0 && (
           <AlertRow tone="info">
-            <strong>{o.outcomes_pending} users</strong> con examen pasado sin outcome. El banner ya les pide en su dashboard — monitor.
+            <strong>{o.outcomes_pending} users</strong> with a past exam date and no reported outcome. The dashboard banner already prompts them — monitor.
           </AlertRow>
         )}
       </div>

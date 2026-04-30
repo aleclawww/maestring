@@ -1,25 +1,33 @@
 import OpenAI from "openai";
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+// Lazy-initialised singleton — throws with a clear message if OPENAI_API_KEY
+// is not set, rather than failing obscurely inside the SDK constructor.
+let _client: OpenAI | null = null;
 
-// ─── Modelos configurados ─────────────────────────────────────────────────────
+function getOpenAI(): OpenAI {
+  if (_client) return _client;
+  const apiKey = process.env["OPENAI_API_KEY"];
+  if (!apiKey) throw new Error("OPENAI_API_KEY environment variable is required but not set");
+  _client = new OpenAI({ apiKey });
+  return _client;
+}
 
-const EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small";
-const CHAT_MODEL = process.env.OPENAI_CHAT_MODEL ?? "gpt-4o-mini";
+// Named export kept for backward compatibility with callers that import
+// `openai` directly.  Using a getter function internally keeps module load
+// side-effect-free (safe for builds without the key present).
+export { getOpenAI as openai };
 
-// ─── Embeddings para búsqueda semántica ──────────────────────────────────────
+const EMBEDDING_MODEL = process.env["OPENAI_EMBEDDING_MODEL"] ?? "text-embedding-3-small";
+const CHAT_MODEL = process.env["OPENAI_CHAT_MODEL"] ?? "gpt-4o-mini";
 
-/**
- * Genera embeddings para un texto dado.
- * Usados para búsqueda semántica de preguntas similares.
- */
+// ─── Embeddings for semantic search ──────────────────────────────────────────
+
+/** Generates an embedding vector for the given text. */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await openai.embeddings.create({
+  const response = await getOpenAI().embeddings.create({
     model: EMBEDDING_MODEL,
     input: text.replace(/\n/g, " "),
-    dimensions: 1536, // text-embedding-3-small usa 1536 por defecto
+    dimensions: 1536,
   });
 
   const embedding = response.data[0]?.embedding;
@@ -30,13 +38,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   return embedding;
 }
 
-/**
- * Genera embeddings en batch para múltiples textos.
- */
+/** Generates embeddings in batch for multiple texts. */
 export async function generateEmbeddingsBatch(
   texts: string[]
 ): Promise<number[][]> {
-  const response = await openai.embeddings.create({
+  const response = await getOpenAI().embeddings.create({
     model: EMBEDDING_MODEL,
     input: texts.map((t) => t.replace(/\n/g, " ")),
   });
@@ -44,7 +50,7 @@ export async function generateEmbeddingsBatch(
   return response.data.map((d) => d.embedding);
 }
 
-// ─── Explicaciones de preguntas ───────────────────────────────────────────────
+// ─── Question explanations ────────────────────────────────────────────────────
 
 export interface ExplanationRequest {
   questionText: string;
@@ -57,7 +63,8 @@ export interface ExplanationRequest {
 }
 
 /**
- * Genera una explicación personalizada de por qué una respuesta es correcta/incorrecta.
+ * Generates a personalised explanation for why an answer is correct or incorrect.
+ * Used by the /api/study/elaborate endpoint.
  */
 export async function generateExplanation(
   request: ExplanationRequest
@@ -66,46 +73,46 @@ export async function generateExplanation(
     JSON.stringify(request.selectedOptionIds.sort()) ===
     JSON.stringify(request.correctOptionIds.sort());
 
-  const prompt = `Eres un experto en certificaciones AWS, especialmente AWS Solutions Architect Associate (SAA-C03).
-Tu tarea es explicar una pregunta del examen de forma clara, educativa y concisa.
+  const prompt = `You are an AWS certification expert, specialising in AWS Solutions Architect Associate (SAA-C03).
+Your task is to explain an exam question clearly, educationally, and concisely.
 
-PREGUNTA:
+QUESTION:
 ${request.questionText}
 
-OPCIONES:
+OPTIONS:
 ${request.options.map((o) => `${o.id}. ${o.text}`).join("\n")}
 
-RESPUESTA CORRECTA: ${request.correctOptionIds.join(", ")}
-RESPUESTA DEL ESTUDIANTE: ${request.selectedOptionIds.join(", ")} (${wasCorrect ? "CORRECTA ✓" : "INCORRECTA ✗"})
+CORRECT ANSWER: ${request.correctOptionIds.join(", ")}
+STUDENT ANSWER: ${request.selectedOptionIds.join(", ")} (${wasCorrect ? "CORRECT ✓" : "INCORRECT ✗"})
 
-DOMINIO: ${request.domain}
-SERVICIOS AWS INVOLUCRADOS: ${request.services.join(", ")}
+DOMAIN: ${request.domain}
+AWS SERVICES INVOLVED: ${request.services.join(", ")}
 
-Por favor:
-1. Explica POR QUÉ la respuesta correcta es correcta (con detalles técnicos precisos)
-2. Explica por qué las otras opciones son incorrectas (sin ser redundante)
-3. Da un tip memorable o mnemónico para recordar este concepto en el futuro
-4. Si hay algún escenario de uso real donde esto aplica, mencionarlo brevemente
+Please:
+1. Explain WHY the correct answer is correct (with precise technical detail)
+2. Explain why the other options are wrong (without being redundant)
+3. Give a memorable tip or mnemonic to remember this concept in future
+4. Briefly mention a real-world scenario where this applies, if relevant
 
-Usa formato markdown. Sé conciso pero completo. No superes 400 palabras.`;
+Use markdown formatting. Be concise but complete. Do not exceed 400 words.`;
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: CHAT_MODEL,
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
     max_tokens: 600,
   });
 
-  return response.choices[0]?.message?.content ?? "No se pudo generar la explicación.";
+  return response.choices[0]?.message?.content ?? "Could not generate explanation.";
 }
 
-// ─── Tokens ───────────────────────────────────────────────────────────────────
+// ─── Token estimation ─────────────────────────────────────────────────────────
 
 /**
- * Estima el número de tokens de un texto (aproximación).
- * Para cálculos exactos usar tiktoken.
+ * Estimates the token count for a text string (approximation).
+ * For exact counts use tiktoken.
  */
 export function estimateTokens(text: string): number {
-  // Aproximación: ~4 caracteres por token para inglés
+  // ~4 characters per token for English text
   return Math.ceil(text.length / 4);
 }

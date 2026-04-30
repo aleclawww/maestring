@@ -96,9 +96,17 @@ async function checkSupabase(): Promise<Check> {
 }
 
 async function checkRedis(): Promise<Check> {
+  if (!redis) {
+    return {
+      status: 'degraded',
+      latencyMs: 0,
+      critical: false,
+      error: 'Redis not configured (UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN missing)',
+    }
+  }
   return withTimeout(
     async () => {
-      const pong = await redis.ping()
+      const pong = await redis!.ping()
       if (pong !== 'PONG') {
         throw new Error(`unexpected ping response: ${String(pong)}`)
       }
