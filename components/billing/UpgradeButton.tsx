@@ -97,7 +97,7 @@ export function UpgradeButton({
   }
 
   return (
-    <div>
+    <div className="flex flex-col items-stretch gap-2">
       <button
         type="button"
         onClick={handleClick}
@@ -107,7 +107,12 @@ export function UpgradeButton({
         {loading ? "Redirecting…" : children}
       </button>
       {error && (
-        <p className="text-xs text-red-400 mt-2 text-center">{error}</p>
+        <div
+          role="alert"
+          className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger text-center"
+        >
+          {error}
+        </div>
       )}
     </div>
   );

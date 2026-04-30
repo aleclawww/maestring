@@ -191,6 +191,14 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
       // question card. Surface the real status + body.
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        // 409 means the selector found no questions for this specific mode
+        // (e.g. Maintenance with no mastered concepts, or all concepts perfectly
+        // scheduled far in the future). Show the server's human-readable message
+        // rather than a generic "data was invalid" error.
+        if (res.status === 409) {
+          resetWithError(j.message ?? "No questions available for this mode. Try Review instead.")
+          return
+        }
         console.error('StudySession loadNextQuestion failed', {
           status: res.status,
           msg: j.message ?? j.error ?? `HTTP ${res.status}`,

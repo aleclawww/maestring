@@ -104,7 +104,19 @@ export async function POST(req: NextRequest) {
   )];
 
   if (queue.length === 0) {
-    return NextResponse.json({ data: null, message: "No more questions due" });
+    // Return a distinct 409 so the client can show a targeted message instead
+    // of the generic "Question data was invalid" it gets from a 200 with null
+    // data. The selector already applies mode-aware fallbacks, so this path
+    // only triggers when the user genuinely has nothing studyable right now
+    // (e.g. all concepts mastered with next review in the future).
+    return NextResponse.json(
+      {
+        error: "no_questions_for_mode",
+        message:
+          "No questions available for this mode right now. Switch to Review to continue.",
+      },
+      { status: 409 }
+    );
   }
 
   const next = queue[0]!;

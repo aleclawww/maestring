@@ -193,28 +193,89 @@ export async function buildStudyQueue(
   const newConcepts = (allConcepts ?? []).filter(c => !existingConceptIds.has(c.id))
 
   if (mode === 'discovery') {
-    return shuffle(newConcepts).slice(0, limit).map(c => ({
-      conceptId: c.id,
-      conceptSlug: c.slug,
-      conceptName: c.name,
-      difficulty: c.difficulty,
-      priority: 100 - c.difficulty * 50,
-      reason: 'new' as const,
-    }))
+    // After ensureConceptStatesExist runs at session start, EVERY concept has a
+    // state row with reps=0 — filtering purely on "not in existingConceptIds"
+    // always returns an empty queue, causing the generate route to return
+    // {data:null} and the client to show "Question data was invalid".
+    //
+    // Discovery intent: surface concepts the user has NEVER answered (reps=0).
+    // Truly-new concepts (no state row yet) take priority; seeded-but-unstudied
+    // concepts (reps=0 state row) fill the rest of the limit.
+    const unstudied = shuffle(
+      existingStates.filter(s => (s.reps ?? 0) === 0 && s.concepts?.slug)
+    )
+      .slice(0, limit)
+      .map(s => ({
+        conceptId: s.concept_id,
+        conceptSlug: s.concepts?.slug ?? '',
+        conceptName: s.concepts?.name ?? '',
+        difficulty: s.concepts?.difficulty ?? 0.5,
+        priority: 100 - (s.concepts?.difficulty ?? 0.5) * 50,
+        reason: 'new' as const,
+      }))
+
+    const trulyNew = shuffle(newConcepts)
+      .slice(0, limit - unstudied.length)
+      .map(c => ({
+        conceptId: c.id,
+        conceptSlug: c.slug,
+        conceptName: c.name,
+        difficulty: c.difficulty,
+        priority: 100 - c.difficulty * 50,
+        reason: 'new' as const,
+      }))
+
+    return [...trulyNew, ...unstudied].slice(0, limit)
   }
 
   if (mode === 'maintenance') {
+    // Ideal: well-mastered concepts (reps≥5, lapses≤1).
     const mastered = existingStates
       .filter(s => s.reps >= 5 && s.lapses <= 1)
       .sort((a, b) => getStudyPriority(a) - getStudyPriority(b))
-    return mastered.slice(0, limit).map(s => ({
-      conceptId: s.concept_id,
-      conceptSlug: s.concepts?.slug ?? '',
-      conceptName: s.concepts?.name ?? '',
-      difficulty: s.concepts?.difficulty ?? 0.5,
-      priority: getStudyPriority(s),
-      reason: 'scheduled' as const,
-    }))
+
+    if (mastered.length >= limit) {
+      return mastered.slice(0, limit).map(s => ({
+        conceptId: s.concept_id,
+        conceptSlug: s.concepts?.slug ?? '',
+        conceptName: s.concepts?.name ?? '',
+        difficulty: s.concepts?.difficulty ?? 0.5,
+        priority: getStudyPriority(s),
+        reason: 'scheduled' as const,
+      }))
+    }
+
+    // Fallback 1: any concept with real practice history (reps≥2, lapses≤2).
+    // Covers users who are progressing but haven't hit "mastered" thresholds yet.
+    const practiced = existingStates
+      .filter(s => s.reps >= 2 && s.lapses <= 2)
+      .sort((a, b) => getStudyPriority(a) - getStudyPriority(b))
+
+    if (practiced.length > 0) {
+      return practiced.slice(0, limit).map(s => ({
+        conceptId: s.concept_id,
+        conceptSlug: s.concepts?.slug ?? '',
+        conceptName: s.concepts?.name ?? '',
+        difficulty: s.concepts?.difficulty ?? 0.5,
+        priority: getStudyPriority(s),
+        reason: 'scheduled' as const,
+      }))
+    }
+
+    // Fallback 2: any due/unstudied concept — same as review mode — so new
+    // users clicking Maintenance still get questions instead of an empty queue.
+    const due = getDueConcepts(existingStates as UserConceptState[])
+    return due.slice(0, limit).map(s => {
+      const es = s as typeof existingStates[0]
+      return {
+        conceptId: s.concept_id,
+        conceptSlug: es.concepts?.slug ?? '',
+        conceptName: es.concepts?.name ?? '',
+        difficulty: es.concepts?.difficulty ?? 0.5,
+        priority: getStudyPriority(s),
+        reason: 'scheduled' as const,
+      }
+    })
   }
 
   const reviewLimit = Math.ceil(limit * REVIEW_RATIO)
