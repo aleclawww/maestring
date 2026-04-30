@@ -81,6 +81,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
   const totalXpRef = useRef<number>(0)
   const prefetchedRef = useRef<Question | null>(null)
   const modeRef = useRef<StudyMode>('review')
+  const sessionStartedAtRef = useRef<number | null>(null)
 
   // Dispatch RESET and surface a user-visible error message simultaneously.
   // Both setErrorMsg (useState) and dispatch (useReducer) are guaranteed
@@ -140,6 +141,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
       }
       sessionIdRef.current = session.id
       answersRef.current = []
+      sessionStartedAtRef.current = Date.now()
       track({ name: 'study_session_started', properties: { mode, session_id: session.id } })
 
       // Load first question
@@ -386,7 +388,9 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
           incorrectCount: SESSION_LENGTH - correct,
           totalQuestions: SESSION_LENGTH,
           accuracy: correct / SESSION_LENGTH,
-          totalTimeSeconds: 0,
+          totalTimeSeconds: sessionStartedAtRef.current
+              ? Math.round((Date.now() - sessionStartedAtRef.current) / 1000)
+              : 0,
           xpEarned: totalXpRef.current,
           conceptsStudied: answersRef.current.map(a => a.conceptId),
           streakBonus: 0,

@@ -117,7 +117,21 @@ export function SubscriptionSettings({
             </p>
           )}
         </>
-      ) : null}
+      ) : (
+        // Enterprise or manually-provisioned plans don't have a Stripe
+        // customer attached — show a support contact prompt instead of
+        // silently rendering nothing.
+        <p className="mt-4 text-sm text-text-secondary rounded-lg border border-border bg-surface-2 px-4 py-3">
+          Your plan is managed by your organisation.{' '}
+          <a
+            href="mailto:support@maestring.com"
+            className="text-primary hover:underline"
+          >
+            Contact support
+          </a>{' '}
+          to make changes.
+        </p>
+      )}
     </section>
   )
 }

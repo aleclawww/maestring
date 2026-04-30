@@ -7,8 +7,8 @@ import { logger } from "@/lib/logger";
 let _secret: Uint8Array | null = null;
 function getSecret(): Uint8Array {
   if (_secret) return _secret;
-  const raw = process.env["MAGIC_LINK_getSecret()"];
-  if (!raw) throw new Error("MAGIC_LINK_getSecret() environment variable is required but not set");
+  const raw = process.env["MAGIC_LINK_SECRET"];
+  if (!raw) throw new Error("MAGIC_LINK_SECRET environment variable is required but not set");
   _secret = new TextEncoder().encode(raw);
   return _secret;
 }

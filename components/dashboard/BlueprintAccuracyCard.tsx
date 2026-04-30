@@ -38,8 +38,9 @@ function accuracyBadge(pct: number | null, attempts: number) {
 }
 
 export function BlueprintAccuracyCard({ tasks }: Props) {
-  // Group by domain
-  const domains = [1, 2, 3, 4]
+  // Group by domain — derive from actual task data so this stays correct if
+  // domains are added or renumbered.
+  const domains = [...new Set(tasks.map(t => t.domain_number))].sort((a, b) => a - b)
   const byDomain = domains.map(d => ({
     number: d,
     name: tasks.find(t => t.domain_number === d)?.domain_name ?? `Domain ${d}`,
@@ -62,7 +63,7 @@ export function BlueprintAccuracyCard({ tasks }: Props) {
           <div>
             <CardTitle>Exam Blueprint Coverage</CardTitle>
             <p className="text-xs text-text-muted mt-0.5">
-              SAA-C03 · {tasksStarted}/14 tasks attempted
+              SAA-C03 · {tasksStarted}/{tasks.length} tasks attempted
               {overallAccuracy !== null && ` · ${overallAccuracy}% overall accuracy`}
             </p>
           </div>

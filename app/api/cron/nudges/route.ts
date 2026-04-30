@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
         const [readinessRes, profileRes] = await Promise.all([
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          supabase.rpc("get_exam_readiness" as any, { p_user_id: u.user_id }),
+          supabase.rpc("get_exam_readiness_v2" as any, { p_user_id: u.user_id }),
           supabase
             .from("profiles")
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,14 +49,14 @@ export async function POST(req: NextRequest) {
             .maybeSingle(),
         ]);
 
-        // `get_exam_readiness` is best-effort: the email should still go out
-        // even if the readiness snapshot RPC drops (old cert id, stale view,
-        // etc.). But don't eat the error — log it so operators can spot a
-        // systemic breakage showing up as "nudges with no delta" in prod.
+        // `get_exam_readiness_v2` is best-effort: the email should still go
+        // out even if the readiness snapshot RPC drops (old cert id, stale
+        // view, etc.). But don't eat the error — log it so operators can spot
+        // a systemic breakage showing up as "nudges with no delta" in prod.
         if (readinessRes.error) {
           logger.warn(
             { err: readinessRes.error, userId: u.user_id },
-            "get_exam_readiness failed during nudge — sending without readiness delta"
+            "get_exam_readiness_v2 failed during nudge — sending without readiness delta"
           );
         }
         const readinessRow = Array.isArray(readinessRes.data) ? readinessRes.data[0] : null;
