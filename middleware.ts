@@ -30,6 +30,8 @@ const PUBLIC_PREFIXES = [
   // OG image generation — called by link-unfurl crawlers (Slack, Twitter, etc.)
   // which are never authenticated.
   '/api/og/',
+  // Google Search Console HTML verification files (google*.html)
+  '/google',
   // Test-auth shim is public only when explicitly enabled — the route handler
   // returns 404 otherwise, so this prefix is inert in production.
   ...(process.env['ALLOW_TEST_AUTH'] === '1' ? ['/api/test/'] : []),
@@ -172,6 +174,6 @@ export const config = {
   // .webmanifest is included so /site.webmanifest (Google/Chrome PWA probe)
   // isn't treated as a protected route and 307'd to /login.
   matcher: [
-    '/((?!_next/static|_next/image|.*\.(?:ico|svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)',
+    '/((?!_next/static|_next/image|.*\.(?:ico|svg|png|jpg|jpeg|gif|webp|webmanifest|html|txt|xml)$).*)',
   ],
 }
