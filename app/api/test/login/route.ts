@@ -21,14 +21,15 @@ import { z } from 'zod'
 // email to authenticate on any staging env that has ALLOW_TEST_AUTH=1 set.
 // Set E2E_FIXTURE_PASSWORD in your .env.local / CI secret; it is never read
 // in production (the isEnabled() guard returns false there).
-// Fail loudly at module load time so a missing env var surfaces immediately
-// rather than silently creating a predictable password that anyone who reads
-// the source can use to authenticate on any env with ALLOW_TEST_AUTH=1.
-const TEST_PASSWORD: string = (() => {
+// Fail loudly at first use (not at module-load time) — a module-level throw
+// breaks Next.js build when ALLOW_TEST_AUTH=1 is set but E2E_FIXTURE_PASSWORD
+// is missing, because the build-time page-data pass imports and executes every
+// route module.
+function getTestPassword(): string {
   const pw = process.env['E2E_FIXTURE_PASSWORD']
   if (!pw) throw new Error('E2E_FIXTURE_PASSWORD must be set when ALLOW_TEST_AUTH=1 is configured')
   return pw
-})()
+}
 
 const BodySchema = z.object({
   email: z.string().email().default('e2e-fixture@maestring.test'),
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
   // we can safely ignore — we only need the user to exist.
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
-    password: TEST_PASSWORD,
+    password: getTestPassword(),
     email_confirm: true,
     user_metadata: { onboarding_completed: true, full_name: 'E2E Fixture' },
   })
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
     // Make sure metadata + password match what we expect, in case an earlier
     // run left the fixture in a half-state.
     await admin.auth.admin.updateUserById(userId, {
-      password: TEST_PASSWORD,
+      password: getTestPassword(),
       user_metadata: { onboarding_completed: true, full_name: 'E2E Fixture' },
     })
   }
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
   const ssr = createClient()
   const { error: signInErr } = await ssr.auth.signInWithPassword({
     email,
-    password: TEST_PASSWORD,
+    password: getTestPassword(),
   })
   if (signInErr) {
     return NextResponse.json({ error: signInErr.message }, { status: 500 })

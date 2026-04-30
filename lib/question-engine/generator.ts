@@ -8,12 +8,17 @@ import logger from '@/lib/logger'
 import { recordLlmUsage } from '@/lib/llm/usage'
 import type { GenerateQuestionRequest, EvaluationResult } from '@/types/study'
 
-const _anthropicApiKey = process.env['ANTHROPIC_API_KEY']
-if (!_anthropicApiKey) throw new Error('ANTHROPIC_API_KEY environment variable is required but not set')
+// Lazy-initialised singleton — throws with a clear message if ANTHROPIC_API_KEY
+// is not set, but only at request time (not at module load / build time).
+let _anthropic: Anthropic | null = null
 
-const anthropic = new Anthropic({
-  apiKey: _anthropicApiKey,
-})
+function getAnthropicClient(): Anthropic {
+  if (_anthropic) return _anthropic
+  const apiKey = process.env['ANTHROPIC_API_KEY']
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY environment variable is required but not set')
+  _anthropic = new Anthropic({ apiKey })
+  return _anthropic
+}
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_RETRIES = 3
@@ -105,7 +110,7 @@ export async function generateQuestion(
 
     const t0 = Date.now()
     try {
-      const response = await anthropic.messages.create({
+      const response = await getAnthropicClient().messages.create({
         model: MODEL,
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
@@ -254,7 +259,7 @@ export async function elaborateAnswer(
       explanation
     )
 
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: MODEL,
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
