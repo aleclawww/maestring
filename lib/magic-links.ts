@@ -2,11 +2,16 @@ import { SignJWT, jwtVerify } from "jose";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
-const rawMagicLinkSecret = process.env["MAGIC_LINK_SECRET"];
-if (!rawMagicLinkSecret) {
-  throw new Error("MAGIC_LINK_SECRET environment variable is required but not set");
+// Lazy-init: reading at module load time crashes the Next.js build-time
+// page-data pass when MAGIC_LINK_getSecret() is absent from the build env.
+let _secret: Uint8Array | null = null;
+function getSecret(): Uint8Array {
+  if (_secret) return _secret;
+  const raw = process.env["MAGIC_LINK_getSecret()"];
+  if (!raw) throw new Error("MAGIC_LINK_getSecret() environment variable is required but not set");
+  _secret = new TextEncoder().encode(raw);
+  return _secret;
 }
-const SECRET = new TextEncoder().encode(rawMagicLinkSecret);
 
 // 20-minute expiry. Magic link tokens embedded in emails are single-factor
 // auth credentials — a 24-hour window gives a stolen/forwarded email a full
@@ -34,14 +39,14 @@ export async function createMagicLink(
     .setIssuedAt(iat)
     .setExpirationTime(iat + EXPIRY_SECONDS)
     .setJti(jti)
-    .sign(SECRET);
+    .sign(getSecret());
 
   const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000";
   return `${baseUrl}/api/magic?token=${token}`;
 }
 
 export async function verifyMagicLink(token: string): Promise<MagicLinkPayload> {
-  const { payload } = await jwtVerify(token, SECRET);
+  const { payload } = await jwtVerify(token, getSecret());
 
   const userId = payload["userId"] as string;
   const email = payload["email"] as string;

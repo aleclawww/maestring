@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maestring.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://maestring.com'),
   // Canonical tells Google which URL is the definitive version of this domain —
   // without it Google may pick an arbitrary indexed URL for favicon association.
   alternates: {

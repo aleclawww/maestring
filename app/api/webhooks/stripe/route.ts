@@ -18,8 +18,13 @@ import { captureApiException } from "@/lib/sentry/capture";
 // Use the shared singleton rather than creating a second Stripe instance here.
 // Two separate instances meant different HTTP connection pools and a risk of
 // apiVersion drift if one was bumped without the other.
-const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"];
-if (!webhookSecret) throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
+// Lazy getter: a module-level throw crashes the Next.js build-time page-data
+// pass when the key is absent from the build environment.
+function getWebhookSecret(): string {
+  const s = process.env["STRIPE_WEBHOOK_SECRET"];
+  if (!s) throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
+  return s;
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -31,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = getStripe().webhooks.constructEvent(body, sig, webhookSecret as string);
+    event = getStripe().webhooks.constructEvent(body, sig, getWebhookSecret());
   } catch (err) {
     logger.error({ err }, "Stripe webhook signature verification failed");
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
