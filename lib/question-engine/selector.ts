@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getDueConcepts, getStudyPriority, initConceptState } from '@/lib/fsrs'
 import { CERTIFICATION_ID as DEFAULT_CERT_ID } from '@/lib/knowledge-graph/aws-saa'
@@ -114,10 +113,14 @@ export async function buildStudyQueue(
   certificationId: string = DEFAULT_CERT_ID,
   limit = 10
 ): Promise<StudyQueueItem[]> {
-  const supabase = createClient()
   const admin = createAdminClient()
 
-  const { data: states, error: statesErr } = await supabase
+  // Use admin client (service role) instead of the cookie/RLS client so the
+  // join on concepts always works. The route handler already validated the user
+  // via requireAuthenticatedUser() and passes userId explicitly — the explicit
+  // .eq('user_id', userId) filter below enforces the same row-level restriction
+  // without relying on RLS being threaded through the SSR client context.
+  const { data: states, error: statesErr } = await admin
     .from('user_concept_states')
     .select('*, concepts!inner(id, slug, name, domain_id, difficulty)')
     .eq('user_id', userId)
@@ -416,7 +419,7 @@ export async function ensureConceptStatesExist(
 }
 
 export async function getRecentMistakes(userId: string, limit = 5): Promise<string[]> {
-  const supabase = createClient()
+  const admin = createAdminClient()
   // Silent failure here collapsed into "no recent mistakes" — the question
   // prompt builder (lib/question-engine/prompts.ts formatQuestionPrompt) got
   // an empty list and generated without any mistake-aware personalization.
@@ -424,7 +427,11 @@ export async function getRecentMistakes(userId: string, limit = 5): Promise<stri
   // steering away from the user's known weak spots. Log warn so
   // personalization regressions can be correlated with DB/RLS incidents
   // rather than blamed on prompt drift.
-  const { data, error } = await supabase
+  //
+  // Use admin client (service role) so the !inner join on concepts resolves
+  // regardless of RLS policy state. The .eq('user_id', userId) below is the
+  // access control gate — user is already validated at the route level.
+  const { data, error } = await admin
     .from('question_attempts')
     .select('concept_id, concepts!inner(name)')
     .eq('user_id', userId)
