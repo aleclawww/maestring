@@ -14,7 +14,7 @@ export function isConfigured(key: string): boolean {
 }
 
 export const CONFIG_STATUS = {
-  /** Claude Haiku — required for question generation */
+  /** Claude Haiku — optional enhancement for question generation (static generator works without it) */
   get anthropic() {
     return isConfigured('ANTHROPIC_API_KEY')
   },
@@ -52,20 +52,16 @@ export type SetupWarning = {
 export function getSetupWarnings(): SetupWarning[] {
   const warnings: SetupWarning[] = []
 
-  if (!CONFIG_STATUS.anthropic) {
-    warnings.push({
-      feature: 'Study / Question generation',
-      description:
-        'Generating questions requires an Anthropic API key. Study sessions will fail until this is set.',
-      envVars: ['ANTHROPIC_API_KEY'],
-    })
-  }
+  // NOTE: ANTHROPIC_API_KEY is optional — the static generator produces full
+  // MCQ questions from the knowledge graph without any API key. LLM generation
+  // is only used as a fallback for concepts not yet in aws-saa.ts.
+  // We therefore do NOT surface a warning for missing ANTHROPIC_API_KEY.
 
   if (!CONFIG_STATUS.stripe || !CONFIG_STATUS.stripePrices) {
     warnings.push({
       feature: 'Payments / Upgrade to Pro',
       description:
-        'Stripe keys are not configured. The Upgrade button will return an error until these are set.',
+        'Stripe is not configured — the Upgrade button will show an error. Study sessions work without it.',
       envVars: !CONFIG_STATUS.stripe
         ? ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_PRO_MONTHLY', 'STRIPE_PRICE_PRO_ANNUAL']
         : ['STRIPE_PRICE_PRO_MONTHLY', 'STRIPE_PRICE_PRO_ANNUAL'],
