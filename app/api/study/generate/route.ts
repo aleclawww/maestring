@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateQuestion } from "@/lib/question-engine/generator";
+import { generateQuestionStatic } from "@/lib/question-engine/static-generator";
+import { CONCEPTS } from "@/lib/knowledge-graph/aws-saa";
 import { buildStudyQueue, getRecentMistakes } from "@/lib/question-engine/selector";
 import { checkLlmRateLimit, rateLimitHeaders } from "@/lib/redis/rate-limit";
 import { isConfigured } from "@/lib/config-check";
@@ -193,21 +195,126 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // POOL MISS: fall back to live LLM generation. Only here do we charge
-  // rate-limit + daily quota.
+  // ── POOL MISS — generate a question ──────────────────────────────────────
+  //
+  // Generation strategy (in order of priority):
+  //
+  //   1. STATIC generator  — always works, no API key needed, deterministic.
+  //      Uses keyFacts / examTips / confusedWith from the knowledge graph to
+  //      produce diverse MCQ questions. Zero cost, zero latency hit.
+  //
+  //   2. LLM (Claude Haiku) — only attempted when ANTHROPIC_API_KEY is
+  //      configured. Uses the same quota + rate-limit path as before.
+  //      LLM output is saved to the questions table and will be served
+  //      from the pool on the next request for this concept.
+  //
+  // Both paths save the generated question to the DB so the pool fills over
+  // time and pick_pool_question can serve it next time (zero-cost path).
 
-  // Fast-fail with an actionable message if ANTHROPIC_API_KEY is missing or is
-  // still the placeholder value from .env.local. Without this check the Anthropic
-  // SDK initialises with key="TODO_ANTHROPIC_KEY", the API returns 401, and after
-  // three retries the user gets a generic "Couldn't load the next question" that
-  // gives no hint about what to fix. Surface the real cause immediately.
+  // Resolve the concept from the knowledge graph for static generation.
+  const conceptDef = CONCEPTS.find(c => c.slug === next.conceptSlug);
+
+  if (conceptDef) {
+    // ── Path 1: Static generation (no LLM, no API key) ──────────────────
+    //
+    // Compute a seed that changes with each session + question attempt so
+    // the same concept gets a different question type / fact on each call.
+    // We use the number of prior attempts the user has on this concept as
+    // the seed — but we don't want to do an extra DB round-trip, so we
+    // approximate with the sessionAttempts count.
+    const staticSeed = sessionAttempts.filter(
+      a => a.questions?.blueprint_task_id === next.conceptId
+    ).length + Math.floor(Date.now() / (1000 * 60 * 60 * 24)); // day-based rotation
+
+    const staticQ = generateQuestionStatic(conceptDef, staticSeed);
+
+    // Save to the questions table so it lands in the pool for future users.
+    // Fire-and-forget — a save failure does NOT block the response.
+    const insertPayload = {
+      concept_id: next.conceptId,
+      question_text: staticQ.questionText,
+      options: staticQ.options,
+      correct_index: staticQ.correctIndex,
+      explanation: staticQ.explanation,
+      difficulty: staticQ.difficulty,
+      question_type: 'multiple_choice',
+      source: 'static',
+      review_status: 'approved',
+      pattern_tag: staticQ.patternTag ?? null,
+      is_canonical: false,
+    };
+    supabase
+      .from("questions")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert(insertPayload as any)
+      .then(({ error: saveErr }) => {
+        if (saveErr) {
+          // 23505 = unique violation (question already exists) — safe to ignore
+          if ((saveErr as { code?: string }).code !== '23505') {
+            logger.warn(
+              { err: saveErr, conceptId: next.conceptId },
+              "static-generator: failed to save generated question to pool"
+            );
+          }
+        }
+      });
+
+    logger.info(
+      { userId: user.id, conceptId: next.conceptId, sessionId, questionType: staticQ.questionType },
+      "Static question generated"
+    );
+
+    // If ANTHROPIC_API_KEY is configured, we could try to enrich with LLM in the
+    // background — but for now static is the primary path and is sufficient.
+    const responseData = {
+      id: crypto.randomUUID(),
+      conceptId: next.conceptId,
+      conceptName: next.conceptName,
+      conceptSlug: next.conceptSlug,
+      domainId: "",
+      questionText: staticQ.questionText,
+      options: staticQ.options,
+      correctIndex: staticQ.correctIndex,
+      explanation: staticQ.explanation,
+      difficulty: staticQ.difficulty,
+      questionType: staticQ.questionType,
+      hint: null,
+      explanationDeep: null,
+      keyInsight: null,
+      scenarioContext: null,
+      tags: [] as string[],
+      blueprintTaskId: null,
+      patternTag: staticQ.patternTag ?? null,
+      isCanonical: false,
+    };
+
+    return NextResponse.json({
+      data: responseData,
+      metadata: {
+        conceptId: next.conceptId,
+        conceptName: next.conceptName,
+        priority: next.priority,
+        queueRemaining: queue.length - 1,
+        source: "static",
+      },
+    });
+  }
+
+  // ── Path 2: LLM fallback (concept not in knowledge graph, or no static def) ──
+  //
+  // Should only reach here if a concept slug exists in the DB but not in the
+  // local knowledge graph (e.g. newly seeded concept not yet in aws-saa.ts).
+  // Requires ANTHROPIC_API_KEY.
   if (!isConfigured('ANTHROPIC_API_KEY')) {
-    logger.error({ userId: user.id }, "generate: ANTHROPIC_API_KEY not set — returning 503");
+    logger.error(
+      { userId: user.id, conceptSlug: next.conceptSlug },
+      "generate: concept not in knowledge graph and ANTHROPIC_API_KEY not set"
+    );
     return NextResponse.json(
       {
         error: "api_key_not_configured",
         message:
-          "Question generation is not configured: ANTHROPIC_API_KEY is missing or not set. " +
+          "Question generation is not configured: ANTHROPIC_API_KEY is missing. " +
           "Add it to .env.local (local dev) or your Vercel environment variables.",
       },
       { status: 503 }
@@ -224,13 +331,6 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quotaRes = await supabase.rpc("consume_llm_quota" as any, { p_user_id: user.id });
-  // If the quota RPC itself fails (RLS regression, signature drift) we
-  // previously fell through silently and generated the question WITHOUT
-  // consuming a quota slot — effectively unlimited free usage during the
-  // outage. Fail-open is still the right call (blocking all users during a
-  // DB hiccup is worse), but log loudly so the pager trips and operators
-  // can correlate "LLM spend spike with no quota rows today" to a concrete
-  // cause.
   if (quotaRes.error) {
     logger.error(
       { err: quotaRes.error, userId: user.id },
@@ -268,12 +368,9 @@ export async function POST(req: NextRequest) {
 
     logger.info(
       { userId: user.id, conceptId: next.conceptId, sessionId },
-      "Question generated"
+      "LLM question generated"
     );
 
-    // Pad optional rich fields so the LLM-generated shape matches the pool-hit
-    // shape. QuestionCard reads hint/keyInsight/scenarioContext and guards with
-    // `??` or conditional rendering — null is safe and avoids undefined access.
     const paddedQuestion = {
       hint: null,
       explanationDeep: null,
@@ -294,13 +391,13 @@ export async function POST(req: NextRequest) {
           conceptName: next.conceptName,
           priority: next.priority,
           queueRemaining: queue.length - 1,
-          source: "generated",
+          source: "llm",
         },
       },
       { headers: rateLimitHeaders(rl) }
     );
   } catch (err) {
-    logger.error({ err, conceptId: next.conceptId }, "Question generation failed");
+    logger.error({ err, conceptId: next.conceptId }, "LLM question generation failed");
     return NextResponse.json({ error: "Failed to generate question" }, { status: 500 });
   }
 }
