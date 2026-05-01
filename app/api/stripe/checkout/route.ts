@@ -4,10 +4,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createCheckoutSession } from "@/lib/stripe";
+import { isConfigured } from "@/lib/config-check";
 import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   const user = await requireAuthenticatedUser();
+
+  // Fast-fail with an actionable message when Stripe is not configured.
+  // The old code either passed "TODO_*" strings to the SDK (which got a 401
+  // from Stripe after network round-trips) or surfaced a generic 500.
+  if (!isConfigured('STRIPE_SECRET_KEY')) {
+    logger.error({ userId: user.id }, "checkout: STRIPE_SECRET_KEY not configured");
+    return NextResponse.json(
+      {
+        error: "payments_not_configured",
+        message:
+          "Payments are not configured: STRIPE_SECRET_KEY is missing or not set. " +
+          "Add it to .env.local (local dev) or your Vercel environment variables.",
+      },
+      { status: 503 }
+    );
+  }
 
   let body: { plan?: "monthly" | "annual"; referralCode?: string } = {};
   try {
@@ -17,16 +34,20 @@ export async function POST(req: NextRequest) {
   }
 
   const plan = body.plan ?? "monthly";
-  const priceId =
-    plan === "annual"
-      ? process.env["STRIPE_PRICE_PRO_ANNUAL"]
-      : process.env["STRIPE_PRICE_PRO_MONTHLY"];
+  const priceId = isConfigured(`STRIPE_PRICE_PRO_${plan.toUpperCase()}`)
+    ? (plan === "annual"
+        ? process.env["STRIPE_PRICE_PRO_ANNUAL"]
+        : process.env["STRIPE_PRICE_PRO_MONTHLY"])
+    : null;
 
   if (!priceId) {
-    logger.error({ plan }, "Missing Stripe price ID env var");
+    logger.error({ plan }, "Missing or unconfigured Stripe price ID env var");
     return NextResponse.json(
-      { error: "Pricing not configured" },
-      { status: 500 }
+      {
+        error: "payments_not_configured",
+        message: `Stripe price ID for the ${plan} plan is not configured. Set STRIPE_PRICE_PRO_${plan.toUpperCase()} in your environment.`,
+      },
+      { status: 503 }
     );
   }
 

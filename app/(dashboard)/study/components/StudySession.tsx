@@ -199,6 +199,13 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
           resetWithError(j.message ?? "No questions available for this mode. Try Review instead.")
           return
         }
+        // 503 means a required API key is not configured (e.g. ANTHROPIC_API_KEY).
+        // Surface the server's message directly — it tells the developer exactly
+        // what env var to set, which is far more useful than "couldn't load question".
+        if (res.status === 503) {
+          resetWithError(j.message ?? "Question generation is not configured. Check your environment variables.")
+          return
+        }
         console.error('StudySession loadNextQuestion failed', {
           status: res.status,
           msg: j.message ?? j.error ?? `HTTP ${res.status}`,

@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/Badge'
 import { formatRelativeTime } from '@/lib/utils'
 import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import { OutcomeCaptureBanner } from '@/components/dashboard/OutcomeCaptureBanner'
+import { SetupWarningBanner } from '@/components/dashboard/SetupWarningBanner'
+import { getSetupWarnings } from '@/lib/config-check'
 import { logger } from '@/lib/logger'
 import type { Metadata } from 'next'
 
@@ -15,6 +17,7 @@ export const metadata: Metadata = { title: 'Dashboard' }
 export default async function DashboardPage() {
   const user = await requireAuthenticatedUser()
   const supabase = createClient()
+  const setupWarnings = getSetupWarnings()
 
   const [
     { data: profile },
@@ -103,6 +106,9 @@ export default async function DashboardPage() {
             : 'Continue your AWS SAA-C03 prep.'}
         </p>
       </div>
+
+      {/* Setup banner — shown when API keys are not yet configured */}
+      <SetupWarningBanner warnings={setupWarnings} />
 
       {/* Outcome capture banner — higher priority than readiness score */}
       {needsOutcome && profile?.exam_target_date && (

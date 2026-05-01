@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateQuestion } from "@/lib/question-engine/generator";
 import { buildStudyQueue, getRecentMistakes } from "@/lib/question-engine/selector";
 import { checkLlmRateLimit, rateLimitHeaders } from "@/lib/redis/rate-limit";
+import { isConfigured } from "@/lib/config-check";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -194,6 +195,25 @@ export async function POST(req: NextRequest) {
 
   // POOL MISS: fall back to live LLM generation. Only here do we charge
   // rate-limit + daily quota.
+
+  // Fast-fail with an actionable message if ANTHROPIC_API_KEY is missing or is
+  // still the placeholder value from .env.local. Without this check the Anthropic
+  // SDK initialises with key="TODO_ANTHROPIC_KEY", the API returns 401, and after
+  // three retries the user gets a generic "Couldn't load the next question" that
+  // gives no hint about what to fix. Surface the real cause immediately.
+  if (!isConfigured('ANTHROPIC_API_KEY')) {
+    logger.error({ userId: user.id }, "generate: ANTHROPIC_API_KEY not set — returning 503");
+    return NextResponse.json(
+      {
+        error: "api_key_not_configured",
+        message:
+          "Question generation is not configured: ANTHROPIC_API_KEY is missing or not set. " +
+          "Add it to .env.local (local dev) or your Vercel environment variables.",
+      },
+      { status: 503 }
+    );
+  }
+
   const rl = await checkLlmRateLimit(user.id);
   if (!rl.allowed) {
     return NextResponse.json(
