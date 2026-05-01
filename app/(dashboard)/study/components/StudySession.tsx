@@ -8,6 +8,7 @@ import { AnswerFeedback } from './AnswerFeedback'
 import type { Question, EvaluationResult, SessionStats } from '@/types/study'
 import type { StudyMode } from '@/types/database'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
+import { PaywallModal } from '@/components/billing/PaywallModal'
 import { track } from '@/lib/analytics'
 
 type StudyState =
@@ -71,11 +72,13 @@ interface StudySessionProps {
   userId: string
   activeSessionId?: string
   dueCount: number
+  hasPro?: boolean
 }
 
-export function StudySession({ userId: _userId, activeSessionId, dueCount }: StudySessionProps) {
+export function StudySession({ userId: _userId, activeSessionId, dueCount, hasPro = false }: StudySessionProps) {
   const [state, dispatch] = useReducer(reducer, { phase: 'setup' })
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showRagPaywall, setShowRagPaywall] = useState(false)
   const sessionIdRef = useRef<string | null>(activeSessionId ?? null)
   const answersRef = useRef<Array<{ conceptId: string; isCorrect: boolean; timeTaken: number }>>([])
   const totalXpRef = useRef<number>(0)
@@ -178,6 +181,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
         const used = body.used ?? 0
         const quota = body.quota ?? 0
         track({ name: 'quota_hit', properties: { used, quota, plan: body.plan ?? 'free' } })
+        track({ name: 'paywall_viewed', properties: { surface: 'daily_limit', plan_shown: 'monthly' } })
         dispatch({ type: 'QUOTA_EXCEEDED', used, quota })
         return
       }
@@ -330,6 +334,17 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
         },
       })
 
+      // Fire first_correct_answer once per account lifetime (localStorage flag).
+      if (evaluation.isCorrect && firstAttemptCorrect) {
+        try {
+          const key = 'maestring_first_correct_fired'
+          if (!localStorage.getItem(key)) {
+            localStorage.setItem(key, '1')
+            track({ name: 'first_correct_answer', properties: { concept_id: state.question.conceptId } })
+          }
+        } catch { /* ignore storage errors */ }
+      }
+
       dispatch({
         type: 'ANSWER_SELECTED',
         selectedIndex,
@@ -447,7 +462,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
           {/* Exploration mode: safe zone of proximal development — no FSRS penalty */}
           <button
             onClick={() => startSession('exploration')}
-            className="w-full flex items-center gap-3 rounded-xl border border-dashed border-warning/40 bg-warning/5 p-4 hover:bg-warning/10 transition-colors text-left mb-4"
+            className="w-full flex items-center gap-3 rounded-xl border border-dashed border-warning/40 bg-warning/5 p-4 hover:bg-warning/10 transition-colors text-left mb-3"
           >
             <span className="text-2xl">🧪</span>
             <div className="flex-1">
@@ -457,6 +472,26 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
               </p>
             </div>
           </button>
+
+          {/* Document-backed questions — Pro feature */}
+          <button
+            onClick={() => { if (hasPro) { window.location.href = '/documents' } else { setShowRagPaywall(true) } }}
+            className="w-full flex items-center gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 hover:bg-primary/10 transition-colors text-left mb-4"
+          >
+            <span className="text-2xl">📄</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-text-primary">Study from my notes</p>
+              <p className="text-xs text-text-muted">
+                Questions generated from your uploaded PDFs. {!hasPro && <span className="text-primary">Pro ✦</span>}
+              </p>
+            </div>
+          </button>
+
+          <PaywallModal
+            isOpen={showRagPaywall}
+            onClose={() => setShowRagPaywall(false)}
+            surface="rag"
+          />
         </div>
       </div>
     )
@@ -487,7 +522,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
             You’ve used <strong>{state.used} / {state.quota}</strong> questions today on the free plan.
             Come back tomorrow, or unlock unlimited sessions with Pro.
           </p>
-          <UpgradeButton plan="monthly" className="btn-primary w-full py-3 rounded-lg">
+          <UpgradeButton plan="monthly" surface="daily_limit" className="btn-primary w-full py-3 rounded-lg">
             ✨ Go Pro — 7 days free
           </UpgradeButton>
           <button

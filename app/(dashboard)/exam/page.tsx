@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PaywallModal } from '@/components/billing/PaywallModal'
 
 export default function ExamIntroPage() {
   const router = useRouter()
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPaywall, setShowPaywall] = useState(false)
 
   async function start() {
     setStarting(true)
@@ -31,6 +33,10 @@ export default function ExamIntroPage() {
         message?: string
       }
       if (!res.ok) {
+        if (res.status === 402) {
+          setShowPaywall(true)
+          return
+        }
         console.error('ExamIntroPage start failed', { status: res.status, body: json })
         setError(json.message ?? json.error ?? `Couldn't start the mock exam (HTTP ${res.status}).`)
         return
@@ -50,6 +56,7 @@ export default function ExamIntroPage() {
   }
 
   return (
+    <>
     <div className="flex min-h-full items-center justify-center p-6">
       <div className="w-full max-w-lg text-center">
         <div className="text-6xl mb-6">📝</div>
@@ -93,5 +100,12 @@ export default function ExamIntroPage() {
         </button>
       </div>
     </div>
+
+    <PaywallModal
+      isOpen={showPaywall}
+      onClose={() => setShowPaywall(false)}
+      surface="exam_simulator"
+    />
+    </>
   )
 }

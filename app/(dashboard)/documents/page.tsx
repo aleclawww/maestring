@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { formatBytes, formatRelativeTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent } from '@/components/ui/Card'
+import { PaywallModal } from '@/components/billing/PaywallModal'
 
 interface Document {
   id: string
@@ -21,6 +22,7 @@ export default function DocumentsPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showPaywall, setShowPaywall] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load existing documents on mount. Previously this was missing, so a user
@@ -78,6 +80,11 @@ export default function DocumentsPage() {
       // message over our generic fallback.
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+        // 402 = PDF limit reached for free plan — show upgrade modal instead of inline error.
+        if (res.status === 402) {
+          setShowPaywall(true)
+          return
+        }
         setUploadError(j.message ?? j.error ?? `Upload failed (HTTP ${res.status}). Please try again.`)
         return
       }
@@ -220,6 +227,11 @@ export default function DocumentsPage() {
           </CardContent>
         </Card>
       )}
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        surface="pdf_upload"
+      />
     </div>
   )
 }

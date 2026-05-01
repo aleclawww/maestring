@@ -370,26 +370,34 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
         {step === 4 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">Psychological contract</h2>
-            <p className="text-sm text-text-secondary mb-5">Before you start, this matters:</p>
-            <div className="rounded-xl border border-border bg-surface-2 p-4 mb-5 space-y-3 text-sm">
-              <p className="text-text-primary">
-                <strong>In Maestring, mistakes aren't problems — they're the learning mechanism.</strong>
+            <h2 className="text-lg font-bold text-text-primary mb-1">One thing before your first question</h2>
+            <p className="text-sm text-text-secondary mb-5">
+              This is the part most prep tools skip.
+            </p>
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 mb-4 space-y-3 text-sm">
+              <p className="text-text-primary font-semibold">
+                Getting a question wrong is how this works.
               </p>
               <p className="text-text-secondary">
-                Every time you miss a question, the system learns more about you and adjusts your plan.
-                You will miss questions. That's exactly what's supposed to happen.
-              </p>
-              <p className="text-text-secondary">
-                Your Readiness Score starts low and rises with spaced repetitions — not with
-                consecutive correct answers. Consistency wins, not speed.
+                Every miss teaches the algorithm exactly which concept to resurface and when.
+                A wrong answer today means you won't miss it on exam day.
+                Don't guess to look smart — guess to get the feedback.
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-surface-2 p-4 text-sm space-y-1">
-              <p>📅 Exam: <strong>{examTargetDate || 'no date'}</strong>{days !== null && ` (${days}d)`}</p>
-              <p>⏱️ Daily study: <strong>{studyMinutesPerDay} min</strong></p>
-              <p>🎯 Background: <strong>{BACKGROUNDS.find(b => b.v === background)?.label}</strong></p>
-              <p>📊 Concepts to seed: <strong>{domains.length * 5}</strong></p>
+            <div className="rounded-xl border border-border bg-surface-2 p-4 mb-4 space-y-3 text-sm">
+              <p className="text-text-secondary">
+                Your Readiness Score will be low at first — it needs 30+ questions across 2+ sessions
+                before the prediction is reliable. Don't panic when you see 40. Keep going.
+              </p>
+              <p className="text-text-secondary">
+                When it hits <strong className="text-text-primary">82+</strong>, book the exam.
+                Not before.
+              </p>
+            </div>
+            <div className="rounded-xl border border-border p-4 text-sm space-y-1.5">
+              {examTargetDate && <p className="text-text-secondary">📅 Exam: <strong className="text-text-primary">{examTargetDate}</strong>{days !== null && <span className="text-text-muted"> ({days} days)</span>}</p>}
+              <p className="text-text-secondary">⏱️ Daily study: <strong className="text-text-primary">{studyMinutesPerDay} min</strong></p>
+              <p className="text-text-secondary">🎯 Background: <strong className="text-text-primary">{BACKGROUNDS.find(b => b.v === background)?.label}</strong></p>
             </div>
             {error && <p className="text-sm text-danger mt-3">{error}</p>}
           </div>
@@ -407,7 +415,7 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
             </button>
           ) : (
             <button onClick={submit} disabled={loading} className="btn-primary">
-              {loading ? 'Calibrating…' : 'Start studying'}
+              {loading ? 'Calibrating…' : 'Start my first session →'}
             </button>
           )}
         </div>

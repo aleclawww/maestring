@@ -4,6 +4,8 @@ import './globals.css'
 import { PostHogProvider } from '@/components/shared/PostHogProvider'
 import { CookieBanner } from '@/components/shared/CookieBanner'
 import { ServiceWorkerRegistration } from '@/components/shared/ServiceWorkerRegistration'
+import { ExitIntentPopup } from '@/components/shared/ExitIntentPopup'
+import { StickySignupBar } from '@/components/shared/StickySignupBar'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -48,10 +50,10 @@ export const metadata: Metadata = {
       'Prep for AWS SAA-C03 with adaptive AI, FSRS spaced repetition, and realistic exam simulators.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/api/og',
         width: 1200,
         height: 630,
-        alt: 'Maestring — AWS prep with AI',
+        alt: 'Maestring — Stop memorizing 1,000 questions. Know when you\'re ready.',
       },
     ],
   },
@@ -59,7 +61,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Maestring — Master AWS with AI',
     description: 'Prep for AWS SAA-C03 with the most effective method: AI + FSRS.',
-    images: ['/og-image.png'],
+    images: ['/api/og'],
     creator: '@maestring',
   },
   robots: {
@@ -149,6 +151,8 @@ export default function RootLayout({
         <PostHogProvider>
           {children}
           <CookieBanner />
+          <ExitIntentPopup />
+          <StickySignupBar />
           <ServiceWorkerRegistration />
         </PostHogProvider>
       </body>

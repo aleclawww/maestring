@@ -24,7 +24,8 @@ function getClient(): PostHog | null {
 type ServerEvent =
   | { name: "subscription_created"; properties?: { plan?: string } }
   | { name: "subscription_cancelled"; properties?: { plan?: string; reason?: string } }
-  | { name: "subscription_payment_failed"; properties?: { plan?: string } };
+  | { name: "subscription_payment_failed"; properties?: { plan?: string } }
+  | { name: "referral_converted"; properties?: { referrer_user_id?: string; price_usd?: number } };
 
 /**
  * Emit an analytics event from server code. Fail-open: if PostHog is

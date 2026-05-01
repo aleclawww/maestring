@@ -173,11 +173,13 @@ export async function GET(request: NextRequest) {
 
         if (claimed) {
           const firstName = profile.full_name?.trim().split(/\s+/)[0] ?? 'there'
-          const studyUrl = `${origin}/onboarding`
+          // Point to /study so WelcomeEmail's appUrl derivation (replace("/study","")) resolves correctly.
+          // New users still land at /onboarding via the middleware gate — this URL is for the email CTA.
+          const studyUrl = `${origin}/study`
           try {
             await sendEmail({
               to: data.user.email,
-              subject: 'Welcome to Maestring 🚀',
+              subject: 'the only thing that matters in your first session',
               react: WelcomeEmail({
                 firstName,
                 studyUrl,

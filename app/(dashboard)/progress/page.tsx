@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import { BlueprintAccuracyCard, type BlueprintTaskRow } from '@/components/dashboard/BlueprintAccuracyCard'
+import { FullHistoryPaywallCta } from '@/components/dashboard/FullHistoryPaywallCta'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -22,6 +23,7 @@ export default async function ProgressPage() {
     { data: conceptStates },
     { data: readinessRows },
     { data: blueprintRows },
+    { data: sub },
   ] = await Promise.all([
     supabase.rpc('get_user_stats', { p_user_id: user.id }),
     supabase.rpc('get_study_heatmap', { p_user_id: user.id, p_days: 84 }),
@@ -44,10 +46,19 @@ export default async function ProgressPage() {
     supabase.rpc('get_exam_readiness_v2' as any, { p_user_id: user.id }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     supabase.rpc('get_blueprint_task_accuracy' as any, { p_user_id: user.id }),
+    supabase
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', user.id)
+      .maybeSingle(),
   ])
 
   const readiness = (readinessRows as ReadinessData[] | null)?.[0] ?? null
   const blueprintTasks = (blueprintRows as BlueprintTaskRow[] | null) ?? []
+  const hasPro =
+    sub?.plan === 'pro' || sub?.plan === 'pro_annual'
+      ? sub.status === 'active' || sub.status === 'trialing'
+      : false
 
   const statsRow = stats?.[0]
   const masteredIds = new Set(
@@ -197,6 +208,7 @@ export default async function ProgressPage() {
             </p>
           </div>
         ) : (
+          <>
           <div className="divide-y divide-border">
             {(sessions ?? []).map(s => {
               const accuracy =
@@ -234,6 +246,10 @@ export default async function ProgressPage() {
               )
             })}
           </div>
+          {!hasPro && (sessions ?? []).length >= 5 && (
+            <FullHistoryPaywallCta />
+          )}
+          </>
         )}
       </Card>
     </div>

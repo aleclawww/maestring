@@ -32,18 +32,31 @@ export default async function StudyPage() {
     )
   }
 
-  // Get due count for display
-  const { count: dueCount } = await supabase
-    .from('user_concept_states')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .or('reps.eq.0,next_review_date.lte.' + new Date().toISOString())
+  // Get due count + plan in one parallel batch
+  const [{ count: dueCount }, { data: sub }] = await Promise.all([
+    supabase
+      .from('user_concept_states')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .or('reps.eq.0,next_review_date.lte.' + new Date().toISOString()),
+    supabase
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ])
+
+  const hasPro =
+    sub?.plan === 'pro' || sub?.plan === 'pro_annual'
+      ? sub.status === 'active' || sub.status === 'trialing'
+      : false
 
   return (
     <StudySession
       userId={user.id}
       activeSessionId={activeSession?.id}
       dueCount={dueCount ?? 0}
+      hasPro={hasPro}
     />
   )
 }

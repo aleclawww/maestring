@@ -6,8 +6,8 @@ import type { Metadata } from 'next'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Create account',
-  description: 'Join Maestring and start your AWS prep today.',
+  title: 'Start free — AWS SAA-C03 adaptive prep | Maestring',
+  description: 'Create your free account. 7 days of Pro, no card required. First adaptive question in 90 seconds.',
 }
 
 export default async function SignupPage({
@@ -30,9 +30,9 @@ export default async function SignupPage({
           <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
             <span className="text-2xl">🎓</span>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary">Start free</h1>
+          <h1 className="text-2xl font-bold text-text-primary">90 seconds to your first adaptive question</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Prep for AWS SAA-C03 with adaptive AI
+            7 days of Pro free — no card required
           </p>
         </div>
 
@@ -58,6 +58,20 @@ export default async function SignupPage({
         )}
 
         <SignupForm referralCode={searchParams.ref} />
+
+        {/* Trust signals */}
+        <div className="mt-6 flex flex-col gap-2">
+          {[
+            'No credit card — 7-day Pro trial, auto-drops to Free',
+            'FSRS-4.5 spaced repetition, not a static question bank',
+            'Readiness Score tracks your trajectory to your exam date',
+          ].map((signal) => (
+            <div key={signal} className="flex items-center gap-2 text-xs text-text-muted">
+              <span className="text-success">✓</span>
+              <span>{signal}</span>
+            </div>
+          ))}
+        </div>
 
         <p className="mt-6 text-center text-sm text-text-muted">
           Already have an account?{' '}

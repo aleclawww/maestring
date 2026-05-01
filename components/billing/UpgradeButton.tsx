@@ -8,14 +8,19 @@ type Props = {
   plan?: "monthly" | "annual";
   className?: string;
   children: React.ReactNode;
+  /** Where in the UI this button appears — used for upgrade funnel analytics */
+  surface?: string;
   /** If true, redirect unauth users to /signup?plan=pro instead of failing */
   redirectIfUnauth?: boolean;
 };
+
+const PLAN_PRICE: Record<"monthly" | "annual", number> = { monthly: 19, annual: 190 };
 
 export function UpgradeButton({
   plan = "monthly",
   className,
   children,
+  surface = "unknown",
   redirectIfUnauth = true,
 }: Props) {
   const router = useRouter();
@@ -26,6 +31,7 @@ export function UpgradeButton({
     setLoading(true);
     setError(null);
     track({ name: "checkout_started", properties: { plan } });
+    track({ name: "upgrade_clicked", properties: { surface, plan_clicked: plan, price_usd: PLAN_PRICE[plan] } });
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",

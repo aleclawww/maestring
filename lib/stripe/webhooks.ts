@@ -60,15 +60,23 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session) 
   // recoverable by support. But DO log so we see it instead of eating it.
   const referralCode = session.metadata?.['referralCode']
   if (referralCode) {
-    const { error: referralErr } = await supabase.from('referrals')
+    const { data: referralRow, error: referralErr } = await supabase.from('referrals')
       .update({ converted_at: new Date().toISOString(), credit_applied: true })
       .eq('code', referralCode)
       .eq('referred_id', userId)
+      .select('referrer_id')
+      .maybeSingle()
     if (referralErr) {
       logger.error(
         { err: referralErr, userId, referralCode },
         'Failed to apply referral credit (subscription still created)'
       )
+    } else if (referralRow) {
+      const amountUsd = session.amount_total ? session.amount_total / 100 : undefined
+      await trackServer(userId, {
+        name: 'referral_converted',
+        properties: { referrer_user_id: referralRow.referrer_id, price_usd: amountUsd },
+      })
     }
   }
 

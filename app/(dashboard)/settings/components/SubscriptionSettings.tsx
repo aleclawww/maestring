@@ -96,6 +96,7 @@ export function SubscriptionSettings({
       {plan === 'free' ? (
         <UpgradeButton
           plan="monthly"
+          surface="settings_subscription"
           className="btn-primary mt-4 block text-center w-full"
         >
           ✨ Upgrade to Pro

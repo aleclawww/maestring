@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { track } from '@/lib/analytics'
 
 export function ShareBlock({ url, code }: { url: string; code: string }) {
   const [copied, setCopied] = useState<'link' | 'code' | null>(null)
@@ -8,6 +9,7 @@ export function ShareBlock({ url, code }: { url: string; code: string }) {
 
   async function copy(value: string, which: 'link' | 'code') {
     setCopyFailed(false)
+    track({ name: 'referral_invited', properties: { channel: 'copy' } })
     try {
       await navigator.clipboard.writeText(value)
       setCopied(which)
@@ -67,6 +69,7 @@ export function ShareBlock({ url, code }: { url: string; code: string }) {
           target="_blank"
           rel="noopener noreferrer"
           className="btn-outline text-xs px-3 py-1.5"
+          onClick={() => track({ name: 'referral_invited', properties: { channel: 'twitter' } })}
         >
           Share on X
         </a>
@@ -75,6 +78,7 @@ export function ShareBlock({ url, code }: { url: string; code: string }) {
           target="_blank"
           rel="noopener noreferrer"
           className="btn-outline text-xs px-3 py-1.5"
+          onClick={() => track({ name: 'referral_invited', properties: { channel: 'copy' } })}
         >
           LinkedIn
         </a>
@@ -83,12 +87,14 @@ export function ShareBlock({ url, code }: { url: string; code: string }) {
           target="_blank"
           rel="noopener noreferrer"
           className="btn-outline text-xs px-3 py-1.5"
+          onClick={() => track({ name: 'referral_invited', properties: { channel: 'whatsapp' } })}
         >
           WhatsApp
         </a>
         <a
           href={`mailto:?subject=${encodeURIComponent('Maestring — AWS SAA-C03 prep')}&body=${encoded}`}
           className="btn-outline text-xs px-3 py-1.5"
+          onClick={() => track({ name: 'referral_invited', properties: { channel: 'email' } })}
         >
           Email
         </a>

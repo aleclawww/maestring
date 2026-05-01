@@ -1,0 +1,172 @@
+---
+title: "AWS SAA-C03 Services Cheat Sheet: What Each Service Actually Does on the Exam"
+description: "Not a list of every AWS service — a focused breakdown of the ~40 services that actually appear on the SAA-C03, with the decision rules that separate correct answers from traps."
+publishedAt: "2026-04-25"
+author: "Maestring Team"
+tags: ["aws", "saa-c03", "cheat-sheet", "certification", "study"]
+---
+
+Most AWS cheat sheets list every service alphabetically. That's a reference document, not a study tool. This one is different: it covers only the services that appear repeatedly on the SAA-C03, with the specific decision rules the exam tests — not marketing descriptions.
+
+## Compute
+
+**EC2**
+- Use when: you need persistent VMs, specific instance types, or OS-level control
+- Exam traps: choosing EC2 when Lambda or Fargate would be simpler and cheaper; forgetting Reserved Instances for predictable workloads
+
+**Lambda**
+- Use when: event-driven, stateless functions, short duration (≤15 min)
+- Exam traps: using Lambda for long-running batch jobs; forgetting cold starts matter for latency-sensitive paths
+
+**ECS (Fargate)**
+- Use when: containers without managing EC2; the question asks about "serverless containers"
+- Exam traps: ECS on EC2 vs Fargate — Fargate means no cluster management; EC2 means you control the underlying instances
+
+**Auto Scaling**
+- Use when: variable load, cost optimization, fault tolerance
+- Key rules: scale-out takes ~2–3 minutes; predictive scaling for known patterns; target tracking is almost always correct over step scaling
+
+---
+
+## Storage
+
+**S3**
+- Use when: object storage, static hosting, data lake source/sink, backups
+- Storage classes by access pattern:
+  - Standard → frequent access
+  - Standard-IA → infrequent, but retrieval must be fast
+  - Glacier Instant Retrieval → archive with millisecond retrieval
+  - Glacier Flexible → archive, 1–5 hour retrieval acceptable
+  - Glacier Deep Archive → cheapest, 12–48h retrieval
+- Exam traps: S3 is not a file system (no POSIX); use EFS for that; S3 Lifecycle rules move objects but can't change them
+
+**EBS**
+- Use when: block storage attached to a single EC2 instance (most of the time)
+- Key rules: gp3 is the default general-purpose choice; io2 for high IOPS databases; Multi-Attach only for io2 and only within one AZ
+
+**EFS**
+- Use when: shared file system across multiple EC2 instances or Lambda; Linux only
+- Exam traps: EFS is for multiple concurrent writers; EBS can't share across AZs; FSx for Windows is the answer when the question says "Windows" or "SMB"
+
+**FSx**
+- FSx for Windows File Server → SMB, Active Directory integration
+- FSx for Lustre → high-performance computing, ML training, S3 integration
+
+---
+
+## Databases
+
+**RDS**
+- Use when: managed relational DB, you want Multi-AZ for HA, automated backups
+- Key rules: Multi-AZ = synchronous standby for HA, not for read scale; Read Replicas = async, for read scale and cross-region DR
+
+**Aurora**
+- Use when: MySQL/PostgreSQL compatible, high availability, serverless option needed
+- Key rules: Aurora Serverless v2 scales automatically; Aurora Global Database for cross-region active-active; 6 copies of data across 3 AZs by default
+
+**DynamoDB**
+- Use when: NoSQL, single-digit millisecond latency, key-value or document, flexible schema
+- Exam traps: DynamoDB is not good for complex queries across many attributes; use GSIs for additional access patterns; DynamoDB Streams for event-driven patterns; DAX for in-memory caching
+
+**ElastiCache**
+- Redis → persistence, pub/sub, complex data types, session storage
+- Memcached → pure in-memory caching, simpler, multi-threaded
+
+---
+
+## Networking
+
+**VPC**
+- Key rules: public subnet = route to IGW; private subnet = no direct route to internet; NAT Gateway for private subnet outbound only
+- Exam traps: security groups are stateful (return traffic automatic); NACLs are stateless (need explicit inbound and outbound rules)
+
+**ALB vs NLB vs CLB**
+- ALB → HTTP/HTTPS, path-based routing, host-based routing, WebSocket
+- NLB → TCP/UDP, ultra-low latency, static IPs, used for non-HTTP protocols
+- CLB → legacy, don't choose this unless the question describes legacy
+
+**CloudFront**
+- Use when: CDN for global content delivery, static/dynamic acceleration, DDoS protection at edge
+- Key rules: OAC (Origin Access Control) restricts S3 access to CloudFront only; Lambda@Edge for request/response manipulation at edge
+
+**Route 53**
+- Routing policies: Simple (one resource), Weighted (A/B split), Latency (nearest region), Failover (active-passive), Geolocation (user geography), Geoproximity (with bias)
+- Health checks are required for Failover routing
+
+**Direct Connect vs VPN**
+- Direct Connect → dedicated physical connection, consistent latency, higher cost, weeks to provision
+- VPN → internet-based, faster to provision, variable latency
+- Exam shortcut: if the question says "consistent" or "reliable bandwidth" → Direct Connect; if "quick" or "cost-effective" → VPN
+
+---
+
+## Messaging
+
+**SQS vs SNS vs EventBridge**
+- SQS → decoupling, pull-based, fan-out via multiple consumers, dead-letter queues; standard vs FIFO (ordered, exactly-once)
+- SNS → push-based, fan-out to multiple endpoints simultaneously (email, Lambda, SQS, HTTP)
+- EventBridge → event routing with rules/patterns, cross-service events, third-party SaaS sources
+- Classic pattern: SNS → SQS fan-out for durable, parallel processing
+
+**Kinesis**
+- Kinesis Data Streams → real-time streaming, retain data 24h–365 days, custom consumers
+- Kinesis Data Firehose → load streaming data into S3/Redshift/OpenSearch, near-real-time (buffer)
+- Exam trap: Firehose is NOT real-time; it buffers; if the question says "real-time" use KDS + Lambda
+
+---
+
+## Security
+
+**IAM**
+- Key rules: always use least-privilege; resource-based policies (S3 bucket policies) vs identity-based policies (IAM policies); service roles for EC2, Lambda
+
+**KMS vs CloudHSM**
+- KMS → managed keys, AWS controls the HSM, multi-tenant
+- CloudHSM → dedicated HSM hardware, you control the keys, required for FIPS 140-2 Level 3
+
+**Secrets Manager vs Parameter Store**
+- Secrets Manager → automatic rotation, built-in rotation for RDS/Redshift/DocumentDB, costs money
+- Parameter Store → cheaper, no built-in rotation, fine for config values
+
+**WAF vs Shield**
+- WAF → filter HTTP requests (SQL injection, XSS, rate limiting, geo-blocking)
+- Shield Standard → free, always on, protects against DDoS at L3/L4
+- Shield Advanced → paid, protects at L7, 24/7 DDoS response team, financial protection
+
+---
+
+## Monitoring & Management
+
+**CloudWatch**
+- Metrics, logs, alarms, dashboards, Logs Insights for queries
+- Custom metrics require the CloudWatch agent on EC2 (memory, disk are NOT native metrics)
+
+**CloudTrail**
+- API call logging for compliance and security audit; Management Events vs Data Events
+- Exam trap: CloudTrail is not for resource metrics — that's CloudWatch
+
+**Config**
+- Continuous resource configuration recording; compliance rules; config history
+- Exam trap: Config tells you "what changed and when"; CloudTrail tells you "who did what"
+
+---
+
+## The most tested decision points
+
+1. **High availability vs read scaling**: Multi-AZ ≠ read scaling; Read Replicas ≠ automatic failover
+2. **Serverless vs managed**: Lambda (compute) / Fargate (containers) / Aurora Serverless (DB) / DynamoDB (NoSQL)
+3. **Encryption at rest vs in transit**: KMS for at-rest; TLS/ACM for in-transit; both for compliance
+4. **Cost optimization**: Reserved ≥ Savings Plans ≥ Spot ≥ On-Demand in cost order; Spot only for fault-tolerant, interruptible workloads
+5. **Cross-region DR**: RDS Read Replica (manual promote) vs Aurora Global (≤1s RPO) vs DynamoDB Global Tables
+
+---
+
+Understanding the pattern behind these services — not just the service itself — is what separates exam-day correct answers from plausible-sounding traps.
+
+Want to test your understanding rather than read more? Maestring generates novel questions on each of these decision points, scores your recall with FSRS, and tells you exactly which concepts to review next.
+
+**Related reading**:
+- [How long to study for AWS SAA-C03](/blog/how-long-to-study-aws-saa-c03)
+- [AWS SAA-C03 pass rate — why people fail on the first attempt](/blog/aws-saa-c03-pass-rate)
+- [6-week AWS SAA-C03 study plan](/study-plan/6)
+- [8-week AWS SAA-C03 study plan](/study-plan/8)

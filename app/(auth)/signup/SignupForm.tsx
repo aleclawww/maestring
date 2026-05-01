@@ -22,6 +22,7 @@ export default function SignupForm({ referralCode }: SignupFormProps) {
     if (!email.trim() || !name.trim()) return
     setLoading(true)
     setError(null)
+    track({ name: 'signup_started', properties: { method: 'magic' } })
 
     // Previously: no try/catch. A rejected fetch promise (offline, DNS blip,
     // Vercel 502 during deploy) bubbled out, leaving loading=true forever —
@@ -67,6 +68,7 @@ export default function SignupForm({ referralCode }: SignupFormProps) {
     if (googleLoading) return
     setGoogleLoading(true)
     setError(null)
+    track({ name: 'signup_started', properties: { method: 'google' } })
     track({ name: 'signup_completed', properties: { method: 'google' } })
 
     // Clear any stale local session before starting a new flow — see LoginForm.

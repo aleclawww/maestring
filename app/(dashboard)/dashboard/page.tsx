@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { formatRelativeTime } from '@/lib/utils'
 import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import { OutcomeCaptureBanner } from '@/components/dashboard/OutcomeCaptureBanner'
+import { StreakMilestoneTracker } from '@/components/dashboard/StreakMilestoneTracker'
 import { logger } from '@/lib/logger'
 import type { Metadata } from 'next'
 
@@ -92,6 +93,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <StreakMilestoneTracker streakDays={profile?.current_streak ?? 0} />
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-text-primary">
@@ -112,14 +114,17 @@ export default async function DashboardPage() {
       {/* Readiness Score — placeholder for new users with no computed score yet */}
       {readiness && !needsOutcome && <ReadinessCard data={readiness} />}
       {!readiness && !needsOutcome && (
-        <Card>
-          <CardContent className="flex items-center gap-4 py-5">
-            <span className="text-3xl">📊</span>
-            <div>
-              <p className="text-sm font-semibold text-text-primary">Readiness score unlocks after your first sessions</p>
-              <p className="text-xs text-text-muted mt-0.5">
-                Answer a few questions and your exam readiness estimate will appear here.
-              </p>
+        <Card className="border-dashed">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl flex-shrink-0">📊</span>
+              <div>
+                <p className="text-sm font-semibold text-text-primary">Readiness Score appears after ~30 questions</p>
+                <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                  The algorithm needs 2–3 sessions to calibrate your weak spots before the prediction is reliable.
+                  Run your first session and the score will start tracking your trajectory to your exam date.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -127,20 +132,20 @@ export default async function DashboardPage() {
 
       {/* Action Card */}
       <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-transparent">
-        <CardContent className="flex items-center justify-between">
-          <div>
+        <CardContent className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
             <p className="text-sm text-text-muted mb-1">
-              {dueCount > 0 ? `${dueCount} concepts ready to review` : 'No pending reviews'}
+              {dueCount > 0 ? `${dueCount} concepts ready to review` : !readiness ? 'First session starts here' : 'No pending reviews'}
             </p>
             <h2 className="text-lg font-bold text-text-primary">
-              {dueCount > 0 ? 'Ready to study?' : 'All caught up!'}
+              {dueCount > 0 ? 'Time to study' : !readiness ? 'Start your first session' : 'All caught up!'}
             </h2>
+            {!readiness && (
+              <p className="text-xs text-text-muted mt-1">6 minutes · the algorithm calibrates as you answer</p>
+            )}
           </div>
-          <Link
-            href="/study"
-            className="btn-primary"
-          >
-            {dueCount > 0 ? `Study (${dueCount})` : 'Explore more'}
+          <Link href="/study" className="btn-primary flex-shrink-0">
+            {dueCount > 0 ? `Study (${dueCount})` : !readiness ? 'Begin →' : 'Explore more'}
           </Link>
         </CardContent>
       </Card>

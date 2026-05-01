@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
+import { track } from '@/lib/analytics'
 
 export interface ReadinessData {
   score: number
@@ -195,6 +196,14 @@ export function ReadinessCard({ data }: { data: ReadinessData }) {
     : velocity < 0
     ? 'text-danger'
     : 'text-text-muted'
+
+  useEffect(() => {
+    if (data.score > 0) {
+      track({ name: 'readiness_score_viewed', properties: { score: data.score } })
+    }
+  // Only fire once per mount — score changes don't need re-tracking.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [atRisk, setAtRisk] = useState<AtRiskItem[] | null>(null)

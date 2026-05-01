@@ -35,7 +35,7 @@ export async function generateMetadata({
   if (!post) return { title: 'Post not found' }
   const { title, description, publishedAt, updatedAt, ogImage, tags } = post.frontmatter
   const canonical = canonicalUrl(params.slug)
-  const og = ogImage ?? `/api/og/blog?slug=${encodeURIComponent(params.slug)}`
+  const og = ogImage ?? `/api/og?title=${encodeURIComponent(title)}&badge=Blog+%C2%B7+AWS+SAA-C03`
   return {
     title,
     description,
@@ -134,22 +134,31 @@ export default async function BlogPostPage({
         </div>
 
         <aside className="mt-16 rounded-xl border border-primary/40 bg-primary/5 p-6">
-          <p className="text-xs uppercase tracking-wider text-primary font-semibold">
-            Try Maestring
+          <p className="text-xs uppercase tracking-wider text-primary font-semibold mb-2">
+            Ready to know when you&apos;ll pass?
           </p>
-          <h2 className="mt-2 text-xl font-bold">
-            Pass AWS SAA-C03 in less time
+          <h2 className="text-xl font-bold">
+            Your Readiness Score starts tracking from session one.
           </h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            AI-generated questions targeting your real weak spots + FSRS spaced repetition.
-            Don&apos;t memorize — understand.
+          <p className="mt-2 text-sm text-text-secondary leading-relaxed">
+            Maestring computes your pass probability across all SAA-C03 objectives using FSRS-4.5 spaced repetition.
+            When the score hits 82+, book the exam. Until then, it tells you exactly where to focus.
           </p>
-          <Link
-            href="/signup"
-            className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-          >
-            Start for free →
-          </Link>
+          <div className="mt-4 flex flex-col sm:flex-row items-start gap-3">
+            <Link
+              href="/signup"
+              className="inline-block rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            >
+              See my Readiness Score — free →
+            </Link>
+            <Link
+              href="/pricing"
+              className="inline-block rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            >
+              View pricing
+            </Link>
+          </div>
+          <p className="mt-3 text-xs text-text-muted">7 days of Pro free — no card required.</p>
         </aside>
       </article>
     </div>
