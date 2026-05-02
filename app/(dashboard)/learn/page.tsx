@@ -21,6 +21,22 @@ export default function LearnIndexPage() {
         </p>
       </header>
 
+      <Link href="/learn/exam-guide" className="block mb-8">
+        <Card hover className="border-primary/40">
+          <CardContent className="p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-primary mb-1">Start here</p>
+              <h2 className="font-semibold">Official SAA-C03 Exam Guide</h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Format, scoring, the four content domains with every task statement, and the
+                full list of in-scope and out-of-scope AWS services.
+              </p>
+            </div>
+            <span className="text-text-secondary text-2xl">→</span>
+          </CardContent>
+        </Card>
+      </Link>
+
       <div className="grid gap-4 md:grid-cols-2">
         {DOMAINS.map(d => (
           <Link key={d.slug} href={`/learn/${d.slug}`}>
