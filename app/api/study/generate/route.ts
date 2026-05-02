@@ -228,8 +228,11 @@ export async function POST(req: NextRequest) {
 
     const staticQ = generateQuestionStatic(conceptDef, staticSeed);
 
-    // Save to the questions table so it lands in the pool for future users.
-    // Fire-and-forget — a save failure does NOT block the response.
+    // Save to the questions table SYNCHRONOUSLY. The returned row id is the
+    // one we send to the client and is what /api/study/evaluate looks up.
+    // Previous fire-and-forget + crypto.randomUUID() returned an id that
+    // didn't exist in the DB, so evaluate would 404 ("Question not found")
+    // and the client showed "session was reset" the moment the user answered.
     const insertPayload = {
       concept_id: next.conceptId,
       question_text: staticQ.questionText,
@@ -243,31 +246,50 @@ export async function POST(req: NextRequest) {
       pattern_tag: staticQ.patternTag ?? null,
       is_canonical: false,
     };
-    supabase
+    let savedQuestionId: string | null = null;
+    const { data: savedRow, error: saveErr } = await supabase
       .from("questions")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .insert(insertPayload as any)
-      .then(({ error: saveErr }) => {
-        if (saveErr) {
-          // 23505 = unique violation (question already exists) — safe to ignore
-          if ((saveErr as { code?: string }).code !== '23505') {
-            logger.warn(
-              { err: saveErr, conceptId: next.conceptId },
-              "static-generator: failed to save generated question to pool"
-            );
-          }
+      .select("id")
+      .single();
+    if (saveErr) {
+      const code = (saveErr as { code?: string }).code;
+      if (code === '23505') {
+        // Unique violation — an identical question already exists. Look it up
+        // by question_text + concept so we serve the canonical row's id.
+        const { data: existing, error: lookupErr } = await supabase
+          .from("questions")
+          .select("id")
+          .eq("concept_id", next.conceptId)
+          .eq("question_text", staticQ.questionText)
+          .maybeSingle();
+        if (lookupErr || !existing) {
+          logger.error(
+            { err: lookupErr, conceptId: next.conceptId },
+            "static-generator: insert hit 23505 but follow-up lookup failed"
+          );
+          return NextResponse.json({ error: "question_persist_failed" }, { status: 500 });
         }
-      });
+        savedQuestionId = existing.id;
+      } else {
+        logger.error(
+          { err: saveErr, conceptId: next.conceptId },
+          "static-generator: failed to persist generated question — refusing to serve unpersisted question (would break evaluate)"
+        );
+        return NextResponse.json({ error: "question_persist_failed" }, { status: 500 });
+      }
+    } else {
+      savedQuestionId = savedRow.id;
+    }
 
     logger.info(
-      { userId: user.id, conceptId: next.conceptId, sessionId, questionType: staticQ.questionType },
+      { userId: user.id, conceptId: next.conceptId, sessionId, questionType: staticQ.questionType, questionId: savedQuestionId },
       "Static question generated"
     );
 
-    // If ANTHROPIC_API_KEY is configured, we could try to enrich with LLM in the
-    // background — but for now static is the primary path and is sufficient.
     const responseData = {
-      id: crypto.randomUUID(),
+      id: savedQuestionId!,
       conceptId: next.conceptId,
       conceptName: next.conceptName,
       conceptSlug: next.conceptSlug,

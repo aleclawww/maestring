@@ -81,7 +81,7 @@ function parseExamTip(tip: string): { condition: string; answer: string } | null
   if (!condition || !answer) return null
   // Clean up quotes and "Si dice"
   const cleanCondition = condition
-    .replace(/^Si dice\s*/i, '')
+    .replace(/^(Si dice|If it says)\s*/i, '')
     .replace(/^"(.*)"$/, '$1')
     .replace(/"/g, '"')
     .trim()
@@ -407,15 +407,15 @@ function generateVsComparison(
 function getVerbPhrase(fact: string): string {
   // Extract the first verb clause from a keyFact
   const lower = fact.toLowerCase()
-  if (lower.includes('síncrono') || lower.includes('synchronous')) return 'uses synchronous replication'
-  if (lower.includes('asíncrono') || lower.includes('asynchronous')) return 'uses asynchronous replication'
-  if (lower.includes('gratuito') || lower.includes('free')) return 'is available at no extra cost'
-  if (lower.includes('persistencia') || lower.includes('persistence')) return 'supports data persistence'
-  if (lower.includes('multi-az') || lower.includes('alta disponibilidad')) return 'supports Multi-AZ deployment'
+  if (lower.includes('synchronous')) return 'uses synchronous replication'
+  if (lower.includes('asynchronous')) return 'uses asynchronous replication'
+  if (lower.includes('free')) return 'is available at no extra cost'
+  if (lower.includes('persistence')) return 'supports data persistence'
+  if (lower.includes('multi-az') || lower.includes('high availability')) return 'supports Multi-AZ deployment'
   if (lower.includes('cross-region')) return 'supports cross-region replication'
-  if (lower.includes('transitivo') || lower.includes('transitive')) return 'supports transitive routing'
-  if (lower.includes('read') || lower.includes('lectura')) return 'can serve read traffic'
-  if (lower.includes('failover automático') || lower.includes('automatic failover')) return 'provides automatic failover'
+  if (lower.includes('transitive')) return 'supports transitive routing'
+  if (lower.includes('read')) return 'can serve read traffic'
+  if (lower.includes('automatic failover')) return 'provides automatic failover'
   // Default: take the first meaningful clause
   const colon = fact.indexOf(':')
   if (colon > -1) return fact.slice(colon + 1).trim().toLowerCase().slice(0, 60)
@@ -481,28 +481,25 @@ function similarity(a: string, b: string): number {
 /** Invert specific numeric/boolean terms to create a plausible-but-wrong statement. */
 function invertFact(fact: string): string | null {
   const replacements: Array<[RegExp, string]> = [
-    [/síncrono/gi,   'asíncrono'],
-    [/asíncrono/gi,  'síncrono'],
     [/synchronous/gi,  'asynchronous'],
     [/asynchronous/gi, 'synchronous'],
-    [/automático/gi, 'manual'],
     [/automatic/gi,  'manual'],
-    [/gratuito/gi,   'de pago'],
+    [/free of charge/gi, 'paid'],
     [/stateful/gi,   'stateless'],
     [/stateless/gi,  'stateful'],
     [/72%/g, '45%'],
     [/54%/g, '72%'],
     [/90%/g, '50%'],
-    [/15 réplicas/g, '5 réplicas'],
-    [/5 réplicas/g,  '15 réplicas'],
+    [/15 replicas/g, '5 replicas'],
+    [/5 replicas/g,  '15 replicas'],
     [/99\.99%/g, '99.5%'],
     [/99\.9%/g,  '99.99%'],
-    [/NO es transitivo/gi, 'es transitivo (permite routing transitivo)'],
-    [/NO sirve tráfico de lectura/gi, 'puede servir tráfico de lectura'],
-    [/1-2 minutos/g, '5-10 minutos'],
-    [/< 1 segundo/g, '10-30 segundos'],
-    [/SOLO S3 y DynamoDB/gi, 'compatible con cualquier servicio AWS'],
-    [/SOLO UNA AZ/gi, 'puede abarcar múltiples AZs'],
+    [/is NOT transitive/gi, 'IS transitive (allows transitive routing)'],
+    [/does NOT serve read traffic/gi, 'can serve read traffic'],
+    [/1-2 minutes/g, '5-10 minutes'],
+    [/< 1 second/g, '10-30 seconds'],
+    [/ONLY S3 and DynamoDB/gi, 'compatible with any AWS service'],
+    [/ONLY ONE AZ/gi, 'can span multiple AZs'],
   ]
 
   for (const [pattern, replacement] of replacements) {
