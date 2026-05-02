@@ -31,8 +31,10 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ error: 'select_failed', detail: selErr.message }, { status: 500 });
   }
 
+  // Use start-only word boundary (\b before, no \b after) so prefixes like
+  // "centralizad" match "centralizados" / "centralizadas".
   const re = new RegExp(
-    SPANISH_PATTERN.replace(/\\m/g, '\\b').replace(/\\M/g, '\\b'),
+    SPANISH_PATTERN.replace(/\\m/g, '\\b').replace(/\\M/g, ''),
     'i'
   );
   const ids = (candidates ?? [])
