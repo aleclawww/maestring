@@ -15,6 +15,36 @@ export function KnowledgeMap({ stateBySlug }: KnowledgeMapProps) {
     total
   )
 
+  // Brand-new user: nothing touched yet. Show a friendly empty state instead
+  // of 142 cold grey dots, which is overwhelming and unmotivating.
+  const hasAnyProgress = stateBySlug.size > 0
+  if (!hasAnyProgress) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Knowledge map</CardTitle></CardHeader>
+        <CardContent className="p-8 text-center">
+          <div className="text-5xl mb-3">🗺️</div>
+          <h3 className="font-semibold mb-2">Your map will appear as you study</h3>
+          <p className="text-sm text-text-secondary mb-5 max-w-md mx-auto">
+            Each of the {total} SAA-C03 concepts will turn from grey → red → orange → blue → green
+            as your FSRS-tracked mastery climbs. Start a session and watch it light up.
+          </p>
+          <div className="flex justify-center gap-2 flex-wrap">
+            <Link href="/learn/session" className="btn-primary text-sm px-4 py-2 rounded-lg">
+              🧭 Open Coach
+            </Link>
+            <Link href="/study" className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-surface-2">
+              ⚡ Quick session
+            </Link>
+            <Link href="/learn" className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-surface-2">
+              📚 Browse syllabus
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const tiers: Array<{ key: keyof typeof counts; label: string; color: string; hex: string }> = [
     { key: 'mastered',   label: 'Mastered',   color: 'bg-success',          hex: '#10b981' },
     { key: 'proficient', label: 'Proficient', color: 'bg-blue-500',         hex: '#3b82f6' },

@@ -17,10 +17,11 @@ function buildCards(concepts: ConceptDefinition[]): Flashcard[] {
   for (const c of concepts) {
     const domainColor = DOMAINS.find(d => d.slug === c.domainSlug)?.color ?? '#888'
 
-    // Card type 1: from each keyFact — "What is true about X?" → fact
+    // Card type 1: prompt the user to recall a key fact about the concept,
+    // then reveal one canonical fact from the knowledge graph.
     for (const fact of c.keyFacts) {
       cards.push({
-        front: `True / False (or fill the gap): a key fact about ${c.name}`,
+        front: `Recall: name a key fact about ${c.name}`,
         back: fact,
         conceptName: c.name,
         conceptSlug: c.slug,

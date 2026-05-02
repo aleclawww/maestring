@@ -27,7 +27,22 @@ export function QuestionCard({ question, onAnswer, timeLimitSec }: QuestionCardP
   const [firstAttempt, setFirstAttempt] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   // Metacognitive calibration: 1..5 confidence picked BEFORE the reveal.
+  // After the user has rated 10 questions we collapse the picker behind a
+  // small "Add confidence" toggle to reduce repetitive UI; it can still be
+  // expanded per-question. Tracked in localStorage so the threshold is
+  // honoured across sessions and devices that share the same browser.
   const [confidence, setConfidence] = useState<number | null>(null)
+  const [showConfidence, setShowConfidence] = useState(true)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const count = Number(localStorage.getItem('maestring_confidence_count') ?? '0')
+    if (count >= 10) setShowConfidence(false)
+  }, [])
+  function recordConfidenceUse() {
+    if (typeof window === 'undefined') return
+    const count = Number(localStorage.getItem('maestring_confidence_count') ?? '0') + 1
+    localStorage.setItem('maestring_confidence_count', String(count))
+  }
   // Ref-based lock prevents double-submit within a single React batch cycle.
   // useState alone has a race window: React hasn't flushed the state update yet
   // by the time a second tap (≤200ms on mobile) checks the lock, so both taps
@@ -228,30 +243,42 @@ export function QuestionCard({ question, onAnswer, timeLimitSec }: QuestionCardP
 
       {/* Confidence picker — appears once an option is selected (attempt 1 only). */}
       {selected !== null && attempt === 1 && (
-        <div className="border-t border-border px-6 py-3">
-          <p className="text-xs text-text-secondary mb-2">
-            How confident are you? <span className="opacity-60">(optional — calibrates your metacognition)</span>
-          </p>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map(v => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setConfidence(v)}
-                disabled={locked}
-                aria-label={`Confidence ${v} of 5`}
-                className={cn(
-                  'flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors',
-                  confidence === v
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border text-text-secondary hover:border-text-secondary'
-                )}
-              >
-                {v === 1 ? '1 · guess' : v === 5 ? '5 · sure' : v}
-              </button>
-            ))}
+        showConfidence ? (
+          <div className="border-t border-border px-6 py-3">
+            <p className="text-xs text-text-secondary mb-2">
+              How confident are you? <span className="opacity-60">(optional — calibrates your metacognition)</span>
+            </p>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => { setConfidence(v); recordConfidenceUse() }}
+                  disabled={locked}
+                  aria-label={`Confidence ${v} of 5`}
+                  className={cn(
+                    'flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors',
+                    confidence === v
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-text-secondary hover:border-text-secondary'
+                  )}
+                >
+                  {v === 1 ? '1 · guess' : v === 5 ? '5 · sure' : v}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="border-t border-border px-6 py-2">
+            <button
+              type="button"
+              onClick={() => setShowConfidence(true)}
+              className="text-xs text-text-secondary hover:text-text-primary"
+            >
+              + Add confidence rating
+            </button>
+          </div>
+        )
       )}
 
       {/* Countdown timer — Automation phase. Shown when timeLimitSec is set. */}

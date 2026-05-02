@@ -128,16 +128,31 @@ function RestCard({ reason, onContinue }: { reason: 'sleep_window' | 'load_budge
     load_budget_exceeded: 'Your cognitive load budget is hit. Diminishing returns from here. Take a break — your brain consolidates between sessions.',
     forgetting_detected: 'Your readiness dipped. The system is shifting back to consolidation to protect what you already learned.',
   }
+  // Sleep window is the only reason a user might legitimately want to override
+  // — they may have an unusual schedule for one night. Browse and Quick session
+  // are still soft-blocked? No — those don't go through the orchestrator. The
+  // override here just routes them to /study which works regardless of phase.
   return (
     <Card className="border-warning/40">
       <CardContent className="p-8 text-center space-y-4">
         <div className="text-5xl">🌙</div>
         <h2 className="text-xl font-semibold">{titles[reason]}</h2>
         <p className="text-sm text-text-secondary">{bodies[reason]}</p>
-        <div className="flex gap-3 justify-center pt-2">
+        <div className="flex gap-3 justify-center pt-2 flex-wrap">
           <Link href="/learn"><Button variant="ghost">Browse the syllabus</Button></Link>
           <Button onClick={onContinue}>Check again</Button>
         </div>
+        {reason === 'sleep_window' && (
+          <div className="pt-3 border-t border-border">
+            <p className="text-xs text-text-secondary mb-2">Awake anyway?</p>
+            <Link href="/study">
+              <Button variant="ghost" className="text-xs">⚡ Quick session (skip the gate)</Button>
+            </Link>
+            <p className="text-[10px] text-text-secondary mt-2">
+              Tip: if your schedule has changed, update your sleep window in Settings.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
