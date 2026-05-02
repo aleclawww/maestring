@@ -20,6 +20,9 @@ const EvaluateSchema = z.object({
   // attempt. For FSRS purposes, that still counts as a lapse (Again). The
   // client tells us whether the first attempt was correct.
   firstAttemptCorrect: z.boolean().optional().default(true),
+  // Metacognitive calibration: 1-5 confidence the user reported BEFORE seeing
+  // the correctness reveal. Optional — older clients won't send it.
+  confidence: z.number().int().min(1).max(5).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request", details: parsed.error.format() }, { status: 400 });
   }
 
-  const { sessionId, questionId, conceptId, selectedIndex, timeTakenMs, firstAttemptCorrect } = parsed.data;
+  const { sessionId, questionId, conceptId, selectedIndex, timeTakenMs, firstAttemptCorrect, confidence } = parsed.data;
   const supabase = createAdminClient();
 
   // All four reads were collapsing `{ data, error }` into just `{ data }`, so
@@ -168,9 +171,12 @@ export async function POST(req: NextRequest) {
       first_attempt_correct: firstAttemptCorrect,
     },
   }
-  const { error: insertErr } = await supabase
+  const { data: insertedAttempt, error: insertErr } = await supabase
     .from("question_attempts")
-    .insert(attemptPayload);
+    .insert(attemptPayload)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .select('id' as any)
+    .single();
 
   if (insertErr) {
     if ((insertErr as { code?: string }).code === "23505") {
@@ -271,6 +277,58 @@ export async function POST(req: NextRequest) {
       "study_sessions counter update failed — questions_answered/correct_answers will drift from question_attempts"
     );
   }
+
+  // ── Learning Engine: phase counter bump + metacog row ─────────────────────
+  // Fire-and-forget: failures here don't break the answer flow.
+  void (async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.rpc as any)('ensure_user_learning_state', { p_user_id: user.id });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: ulsRow } = await (supabase
+        .from('user_learning_state')
+        .select('phase' as any) as any)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const phase = (ulsRow?.phase ?? null) as string | null;
+
+      // Map phase → counter columns.
+      const bumps: Array<{ col: string; cond: boolean }> = [];
+      if (phase === 'retrieval_easy') {
+        bumps.push({ col: 'retrieval_attempts', cond: true });
+        bumps.push({ col: 'retrieval_correct', cond: effectiveCorrect });
+      } else if (phase === 'interleaving') {
+        bumps.push({ col: 'interleave_attempts', cond: true });
+        bumps.push({ col: 'interleave_correct', cond: effectiveCorrect });
+      } else if (phase === 'automation') {
+        bumps.push({ col: 'automation_attempts', cond: true });
+        bumps.push({ col: 'automation_under8s', cond: effectiveCorrect && timeTakenMs <= 8000 });
+      } else if (phase === 'transfer') {
+        bumps.push({ col: 'transfer_attempts', cond: true });
+        bumps.push({ col: 'transfer_correct', cond: effectiveCorrect });
+      }
+      for (const b of bumps) {
+        if (!b.cond) continue;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.rpc as any)('increment_uls_counter', { p_user_id: user.id, p_column: b.col });
+      }
+
+      // Metacognitive calibration row when the client supplied a confidence value.
+      const attemptId = (insertedAttempt as unknown as { id?: number | string } | null)?.id;
+      if (typeof confidence === 'number' && attemptId != null) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('metacognitive_calibration') as any).insert({
+          user_id: user.id,
+          question_attempt_id: attemptId,
+          concept_id: conceptId,
+          confidence,
+          was_correct: effectiveCorrect,
+        });
+      }
+    } catch (e) {
+      logger.warn({ err: e, userId: user.id }, 'learning-engine: post-evaluate hooks failed (non-fatal)');
+    }
+  })();
 
   logger.info({ userId: user.id, conceptId, isCorrect: evaluation.isCorrect, rating }, "Answer evaluated");
 
