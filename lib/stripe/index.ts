@@ -18,6 +18,22 @@ export function getStripe(): Stripe {
   return stripeInstance
 }
 
+/**
+ * 7-day free trial for ALL Pro signups (referralCode no longer gates it).
+ * Stripe collects the card upfront, charges $0 today, automatically converts
+ * to a paid subscription on day 8 unless the user cancels via the portal.
+ *
+ * Trial settings:
+ *   - `payment_method_collection: 'always'` is the default for subscription
+ *     mode → card is required at checkout.
+ *   - `missing_payment_method: 'cancel'` → if the card fails on day 8 we
+ *     cancel cleanly instead of leaving the sub in `past_due`.
+ *   - The customer.subscription.trial_will_end webhook (already handled in
+ *     lib/stripe/webhooks.ts) fires 3 days before expiry to send the
+ *     reminder email via Resend.
+ */
+const TRIAL_DAYS = 7
+
 export async function createCheckoutSession(
   userId: string,
   priceId: string,
@@ -40,7 +56,10 @@ export async function createCheckoutSession(
     },
     subscription_data: {
       metadata: { userId },
-      trial_period_days: referralCode ? 7 : undefined,
+      trial_period_days: TRIAL_DAYS,
+      trial_settings: {
+        end_behavior: { missing_payment_method: 'cancel' },
+      },
     },
   })
 

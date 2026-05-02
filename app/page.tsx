@@ -138,8 +138,12 @@ const FAQS = [
     a: "A 5-minute one-time calibration: a digit-span n-back test for working memory, a 5-trial reaction-time test for processing speed, plus your chronotype, sleep window, and cognitive load budget. The Coach uses this to pick the right activity for the right moment — and refuses to serve you a hard drill at 3am if you said you sleep at 23:00.",
   },
   {
+    q: "How does the 7-day free trial work?",
+    a: "Click Start trial, enter your card on Stripe (PCI-compliant — we never see it), get instant Pro access for 7 days at $0. We email you 3 days before the trial ends. If you cancel any time in those 7 days, you're charged nothing — ever. If you don't cancel, $19 is charged on day 8 and your monthly subscription begins. If your card fails on day 8, the subscription cancels cleanly (no past-due chasing).",
+  },
+  {
     q: "Can I cancel anytime?",
-    a: "Yes. No lock-ins, no dark patterns. Cancel from Settings → Billing at any time and you keep access until the end of your billing period.",
+    a: "Yes. No lock-ins, no dark patterns. Cancel from Settings → Billing at any time and you keep access until the end of your billing period (or, during the trial, immediately with no charge).",
   },
   {
     q: "Is my progress saved if I switch devices?",
@@ -455,6 +459,10 @@ export default async function LandingPage() {
               <Link href="/signup?plan=pro" className="btn-primary w-full text-center py-3 rounded-lg block">
                 Start 7-day free trial
               </Link>
+              <p className="text-[11px] text-zinc-500 mt-3 text-center leading-relaxed">
+                Card on file required · $0 today · Reminder email 3 days before charge ·
+                Cancel any time from Settings → Billing
+              </p>
             </div>
           </div>
         </div>

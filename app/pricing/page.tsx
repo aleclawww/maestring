@@ -77,6 +77,10 @@ export default function PricingPage() {
             >
               Start 7-day free trial
             </UpgradeButton>
+            <p className="text-[11px] text-zinc-500 mt-3 text-center leading-relaxed">
+              Card on file required · $0 today · Reminder email 3 days before charge ·
+              Cancel any time from Settings → Billing · No charge if you cancel within 7 days
+            </p>
           </div>
         </div>
         <p className="text-zinc-600 text-sm mt-8">
