@@ -43,7 +43,16 @@ export async function POST(_req: NextRequest) {
     .map(q => q.id);
 
   if (ids.length === 0) {
-    return NextResponse.json({ ok: true, scanned: candidates?.length ?? 0, deactivated: 0 });
+    return NextResponse.json({
+      ok: true,
+      scanned: candidates?.length ?? 0,
+      deactivated: 0,
+      samples: (candidates ?? []).slice(0, 10).map(q => ({
+        id: q.id,
+        text: (q.question_text ?? '').slice(0, 250),
+        opt0: Array.isArray(q.options) ? String(q.options[0] ?? '').slice(0, 120) : null,
+      })),
+    });
   }
 
   // Chunked update
