@@ -6,9 +6,9 @@ import { logger } from "@/lib/logger";
 export const revalidate = 600;
 
 export const metadata: Metadata = {
-  title: "Maestring — Adaptive AWS Certification Prep",
+  title: "Maestring — Phase-Orchestrated AWS Certification Prep",
   description:
-    "Pass the AWS Solutions Architect Associate exam faster with AI-powered adaptive questions, spaced repetition, and real-time progress analytics.",
+    "Pass the AWS Solutions Architect Associate exam faster with a 9-phase cognitive learning engine, FSRS spaced repetition, and live readiness scoring across 142 concepts.",
   // Explicit canonical on the homepage reinforces to Google which URL owns
   // this domain — a prerequisite for the favicon appearing in search results.
   alternates: {
@@ -22,34 +22,49 @@ export const metadata: Metadata = {
 
 const FEATURES = [
   {
-    icon: "🧠",
-    title: "Adaptive Questions",
-    desc: "Claude generates unique, exam-quality questions tailored to your weak areas, so you never waste time on what you already know.",
+    icon: "🧭",
+    title: "9-Phase Coach (Gemelo Digital)",
+    desc: "An orchestrator decides what you do each session — Calibration → Ambient → Anchoring → Retrieval → Interleaving → Consolidation → Automation → Transfer → Mastery. Not a quiz dump. A pedagogically-sequenced system.",
   },
   {
     icon: "🔄",
-    title: "Spaced Repetition (FSRS v5)",
-    desc: "The most advanced open-source algorithm schedules your reviews at the optimal moment — right before you would have forgotten.",
+    title: "FSRS-4.5 Spaced Repetition",
+    desc: "The state-of-the-art open-source algorithm schedules each of your 142 concepts at the optimal moment — right before you would have forgotten.",
   },
   {
-    icon: "📄",
-    title: "Upload Your Own Materials",
-    desc: "Drop in any AWS PDF and we extract, embed, and generate questions from your notes automatically.",
+    icon: "🧪",
+    title: "Cognitive Fingerprint",
+    desc: "5-minute calibration measures your working-memory span (n-back), reaction time, chronotype, and sleep window. The Coach uses this to decide what activity, when — and blocks you from cramming inside your sleep window.",
+  },
+  {
+    icon: "🗺️",
+    title: "Knowledge Map",
+    desc: "Every one of the 142 SAA-C03 concepts shown as a coloured tile: Mastered / Proficient / Familiar / Learning / Not seen. Scan your gaps in 3 seconds.",
   },
   {
     icon: "📊",
-    title: "Domain-Level Analytics",
-    desc: "See exactly how you stack up across all four SAA-C03 domains: Resilient, Performant, Secure, and Cost-Optimized.",
+    title: "Live Readiness Score",
+    desc: "A single number 0-100 that predicts your pass probability across the four official domains: Secure (30%), Resilient (26%), High-Performing (24%), Cost-Optimized (20%).",
   },
   {
     icon: "🎯",
-    title: "65-Question Exam Simulator",
-    desc: "Full-length practice exams with a timed environment, question flagging, and detailed post-exam breakdowns.",
+    title: "65-Question Mock Exam",
+    desc: "Full-length timed simulator with question flagging and per-task breakdowns. Use it as the final checkpoint after the Coach moves you to the Transfer phase.",
   },
   {
-    icon: "🔥",
-    title: "Streak & Gamification",
-    desc: "Daily streak tracking, XP, and achievement badges keep you accountable without the gimmicks.",
+    icon: "🃏",
+    title: "Flashcards + Self-Rate",
+    desc: "Quick-recall drills built from the knowledge graph. Mark concepts you already know to skip ahead — the FSRS state respects you.",
+  },
+  {
+    icon: "🤔",
+    title: "Confidence Calibration",
+    desc: "Rate your confidence (1-5) before each reveal. The system tracks your overconfidence per domain and won't let you advance to Mastery until your metacognition is honest.",
+  },
+  {
+    icon: "🛡️",
+    title: "Forgetting Bounce-Back",
+    desc: "If your readiness drops more than 20 points in 7 days, the Coach automatically pulls you back to Consolidation. You can't fake progress here.",
   },
 ];
 
@@ -100,11 +115,15 @@ async function getTestimonials(): Promise<Testimonial[]> {
 const FAQS = [
   {
     q: "What exam does Maestring currently cover?",
-    a: "AWS Solutions Architect Associate (SAA-C03). We're adding AWS Developer Associate, SysOps, and Professional tiers based on demand.",
+    a: "AWS Solutions Architect Associate (SAA-C03). 142 concepts mapped to the official v1.1 exam guide — the four domains, every task statement, every in-scope service. Developer Associate, SysOps, and Professional tiers will follow.",
   },
   {
-    q: "How is this different from Udemy or A Cloud Guru?",
-    a: "Those platforms give you a fixed question bank. Maestring generates fresh questions adapted to your specific gaps and schedules reviews scientifically so you retain information long-term, not just for test day.",
+    q: "Is this just another question dump?",
+    a: "No. The differentiator is the orchestrator: a 9-phase engine that decides what you do each session based on your cognitive fingerprint and FSRS state. You don't pick the activity — the system picks for you. Calibration, ambient exposure, open-ended generation, easy retrieval, interleaving, consolidation, timed automation drills, multi-concept transfer, and long-term mastery maintenance.",
+  },
+  {
+    q: "How are the questions generated?",
+    a: "From a deterministic exam-pattern engine. 142 concepts × 5 question types (scenario, true-fact, false-fact, when-to-use, comparison) × 4–6 wording templates × randomised correct-answer position = 12,000+ unique questions, all pre-generated and instantly served. Zero LLM cost, zero latency, no per-day quota even on the free plan.",
   },
   {
     q: "Do I still need AWS Skill Builder?",
@@ -112,7 +131,11 @@ const FAQS = [
   },
   {
     q: "How does Maestring compare to the official AWS practice exam?",
-    a: "The official practice exam is a single 20-question set — useful once, not repeatable. Maestring gives you unlimited adaptive questions, spaced repetition, and a live Readiness Score that updates every session. Use the official practice exam as a final checkpoint; use Maestring to get there.",
+    a: "The official practice exam is a single 20-question set — useful once, not repeatable. Maestring gives you 2,000+ pre-generated questions across all 142 concepts, FSRS spaced repetition, a live Readiness Score, and a 65-question mock exam. Use the official practice as a final checkpoint; use Maestring to get there.",
+  },
+  {
+    q: "What's the cognitive fingerprint?",
+    a: "A 5-minute one-time calibration: a digit-span n-back test for working memory, a 5-trial reaction-time test for processing speed, plus your chronotype, sleep window, and cognitive load budget. The Coach uses this to pick the right activity for the right moment — and refuses to serve you a hard drill at 3am if you said you sleep at 23:00.",
   },
   {
     q: "Can I cancel anytime?",
@@ -120,11 +143,11 @@ const FAQS = [
   },
   {
     q: "Is my progress saved if I switch devices?",
-    a: "Yes. Everything is stored in the cloud. Your FSRS state, streak, and question history sync across all devices.",
+    a: "Yes. Everything is stored in the cloud. Your FSRS state, phase, fingerprint, streak, and answer history sync across all devices.",
   },
   {
     q: "Do you offer a free tier?",
-    a: "Yes — the free plan includes 20 AI-generated questions per day, access to the knowledge graph, and basic progress tracking. The Pro plan removes limits and adds PDF uploads, exam simulator, and advanced analytics.",
+    a: "Yes — the free plan includes the full 142-concept syllabus in /learn, the Coach with all 9 phases, 2,000+ pre-generated questions in /study, the Knowledge Map, flashcards, and the 65-question mock exam. Pro adds PDF upload (turn your own notes into questions), email digests, and priority support.",
   },
 ];
 
@@ -155,7 +178,7 @@ export default async function LandingPage() {
       <section className="max-w-4xl mx-auto px-6 pt-24 pb-20 text-center">
         <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 text-sm text-indigo-400 mb-8">
           <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse-slow" />
-          AWS SAA-C03 · AI-Powered · FSRS v5
+          AWS SAA-C03 · 9-Phase Coach · FSRS-4.5
         </div>
         <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
           Know exactly when
@@ -163,9 +186,9 @@ export default async function LandingPage() {
           <span className="gradient-text">you&rsquo;re ready to pass</span>
         </h1>
         <p className="text-xl text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Maestring gives you a live <strong className="text-white">Readiness Score 0–100</strong> that predicts your AWS SAA
-          outcome weeks before the exam — powered by adaptive AI questions and the FSRS-4.5 memory model.
-          Stop guessing. Start measuring.
+          Maestring orchestrates your prep through a <strong className="text-white">9-phase cognitive engine</strong> — calibrating
+          your memory, then sequencing exposure, retrieval, interleaving, drills and transfer at the right moment.
+          A live <strong className="text-white">Readiness Score 0-100</strong> tells you when you&rsquo;re actually ready.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/signup" className="btn-primary px-8 py-4 text-lg rounded-xl font-semibold">
@@ -187,13 +210,14 @@ export default async function LandingPage() {
             <div className="text-center px-6">
               <div className="inline-block text-7xl font-black gradient-text mb-3">72</div>
               <div className="text-sm uppercase tracking-widest text-zinc-400 mb-1">Readiness Score</div>
-              <div className="text-xs text-zinc-500">Pass probability 68% · Weakest: Networking · 12 concepts at risk</div>
-              <div className="mt-6 flex justify-center gap-1">
-                <div className="h-2 w-8 rounded bg-rose-500/60"></div>
-                <div className="h-2 w-8 rounded bg-amber-500/60"></div>
-                <div className="h-2 w-8 rounded bg-emerald-500"></div>
-                <div className="h-2 w-8 rounded bg-emerald-500"></div>
-                <div className="h-2 w-8 rounded bg-zinc-700"></div>
+              <div className="text-xs text-zinc-500 mb-1">Phase: Interleaving · 18 / 30 attempts · 67% accuracy</div>
+              <div className="text-xs text-zinc-500">Weakest domain: Secure (30% exam weight) · 12 concepts at risk</div>
+              <div className="mt-5 inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> 24 mastered
+                <span className="ml-2 h-2 w-2 rounded-full bg-blue-500" /> 31 proficient
+                <span className="ml-2 h-2 w-2 rounded-full bg-amber-500" /> 42 familiar
+                <span className="ml-2 h-2 w-2 rounded-full bg-rose-500" /> 18 learning
+                <span className="ml-2 h-2 w-2 rounded-full bg-zinc-600" /> 27 not seen
               </div>
             </div>
           </div>
@@ -223,7 +247,7 @@ export default async function LandingPage() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">🧠</span>
             <div className="text-sm">
-              <div className="font-semibold text-emerald-300">FSRS-4.5 + Claude</div>
+              <div className="font-semibold text-emerald-300">9-phase orchestrator</div>
               <div className="text-zinc-400">Not a static question bank. A cognitive system.</div>
             </div>
           </div>
@@ -298,9 +322,9 @@ export default async function LandingPage() {
             <div className="text-sm font-semibold text-zinc-300 mb-3">Maestring</div>
             <ul className="text-sm text-zinc-400 space-y-2">
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Live Readiness Score 0–100</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>9-phase Coach (Calibration → Mastery)</li>
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>FSRS-4.5 spaced repetition</li>
-              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Unlimited adaptive AI questions</li>
-              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Productive-error elaboration</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Cognitive fingerprint + sleep gate</li>
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Pass-or-refund guarantee</li>
             </ul>
           </div>
@@ -318,10 +342,10 @@ export default async function LandingPage() {
           <h2 className="text-3xl font-bold text-center mb-12">How it works</h2>
           <div className="space-y-8">
             {[
-              { step: "01", title: "Sign up and set your exam date", desc: "Tell us when you want to take the exam and we build a personalized study plan." },
-              { step: "02", title: "Study with adaptive AI questions", desc: "Each session generates fresh questions targeting your weak domains. Answer, learn, and get detailed explanations." },
-              { step: "03", title: "FSRS schedules your reviews", desc: "The algorithm tracks your memory for each concept and reminds you at the optimal moment before you forget." },
-              { step: "04", title: "Track your readiness score", desc: "Watch your domain scores climb toward exam-ready. Take a full 65-question simulator when you feel confident." },
+              { step: "01", title: "Calibrate (5 min, one time)", desc: "An n-back test, a reaction-time test, and a short profile of your chronotype, sleep window, and cognitive load budget. The Coach uses this to schedule the rest." },
+              { step: "02", title: "Read the syllabus passively (Ambient)", desc: "Top-12 concepts shown one at a time, no quizzing. Mere-exposure builds the scaffolding before retrieval lands." },
+              { step: "03", title: "Anchoring → Retrieval → Interleaving", desc: "Open-ended generation prompts, then easy-mode quizzes for confidence, then domains intentionally mixed to deepen discrimination. FSRS schedules every concept individually." },
+              { step: "04", title: "Automation drills + Transfer", desc: "8-second timed drills until recognition is automatic. Then multi-concept exam-style scenarios. Hit Mastery and the system maintains it forever." },
             ].map((step) => (
               <div key={step.step} className="flex gap-6 items-start">
                 <div className="text-5xl font-black text-indigo-500/20 shrink-0 w-16">{step.step}</div>
@@ -379,7 +403,15 @@ export default async function LandingPage() {
               <div className="text-lg font-semibold mb-1">Free</div>
               <div className="text-4xl font-black mb-6">$0<span className="text-lg text-zinc-400 font-normal">/mo</span></div>
               <ul className="space-y-3 text-zinc-400 text-sm mb-8">
-                {["20 AI questions/day", "Knowledge graph access", "Basic progress tracking", "5-question exam preview"].map((f) => (
+                {[
+                  "Full 142-concept syllabus (Learn)",
+                  "9-phase Coach with all activities",
+                  "2,000+ pre-generated questions",
+                  "FSRS-4.5 spaced repetition",
+                  "Knowledge Map + flashcards",
+                  "65-question mock exam",
+                  "Cognitive fingerprint calibration",
+                ].map((f) => (
                   <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
                 ))}
               </ul>
@@ -392,7 +424,15 @@ export default async function LandingPage() {
               <div className="text-lg font-semibold mb-1">Pro</div>
               <div className="text-4xl font-black mb-6">$19<span className="text-lg text-zinc-400 font-normal">/mo</span></div>
               <ul className="space-y-3 text-zinc-400 text-sm mb-8">
-                {["Unlimited AI questions", "PDF upload & processing", "Full exam simulator", "Advanced domain analytics", "Streak email reminders", "Priority support"].map((f) => (
+                {[
+                  "Everything in Free",
+                  "Upload your own AWS PDFs",
+                  "RAG-powered questions from your notes",
+                  "Pass-or-refund guarantee",
+                  "Daily streak email reminders",
+                  "Weekly progress digests",
+                  "Priority support",
+                ].map((f) => (
                   <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
                 ))}
               </ul>

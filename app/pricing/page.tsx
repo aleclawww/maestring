@@ -4,11 +4,11 @@ import { UpgradeButton } from "@/components/billing/UpgradeButton";
 
 export const metadata: Metadata = {
   title: "Pricing — Maestring",
-  description: "Simple, transparent pricing for AWS SAA-C03 certification prep. Free forever, Pro unlocks unlimited AI questions.",
+  description: "Simple, transparent pricing for AWS SAA-C03 certification prep. The full 9-phase Coach is free; Pro adds PDF upload and priority support.",
   alternates: { canonical: '/pricing' },
   openGraph: {
     title: "Pricing — Maestring",
-    description: "Free forever. Pro plan unlocks unlimited AI questions, PDF uploads, and the full 65-question exam simulator.",
+    description: "Free plan ships the full 142-concept syllabus, 9-phase Coach, FSRS spaced repetition, and 65-question mock exam. Pro adds PDF upload and pass-or-refund guarantee.",
     url: '/pricing',
     type: 'website',
   },
@@ -35,9 +35,19 @@ export default function PricingPage() {
           <div className="card-base p-8">
             <div className="text-lg font-semibold mb-1">Free</div>
             <div className="text-4xl font-black mb-2">$0</div>
-            <div className="text-zinc-500 text-sm mb-6">Forever free</div>
+            <div className="text-zinc-500 text-sm mb-6">Forever free · everything you need to pass</div>
             <ul className="space-y-3 text-zinc-400 text-sm mb-8">
-              {["20 AI-generated questions/day", "Knowledge graph (43 concepts)", "Basic progress tracking", "5-question exam preview", "Email support"].map((f) => (
+              {[
+                "Full 142-concept SAA-C03 syllabus",
+                "9-phase Coach (Calibration → Mastery)",
+                "2,000+ pre-generated questions",
+                "FSRS-4.5 spaced repetition",
+                "Knowledge Map + flashcards",
+                "65-question mock exam (full simulator)",
+                "Cognitive fingerprint calibration",
+                "Live Readiness Score 0-100",
+                "Email support",
+              ].map((f) => (
                 <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
               ))}
             </ul>
@@ -51,11 +61,11 @@ export default function PricingPage() {
             <ul className="space-y-3 text-zinc-400 text-sm mb-8">
               {[
                 "Everything in Free",
-                "Unlimited AI-generated questions",
-                "PDF upload & question generation",
-                "Full 65-question exam simulator",
-                "Advanced domain analytics",
+                "Upload your own AWS PDFs",
+                "RAG-powered questions from your notes",
+                "Pass-or-refund guarantee",
                 "Daily streak email reminders",
+                "Weekly progress digests",
                 "Priority support",
               ].map((f) => (
                 <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
