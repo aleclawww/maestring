@@ -436,7 +436,6 @@ export default async function LandingPage() {
                 "Knowledge Map + flashcards",
                 "65-question mock exam (full simulator)",
                 "Cognitive fingerprint calibration",
-                "PDF upload + RAG-powered questions from your notes",
                 "Pass-or-refund guarantee",
                 "Email digests + priority support",
               ].map((f) => (

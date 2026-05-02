@@ -54,7 +54,6 @@ export default async function TrialRequiredPage() {
                 <li>✓ FSRS-4.5 spaced repetition</li>
                 <li>✓ Knowledge Map + flashcards</li>
                 <li>✓ 65-question mock exam</li>
-                <li>✓ PDF upload + RAG-powered questions from your notes</li>
               </ul>
             </div>
 

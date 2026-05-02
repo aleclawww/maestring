@@ -348,7 +348,6 @@ export default async function DashboardPage() {
           { href: '/study', label: 'Quick session', desc: 'Review due concepts', icon: '⚡' },
           { href: '/flashcards', label: 'Flashcards', desc: 'Drill the key facts', icon: '🃏' },
           { href: '/exam', label: 'Mock exam', desc: '65 questions, 130 min', icon: '📝' },
-          { href: '/documents', label: 'Upload PDF', desc: 'Turn your notes into questions', icon: '📤' },
         ].map(action => (
           <Link key={action.href} href={action.href}>
             <Card hover className="h-full">

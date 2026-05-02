@@ -4,11 +4,11 @@ import { UpgradeButton } from "@/components/billing/UpgradeButton";
 
 export const metadata: Metadata = {
   title: "Pricing — Maestring",
-  description: "Simple, transparent pricing for AWS SAA-C03 certification prep. The full 9-phase Coach is free; Pro adds PDF upload and priority support.",
+  description: "Simple, transparent pricing for AWS SAA-C03 certification prep. 7-day free trial with the full 9-phase Coach and pass-or-refund guarantee.",
   alternates: { canonical: '/pricing' },
   openGraph: {
     title: "Pricing — Maestring",
-    description: "Free plan ships the full 142-concept syllabus, 9-phase Coach, FSRS spaced repetition, and 65-question mock exam. Pro adds PDF upload and pass-or-refund guarantee.",
+    description: "Single Pro plan with a 7-day free trial. Full 142-concept syllabus, 9-phase Coach, FSRS spaced repetition, 65-question mock exam, pass-or-refund guarantee.",
     url: '/pricing',
     type: 'website',
   },
@@ -49,7 +49,6 @@ export default function PricingPage() {
               "Knowledge Map + flashcards",
               "65-question mock exam (full simulator)",
               "Cognitive fingerprint calibration",
-              "PDF upload + RAG-powered questions from your notes",
               "Pass-or-refund guarantee",
               "Email digests + priority support",
             ].map((f) => (

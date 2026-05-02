@@ -8,7 +8,19 @@ import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
-export async function POST(req: NextRequest) {
+// Feature disabled for SAA-C03 (knowledge graph already complete). The full
+// implementation is preserved in git history; revert the wholesale rewrite of
+// this file when bringing back PDF upload (will also require OPENAI_API_KEY).
+export async function POST(_req: NextRequest) {
+  void _req
+  return NextResponse.json(
+    { error: 'feature_disabled', message: 'PDF upload is on hold while we focus on SAA-C03 (full syllabus already included).' },
+    { status: 503 }
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _legacyImpl(req: NextRequest) {
   const user = await requireAuthenticatedUser();
 
   const rl = await checkUploadRateLimit(user.id);

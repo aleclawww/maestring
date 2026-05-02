@@ -16,7 +16,6 @@ const navItems = [
   { href: '/flashcards', label: 'Flashcards', icon: '🃏' },
   { href: '/exam', label: 'Exam', icon: '📝' },
   { href: '/progress', label: 'Progress', icon: '📊' },
-  { href: '/documents', label: 'Documents', icon: '📄' },
   { href: '/referrals', label: 'Referrals', icon: '👥' },
   { href: '/settings?tab=subscription', label: 'Billing', icon: '💳' },
   { href: '/settings', label: 'Settings', icon: '⚙️' },
