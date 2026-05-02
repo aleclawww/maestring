@@ -289,7 +289,9 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {[
+          { href: '/learn', label: 'Learn', desc: 'Read concept-by-concept', icon: '📚' },
           { href: '/study', label: 'Quick session', desc: 'Review due concepts', icon: '⚡' },
+          { href: '/flashcards', label: 'Flashcards', desc: 'Drill the key facts', icon: '🃏' },
           { href: '/exam', label: 'Mock exam', desc: '65 questions, 130 min', icon: '📝' },
           { href: '/documents', label: 'Upload PDF', desc: 'Turn your notes into questions', icon: '📤' },
         ].map(action => (

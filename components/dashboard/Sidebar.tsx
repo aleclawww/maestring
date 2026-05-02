@@ -10,7 +10,9 @@ import type { SubscriptionPlan } from '@/types/database'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '🏠' },
+  { href: '/learn', label: 'Learn', icon: '📚' },
   { href: '/study', label: 'Study', icon: '📖' },
+  { href: '/flashcards', label: 'Flashcards', icon: '🃏' },
   { href: '/exam', label: 'Exam', icon: '📝' },
   { href: '/progress', label: 'Progress', icon: '📊' },
   { href: '/documents', label: 'Documents', icon: '📄' },
