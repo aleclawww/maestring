@@ -4,6 +4,7 @@ import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { TrialBanner } from '@/components/billing/TrialBanner'
+import { PreviewBanner } from '@/components/billing/PreviewBanner'
 import { getEntitlement } from '@/lib/subscription/check'
 import type { SubscriptionPlan } from '@/types/database'
 
@@ -33,10 +34,12 @@ export default async function DashboardLayout({
   // portal so a past_due user can update their card.
   const isExempt = PAYWALL_EXEMPT_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
   let trialEnd: string | null = null
+  let previewUsage: { questions: number; ambient: number; anchoring: number } | null = null
   if (!isExempt) {
     const ent = await getEntitlement(user.id)
-    if (!ent.allowed) redirect('/trial-required')
-    if (ent.status === 'trialing') trialEnd = ent.trialEnd
+    if (ent.kind === 'gated') redirect('/trial-required')
+    if (ent.kind === 'trialing') trialEnd = ent.trialEnd
+    if (ent.kind === 'exploring') previewUsage = ent.usage
   }
 
   const [{ data: profile }, { data: subscription }] = await Promise.all([
@@ -51,6 +54,7 @@ export default async function DashboardLayout({
       plan={(subscription?.plan ?? 'free') as SubscriptionPlan}
     >
       {trialEnd && <TrialBanner trialEnd={trialEnd} />}
+      {previewUsage && <PreviewBanner usage={previewUsage} />}
       {children}
     </DashboardShell>
   )

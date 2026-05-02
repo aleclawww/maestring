@@ -1,30 +1,71 @@
 /**
- * Subscription gating helper.
+ * Engagement-gated subscription model.
  *
- * The product no longer has a no-card free tier — every user must either
- * be in an active 7-day trial or on a paid subscription to access the
- * dashboard. Public marketing routes, /onboarding, and the billing flow
- * itself stay open (defined in middleware.ts PUBLIC_PREFIXES).
+ * 4 entitlement kinds:
  *
- * This helper lives in lib/ rather than middleware.ts because middleware
- * runs in the Edge runtime — `@supabase/supabase-js` plays nicer in the
- * Node runtime used by route handlers and server components.
+ *   exploring  — new user without a Stripe subscription. Full feature access
+ *                up to the FREE_PREVIEW limits below. No card required yet.
+ *                The Coach + Calibration + first 20 questions are designed
+ *                as the demo; once the user is hooked they hit the paywall.
+ *
+ *   trialing   — has a Stripe subscription with status='trialing'. Full
+ *                access. Card on file, $0 charged, auto-converts on day 8.
+ *
+ *   active     — has a Stripe subscription with status='active'. Full
+ *                access. Paying $19/mo.
+ *
+ *   gated      — exhausted the exploring quota AND no active subscription
+ *                (or sub is past_due / canceled / expired). Layout redirects
+ *                to /trial-required.
+ *
+ * Counts come from existing tables: question_attempts row count for the
+ * user, plus user_learning_state.ambient_exposures + anchoring_responses.
+ * No new schema required.
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export type Entitlement =
-  | { allowed: true; status: 'trialing' | 'active'; trialEnd: string | null; planLabel: 'pro' | 'team' }
-  | { allowed: false; reason: 'no_subscription' | 'expired' | 'past_due' | 'canceled' }
+// Engagement budget for the exploring state. Tuned so the user completes
+// calibration → ambient + first retrieval cycle and just begins to feel the
+// FSRS scheduling kick in before being asked for the card.
+export const FREE_PREVIEW = {
+  questions: 20,
+  ambient: 10,
+  anchoring: 1,
+} as const
 
-/**
- * Returns whether the user has an active entitlement (trial or paid sub).
- * Reads the `subscriptions` table that's kept in sync by Stripe webhooks.
- */
+export interface UsageSnapshot {
+  questions: number
+  ambient: number
+  anchoring: number
+}
+
+export type Entitlement =
+  | { kind: 'trialing'; trialEnd: string | null; planLabel: 'pro' | 'team' }
+  | { kind: 'active'; planLabel: 'pro' | 'team' }
+  | { kind: 'exploring'; usage: UsageSnapshot; limits: typeof FREE_PREVIEW }
+  | { kind: 'gated'; reason: 'preview_exhausted' | 'past_due' | 'canceled' | 'expired'; usage?: UsageSnapshot }
+
+/** True when this entitlement allows access to the dashboard at all. */
+export function isAllowed(e: Entitlement): boolean {
+  return e.kind === 'trialing' || e.kind === 'active' || e.kind === 'exploring'
+}
+
+/** True when the user has reached the soft cap on a specific feature. */
+export function overCap(usage: UsageSnapshot): boolean {
+  return (
+    usage.questions >= FREE_PREVIEW.questions ||
+    usage.ambient >= FREE_PREVIEW.ambient ||
+    usage.anchoring >= FREE_PREVIEW.anchoring
+  )
+}
+
 export async function getEntitlement(userId: string): Promise<Entitlement> {
   const supabase = createAdminClient()
+
+  // 1) Stripe-side subscription state.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase
+  const { data: subData } = await (supabase
     .from('subscriptions')
     .select('plan, status, current_period_end, trial_end' as any) as any)
     .eq('user_id', userId)
@@ -32,32 +73,53 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
     .limit(1)
     .maybeSingle()
 
-  if (error || !data) return { allowed: false, reason: 'no_subscription' }
+  const sub = subData as
+    | { plan: 'free' | 'pro' | 'team'; status: string; trial_end: string | null }
+    | null
 
-  const sub = data as {
-    plan: 'free' | 'pro' | 'team'
-    status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete'
-    current_period_end: string | null
-    trial_end: string | null
+  if (sub?.status === 'trialing') {
+    return { kind: 'trialing', trialEnd: sub.trial_end, planLabel: sub.plan === 'team' ? 'team' : 'pro' }
+  }
+  if (sub?.status === 'active') {
+    return { kind: 'active', planLabel: sub.plan === 'team' ? 'team' : 'pro' }
+  }
+  if (sub?.status === 'past_due') return { kind: 'gated', reason: 'past_due' }
+  // Don't auto-gate on `canceled` if the user is mid-preview — they may have
+  // canceled a previous trial and still have engagement budget left.
+
+  // 2) Usage tally for the exploring state.
+  const usage = await tallyUsage(userId)
+
+  if (sub?.status === 'canceled' && overCap(usage)) {
+    return { kind: 'gated', reason: 'canceled', usage }
   }
 
-  if (sub.status === 'trialing') {
-    return {
-      allowed: true,
-      status: 'trialing',
-      trialEnd: sub.trial_end,
-      planLabel: (sub.plan === 'team' ? 'team' : 'pro'),
-    }
+  if (overCap(usage)) {
+    return { kind: 'gated', reason: 'preview_exhausted', usage }
   }
-  if (sub.status === 'active') {
-    return {
-      allowed: true,
-      status: 'active',
-      trialEnd: null,
-      planLabel: (sub.plan === 'team' ? 'team' : 'pro'),
-    }
+
+  return { kind: 'exploring', usage, limits: FREE_PREVIEW }
+}
+
+async function tallyUsage(userId: string): Promise<UsageSnapshot> {
+  const supabase = createAdminClient()
+
+  const [attemptsRes, ulsRes] = await Promise.all([
+    supabase
+      .from('question_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from('user_learning_state').select('ambient_exposures, anchoring_responses' as any) as any)
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ])
+
+  const questions = attemptsRes.count ?? 0
+  const ulsRow = ulsRes.data as { ambient_exposures?: number; anchoring_responses?: number } | null
+  return {
+    questions,
+    ambient: ulsRow?.ambient_exposures ?? 0,
+    anchoring: ulsRow?.anchoring_responses ?? 0,
   }
-  if (sub.status === 'past_due') return { allowed: false, reason: 'past_due' }
-  if (sub.status === 'canceled') return { allowed: false, reason: 'canceled' }
-  return { allowed: false, reason: 'expired' }
 }

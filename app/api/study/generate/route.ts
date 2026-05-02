@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateQuestionStatic } from "@/lib/question-engine/static-generator";
 import { CONCEPTS } from "@/lib/knowledge-graph/aws-saa";
 import { buildStudyQueue, getRecentMistakes } from "@/lib/question-engine/selector";
+import { getEntitlement } from "@/lib/subscription/check";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -16,6 +17,17 @@ const RequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   const user = await requireAuthenticatedUser();
+
+  // Engagement-gated trial: block question generation when the free preview
+  // is exhausted and the user hasn't started a trial yet. Returns 402 with
+  // a paywall hint the client surfaces as a "Start trial" overlay.
+  const ent = await getEntitlement(user.id);
+  if (ent.kind === 'gated') {
+    return NextResponse.json(
+      { error: 'preview_exhausted', message: 'Free preview used. Start your 7-day trial to keep going.', paywall: true },
+      { status: 402 }
+    );
+  }
 
   const body = await req.json().catch(() => ({}));
   const parsed = RequestSchema.safeParse(body);

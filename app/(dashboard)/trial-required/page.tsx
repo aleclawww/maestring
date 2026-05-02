@@ -12,8 +12,10 @@ export const metadata: Metadata = { title: 'Start your free trial' }
 export default async function TrialRequiredPage() {
   const user = await requireAuthenticatedUser()
   const ent = await getEntitlement(user.id)
-  // If they already have access, send them to the dashboard.
-  if (ent.allowed) redirect('/dashboard')
+  // If they're not gated, they don't need this page — back to the app.
+  if (ent.kind === 'trialing' || ent.kind === 'active' || ent.kind === 'exploring') {
+    redirect('/dashboard')
+  }
 
   const reason = ent.reason
 
@@ -23,16 +25,18 @@ export default async function TrialRequiredPage() {
         <Card className="border-primary/30">
           <CardContent className="p-8 space-y-6">
             <div className="text-center">
-              <div className="inline-block text-5xl mb-4">🔓</div>
+              <div className="inline-block text-5xl mb-4">
+                {reason === 'preview_exhausted' ? '🚀' : '🔓'}
+              </div>
               <h1 className="text-2xl font-bold mb-2">
-                {reason === 'no_subscription' && 'Start your 7-day free trial'}
+                {reason === 'preview_exhausted' && "You're hooked. Now make it stick."}
                 {reason === 'past_due' && 'Update your payment method'}
                 {reason === 'canceled' && 'Reactivate your subscription'}
                 {reason === 'expired' && 'Your subscription has ended'}
               </h1>
               <p className="text-text-secondary text-sm">
-                {reason === 'no_subscription'
-                  ? 'Maestring requires an active subscription. Start a 7-day free trial — $0 today, full access, cancel any time.'
+                {reason === 'preview_exhausted'
+                  ? "You've completed the free preview — calibration, a handful of questions, the Coach. Start your 7-day trial to unlock the full curriculum, FSRS scheduling, and the mock exam. $0 today, $19 after day 7 only if you don't cancel."
                   : reason === 'past_due'
                     ? 'Your last payment failed. Update your card in the billing portal to restore access.'
                     : reason === 'canceled'
@@ -59,7 +63,7 @@ export default async function TrialRequiredPage() {
                 plan="monthly"
                 className="btn-primary w-full text-center py-3 rounded-lg block"
               >
-                {reason === 'no_subscription' ? 'Start 7-day free trial' : 'Resubscribe'}
+                {reason === 'preview_exhausted' ? 'Start 7-day free trial' : 'Resubscribe'}
               </UpgradeButton>
               <p className="text-[11px] text-text-secondary text-center leading-relaxed">
                 Card on file required · $0 today · Reminder email 3 days before charge ·
