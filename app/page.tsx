@@ -150,8 +150,8 @@ const FAQS = [
     a: "Yes. Everything is stored in the cloud. Your FSRS state, phase, fingerprint, streak, and answer history sync across all devices.",
   },
   {
-    q: "Do you offer a free tier?",
-    a: "Yes — the free plan includes the full 142-concept syllabus in /learn, the Coach with all 9 phases, 2,000+ pre-generated questions in /study, the Knowledge Map, flashcards, and the 65-question mock exam. Pro adds PDF upload (turn your own notes into questions), email digests, and priority support.",
+    q: "Is there a free tier?",
+    a: "We don't offer a perma-free plan. We offer a 7-day free trial of the full product (every feature unlocked) with the card on file. If you cancel before day 8 you pay $0. We made this trade because it cuts the no-real-intent signups that were dominating the free tier and lets us put our infra and support behind people who actually want to pass.",
   },
 ];
 
@@ -202,7 +202,7 @@ export default async function LandingPage() {
             See how it works
           </Link>
         </div>
-        <p className="text-zinc-500 text-sm mt-6">No credit card required · Free tier forever</p>
+        <p className="text-zinc-500 text-sm mt-6">7-day free trial · Card on file · Cancel any time before day 8 for $0</p>
       </section>
 
       {/* Product screenshot — swap src when /public/readiness-demo.gif (or .png) is ready.
@@ -415,55 +415,41 @@ export default async function LandingPage() {
 
       {/* Pricing */}
       <section id="pricing" className="bg-zinc-900/50 py-24">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-4">Simple pricing</h2>
-          <p className="text-zinc-400 text-center mb-12">No tricks. Cancel any time.</p>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="card-base p-8">
-              <div className="text-lg font-semibold mb-1">Free</div>
-              <div className="text-4xl font-black mb-6">$0<span className="text-lg text-zinc-400 font-normal">/mo</span></div>
-              <ul className="space-y-3 text-zinc-400 text-sm mb-8">
-                {[
-                  "Full 142-concept syllabus (Learn)",
-                  "9-phase Coach with all activities",
-                  "2,000+ pre-generated questions",
-                  "FSRS-4.5 spaced repetition",
-                  "Knowledge Map + flashcards",
-                  "65-question mock exam",
-                  "Cognitive fingerprint calibration",
-                ].map((f) => (
-                  <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
-                ))}
-              </ul>
-              <Link href="/signup" className="btn-outline w-full text-center py-3 rounded-lg block">
-                Get started
-              </Link>
+        <div className="max-w-2xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center mb-4">One plan, no tricks</h2>
+          <p className="text-zinc-400 text-center mb-10">
+            Try everything free for 7 days. Cancel before day 8 and pay $0.
+          </p>
+          <div className="card-base p-8 border-indigo-500/30 relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-xs px-3 py-1 rounded-full font-semibold">7-DAY FREE TRIAL</div>
+            <div className="text-center">
+              <div className="text-lg font-semibold mb-1">Maestring Pro</div>
+              <div className="text-5xl font-black mb-1">$19<span className="text-lg text-zinc-400 font-normal">/mo</span></div>
+              <div className="text-zinc-500 text-sm mb-6">After the 7-day trial · cancel any time</div>
             </div>
-            <div className="card-base p-8 border-indigo-500/30 relative">
-              <div className="absolute -top-3 right-6 bg-indigo-500 text-white text-xs px-3 py-1 rounded-full font-semibold">MOST POPULAR</div>
-              <div className="text-lg font-semibold mb-1">Pro</div>
-              <div className="text-4xl font-black mb-6">$19<span className="text-lg text-zinc-400 font-normal">/mo</span></div>
-              <ul className="space-y-3 text-zinc-400 text-sm mb-8">
-                {[
-                  "Everything in Free",
-                  "Upload your own AWS PDFs",
-                  "RAG-powered questions from your notes",
-                  "Pass-or-refund guarantee",
-                  "Daily streak email reminders",
-                  "Weekly progress digests",
-                  "Priority support",
-                ].map((f) => (
-                  <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
-                ))}
-              </ul>
-              <Link href="/signup?plan=pro" className="btn-primary w-full text-center py-3 rounded-lg block">
-                Start 7-day free trial
-              </Link>
-              <p className="text-[11px] text-zinc-500 mt-3 text-center leading-relaxed">
-                Card on file required · $0 today · Reminder email 3 days before charge ·
-                Cancel any time from Settings → Billing
-              </p>
-            </div>
+            <ul className="space-y-2.5 text-zinc-300 text-sm mb-8">
+              {[
+                "Full 142-concept SAA-C03 syllabus",
+                "9-phase Coach (Calibration → Mastery)",
+                "2,000+ pre-generated exam-pattern questions",
+                "FSRS-4.5 spaced repetition",
+                "Knowledge Map + flashcards",
+                "65-question mock exam (full simulator)",
+                "Cognitive fingerprint calibration",
+                "PDF upload + RAG-powered questions from your notes",
+                "Pass-or-refund guarantee",
+                "Email digests + priority support",
+              ].map((f) => (
+                <li key={f} className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>{f}</li>
+              ))}
+            </ul>
+            <Link href="/signup?plan=pro" className="btn-primary w-full text-center py-3 rounded-lg block">
+              Start 7-day free trial →
+            </Link>
+            <p className="text-[11px] text-zinc-500 mt-3 text-center leading-relaxed">
+              Card on file required · $0 today · Reminder email 3 days before the first charge ·
+              Cancel any time from Settings → Billing
+            </p>
           </div>
         </div>
       </section>

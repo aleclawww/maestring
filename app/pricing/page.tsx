@@ -26,64 +26,48 @@ export default function PricingPage() {
           </div>
         </div>
       </nav>
-      <div className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <h1 className="text-4xl font-bold mb-4">Simple, honest pricing</h1>
-        <p className="text-zinc-400 mb-16 max-w-lg mx-auto">
-          No upsells. No hidden limits. Upgrade when you're ready.
-        </p>
-        <div className="grid md:grid-cols-2 gap-6 text-left">
-          <div className="card-base p-8">
-            <div className="text-lg font-semibold mb-1">Free</div>
-            <div className="text-4xl font-black mb-2">$0</div>
-            <div className="text-zinc-500 text-sm mb-6">Forever free · everything you need to pass</div>
-            <ul className="space-y-3 text-zinc-400 text-sm mb-8">
-              {[
-                "Full 142-concept SAA-C03 syllabus",
-                "9-phase Coach (Calibration → Mastery)",
-                "2,000+ pre-generated questions",
-                "FSRS-4.5 spaced repetition",
-                "Knowledge Map + flashcards",
-                "65-question mock exam (full simulator)",
-                "Cognitive fingerprint calibration",
-                "Live Readiness Score 0-100",
-                "Email support",
-              ].map((f) => (
-                <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
-              ))}
-            </ul>
-            <Link href="/signup" className="btn-outline w-full text-center py-3 rounded-lg block">Start for free</Link>
-          </div>
-          <div className="card-base p-8 border-indigo-500/40 relative">
-            <div className="absolute -top-3 right-6 bg-indigo-500 text-white text-xs px-3 py-1 rounded-full font-semibold">BEST VALUE</div>
-            <div className="text-lg font-semibold mb-1">Pro</div>
-            <div className="text-4xl font-black mb-2">$19</div>
-            <div className="text-zinc-500 text-sm mb-6">per month · cancel anytime</div>
-            <ul className="space-y-3 text-zinc-400 text-sm mb-8">
-              {[
-                "Everything in Free",
-                "Upload your own AWS PDFs",
-                "RAG-powered questions from your notes",
-                "Pass-or-refund guarantee",
-                "Daily streak email reminders",
-                "Weekly progress digests",
-                "Priority support",
-              ].map((f) => (
-                <li key={f} className="flex gap-2"><span className="text-emerald-400">✓</span>{f}</li>
-              ))}
-            </ul>
-            <UpgradeButton
-              plan="monthly"
-              className="btn-primary w-full text-center py-3 rounded-lg block"
-            >
-              Start 7-day free trial
-            </UpgradeButton>
-            <p className="text-[11px] text-zinc-500 mt-3 text-center leading-relaxed">
-              Card on file required · $0 today · Reminder email 3 days before charge ·
-              Cancel any time from Settings → Billing · No charge if you cancel within 7 days
-            </p>
-          </div>
+      <div className="max-w-2xl mx-auto px-6 py-24">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold mb-4">One plan, no tricks</h1>
+          <p className="text-zinc-400 max-w-lg mx-auto">
+            Try the full product free for 7 days. Cancel before day 8 and pay $0.
+          </p>
         </div>
-        <p className="text-zinc-600 text-sm mt-8">
+        <div className="card-base p-8 border-indigo-500/40 relative">
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-xs px-3 py-1 rounded-full font-semibold">7-DAY FREE TRIAL</div>
+          <div className="text-center">
+            <div className="text-lg font-semibold mb-1">Maestring Pro</div>
+            <div className="text-5xl font-black mb-1">$19<span className="text-lg text-zinc-400 font-normal">/mo</span></div>
+            <div className="text-zinc-500 text-sm mb-6">After the 7-day trial · cancel any time</div>
+          </div>
+          <ul className="space-y-2.5 text-zinc-300 text-sm mb-8">
+            {[
+              "Full 142-concept SAA-C03 syllabus",
+              "9-phase Coach (Calibration → Mastery)",
+              "2,000+ pre-generated exam-pattern questions",
+              "FSRS-4.5 spaced repetition",
+              "Knowledge Map + flashcards",
+              "65-question mock exam (full simulator)",
+              "Cognitive fingerprint calibration",
+              "PDF upload + RAG-powered questions from your notes",
+              "Pass-or-refund guarantee",
+              "Email digests + priority support",
+            ].map((f) => (
+              <li key={f} className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>{f}</li>
+            ))}
+          </ul>
+          <UpgradeButton
+            plan="monthly"
+            className="btn-primary w-full text-center py-3 rounded-lg block"
+          >
+            Start 7-day free trial →
+          </UpgradeButton>
+          <p className="text-[11px] text-zinc-500 mt-3 text-center leading-relaxed">
+            Card on file required · $0 today · Reminder email 3 days before the first charge ·
+            Cancel any time from Settings → Billing · No charge if you cancel within 7 days
+          </p>
+        </div>
+        <p className="text-zinc-600 text-sm mt-8 text-center">
           Payments processed securely by Stripe. By subscribing you agree to our{" "}
           <Link href="/legal/terms" className="text-indigo-400 hover:underline">Terms of Service</Link> and <Link href="/legal/privacy" className="text-indigo-400 hover:underline">Privacy Policy</Link>.
         </p>

@@ -1,8 +1,20 @@
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import { TrialBanner } from '@/components/billing/TrialBanner'
+import { getEntitlement } from '@/lib/subscription/check'
 import type { SubscriptionPlan } from '@/types/database'
+
+// Routes inside the (dashboard) group that should NOT enforce the trial
+// paywall (so the user can complete onboarding, see the paywall itself,
+// and reach Settings → Billing to fix a payment issue).
+const PAYWALL_EXEMPT_PREFIXES = [
+  '/onboarding',
+  '/trial-required',
+  '/settings',
+]
 
 export default async function DashboardLayout({
   children,
@@ -12,11 +24,19 @@ export default async function DashboardLayout({
   const user = await requireAuthenticatedUser()
   const supabase = createClient()
 
-  // Onboarding renders as a standalone wizard — skip all chrome.
   const pathname = headers().get('x-pathname') ?? ''
   const isOnboardingFlow = pathname === '/onboarding' || pathname.startsWith('/onboarding/')
-  if (isOnboardingFlow) {
-    return <>{children}</>
+  if (isOnboardingFlow) return <>{children}</>
+
+  // Subscription gate: every user needs an active 7-day trial or paid sub.
+  // /trial-required is the paywall page itself; /settings hosts billing
+  // portal so a past_due user can update their card.
+  const isExempt = PAYWALL_EXEMPT_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
+  let trialEnd: string | null = null
+  if (!isExempt) {
+    const ent = await getEntitlement(user.id)
+    if (!ent.allowed) redirect('/trial-required')
+    if (ent.status === 'trialing') trialEnd = ent.trialEnd
   }
 
   const [{ data: profile }, { data: subscription }] = await Promise.all([
@@ -30,6 +50,7 @@ export default async function DashboardLayout({
       userAvatar={profile?.avatar_url}
       plan={(subscription?.plan ?? 'free') as SubscriptionPlan}
     >
+      {trialEnd && <TrialBanner trialEnd={trialEnd} />}
       {children}
     </DashboardShell>
   )
