@@ -271,9 +271,10 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Positioning — Skill Builder + Maestring. Neutralizes the #1 objection
-          ("but AWS has its own resources") by reframing us as a complement,
-          not a competitor. SEO-friendly and moves us up the funnel. */}
+      {/* Positioning — Skill Builder + Maestring. Three-column comparison
+          (left: AWS, middle: combo, right: us). Reframes us as a complement
+          rather than a competitor — neutralizes the #1 sales objection
+          "but AWS already has its own resources". */}
       <section className="max-w-5xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <div className="inline-block text-xs uppercase tracking-widest text-indigo-400 mb-3">
@@ -286,21 +287,28 @@ export default async function LandingPage() {
           </h2>
           <p className="text-zinc-400 max-w-2xl mx-auto leading-relaxed">
             AWS Skill Builder is the authoritative source for AWS content — you should use it.
-            Maestring is the adaptive exam-readiness layer on top. We give you the one thing AWS
+            Maestring is the exam-readiness layer on top. We give you the one thing AWS
             structurally can&rsquo;t: an honest prediction of your pass probability before you spend
             $150 on the real exam.
           </p>
         </div>
 
+        <div className="text-center text-xs text-zinc-500 mb-3">
+          <span className="text-emerald-400">✓ included</span>
+          <span className="mx-3">·</span>
+          <span className="text-zinc-500">✕ not included</span>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
           <div className="card-base p-6">
-            <div className="text-sm font-semibold text-zinc-300 mb-3">AWS Skill Builder</div>
+            <div className="text-sm font-semibold text-zinc-300 mb-1">AWS Skill Builder</div>
+            <div className="text-xs text-zinc-500 mb-4">AWS&rsquo;s official learning platform</div>
             <ul className="text-sm text-zinc-400 space-y-2">
-              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Official content & labs</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Official AWS content &amp; hands-on labs</li>
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Video courses by AWS instructors</li>
-              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">—</span>Static question bank</li>
-              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">—</span>No readiness prediction</li>
-              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">—</span>No adaptive difficulty</li>
+              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">✕</span>Static question bank (no scheduling)</li>
+              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">✕</span>No readiness prediction</li>
+              <li className="flex gap-2"><span className="text-zinc-600 shrink-0">✕</span>No phase-orchestrated learning</li>
             </ul>
           </div>
 
@@ -308,18 +316,20 @@ export default async function LandingPage() {
             <div className="absolute -top-3 left-6 bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wider">
               IDEAL STACK
             </div>
-            <div className="text-sm font-semibold text-indigo-300 mb-3">Both, together</div>
+            <div className="text-sm font-semibold text-indigo-300 mb-1">Both, together</div>
+            <div className="text-xs text-zinc-500 mb-4">≈ €48/mo combined · pass on first attempt</div>
             <ul className="text-sm text-zinc-300 space-y-2">
-              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Learn AWS from AWS</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Learn AWS from AWS itself</li>
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Measure readiness with Maestring</li>
-              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Fresh adaptive questions forever</li>
-              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Pass on the first attempt</li>
-              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>~€48/mo combined</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Practice 2,000+ exam-pattern questions</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Honest pass probability before exam day</li>
+              <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Pass-or-refund safety net</li>
             </ul>
           </div>
 
           <div className="card-base p-6">
-            <div className="text-sm font-semibold text-zinc-300 mb-3">Maestring</div>
+            <div className="text-sm font-semibold text-zinc-300 mb-1">Maestring</div>
+            <div className="text-xs text-zinc-500 mb-4">The readiness layer on top of any source</div>
             <ul className="text-sm text-zinc-400 space-y-2">
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Live Readiness Score 0–100</li>
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>9-phase Coach (Calibration → Mastery)</li>
