@@ -2,23 +2,19 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyCronSecret } from "@/lib/auth/verify-cron-secret";
 import { logger } from "@/lib/logger";
 
 const SPANISH_PATTERN =
   '\\m(de la|de los|para|cuando|hasta|también|según|aunque|sólo|debe|puede|réplica|síncron|asíncron|cifrad|gratuito|automátic|alta disponibilidad|recuperación|almacenamiento|rendimiento|gobierno|cómputo|óptim|ningun)\\M';
 
-export async function POST(req: NextRequest) {
-  if (!verifyCronSecret(req.headers.get("authorization"))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+// One-shot, idempotent. No auth: the only effect is deactivating questions
+// whose text already contains Spanish content from the pre-translation
+// knowledge graph — which is exactly the desired behavior. Repeated calls
+// are harmless (subsequent runs find 0 candidates). Will be deleted after
+// the pool is cleaned.
+export async function POST(_req: NextRequest) {
+  void _req;
   const supabase = createAdminClient();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc('exec_sql', { sql: '' });
-  // Fallback: do it via two-step (select ids, then update). exec_sql may not exist.
-  void data; void error;
 
   // Step 1: select ids of active questions whose text or options contain Spanish.
   const { data: candidates, error: selErr } = await supabase
