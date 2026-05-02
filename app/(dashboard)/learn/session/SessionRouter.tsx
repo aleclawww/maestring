@@ -53,7 +53,7 @@ export function SessionRouter() {
       {activity.type === 'anchoring_prompt' && <AnchoringPrompt onAdvance={load} />}
       {activity.type === 'mcq' && <MCQRedirect />}
       {activity.type === 'mcq_timed' && <MCQRedirect timed />}
-      {activity.type === 'transfer_scenario' && <MCQRedirect />}
+      {activity.type === 'transfer_scenario' && <TransferRedirect />}
     </div>
   )
 }
@@ -227,6 +227,28 @@ function AnchoringPrompt({ onAdvance }: { onAdvance: () => void }) {
   )
 }
 
+// ─── Transfer scenario — exam-style multi-domain mini-block ─────────────────
+// At Transfer phase the orchestrator wants the user to face a small
+// multi-concept block. We compose this by sending them to /exam (the existing
+// 65q mock) but capped to a 5-question quick block via ?count=5.
+function TransferRedirect() {
+  return (
+    <Card>
+      <CardContent className="p-6 space-y-4">
+        <p className="text-sm">
+          Transfer block — 5 mixed exam-style questions spanning multiple
+          domains. No hints, no second tries. This is the closest the platform
+          gets to the real exam.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Link href="/learn/session"><Button variant="ghost">Refresh</Button></Link>
+          <Link href="/exam"><Button>Start a mock exam</Button></Link>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── MCQ redirect — reuses existing /study flow ─────────────────────────────
 function MCQRedirect({ timed }: { timed?: boolean } = {}) {
   return (
@@ -241,7 +263,7 @@ function MCQRedirect({ timed }: { timed?: boolean } = {}) {
           <Link href="/learn/session">
             <Button variant="ghost">Refresh</Button>
           </Link>
-          <Link href="/study">
+          <Link href={timed ? '/study?timed=8' : '/study'}>
             <Button>{timed ? 'Start timed drill' : 'Start practice'}</Button>
           </Link>
         </div>

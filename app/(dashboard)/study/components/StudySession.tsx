@@ -1,6 +1,7 @@
 'use client'
 
 import { useReducer, useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { QuestionCard } from './QuestionCard'
 import { SessionProgress } from './SessionProgress'
 import { SessionSummary } from './SessionSummary'
@@ -74,6 +75,11 @@ interface StudySessionProps {
 }
 
 export function StudySession({ userId: _userId, activeSessionId, dueCount }: StudySessionProps) {
+  const searchParams = useSearchParams()
+  // ?timed=1 (or ?timed=12 to set custom seconds) enables the Automation drill
+  // countdown — used by the Coach when phase = automation.
+  const timedParam = searchParams?.get('timed')
+  const timeLimitSec = timedParam ? Math.max(3, Math.min(60, Number(timedParam) || 8)) : undefined
   const [state, dispatch] = useReducer(reducer, { phase: 'setup' })
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const sessionIdRef = useRef<string | null>(activeSessionId ?? null)
@@ -233,7 +239,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
     }
   }, [resetWithError])
 
-  const submitAnswer = useCallback(async (selectedIndex: number, firstAttemptCorrect: boolean) => {
+  const submitAnswer = useCallback(async (selectedIndex: number, firstAttemptCorrect: boolean, confidence?: number) => {
     if (state.phase !== 'question') return
     const timeTaken = Date.now() - state.startedAt
     const questionNumber = state.questionNumber
@@ -278,6 +284,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
           sessionId: sessionIdRef.current,
           conceptId: state.question.conceptId,
           firstAttemptCorrect,
+          ...(typeof confidence === 'number' ? { confidence } : {}),
         }),
       })
       // Previously `const { data: evaluation } = await res.json()` skipped
@@ -566,7 +573,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
         {explorationBanner}
         <div className="flex flex-1 items-center justify-center p-4 sm:p-6">
           <div className="w-full max-w-2xl">
-            <QuestionCard key={state.question.id} question={state.question} onAnswer={submitAnswer} />
+            <QuestionCard key={state.question.id} question={state.question} onAnswer={submitAnswer} timeLimitSec={timeLimitSec} />
           </div>
         </div>
       </div>

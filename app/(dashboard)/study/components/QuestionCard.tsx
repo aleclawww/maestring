@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import type { Question } from '@/types/study'
 
 interface QuestionCardProps {
   question: Question
-  onAnswer: (selectedIndex: number, firstAttemptCorrect: boolean) => void
+  onAnswer: (selectedIndex: number, firstAttemptCorrect: boolean, confidence?: number) => void
+  /** When set, shows a countdown timer (Automation phase). Auto-submits at 0. */
+  timeLimitSec?: number
 }
 
 // Progressive-explanation flow (plan A3.2):
@@ -17,13 +19,15 @@ interface QuestionCardProps {
 // The submit callback receives `firstAttemptCorrect` so the evaluator can
 // record the honest rating (only first-try-correct is "good"; everything
 // else flags FSRS Again).
-export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
+export function QuestionCard({ question, onAnswer, timeLimitSec }: QuestionCardProps) {
   const [selected, setSelected] = useState<number | null>(null)
   const [attempt, setAttempt] = useState<1 | 2>(1)
   const [hintShown, setHintShown] = useState(false)
   const [hintRequestedBeforeAnswer, setHintRequestedBeforeAnswer] = useState(false)
   const [firstAttempt, setFirstAttempt] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Metacognitive calibration: 1..5 confidence picked BEFORE the reveal.
+  const [confidence, setConfidence] = useState<number | null>(null)
   // Ref-based lock prevents double-submit within a single React batch cycle.
   // useState alone has a race window: React hasn't flushed the state update yet
   // by the time a second tap (≤200ms on mobile) checks the lock, so both taps
@@ -56,7 +60,7 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
       setSubmitting(true)
       // Proactive hint use forfeits first-try bonus even when correct.
       const firstCorrect = attempt === 1 && isCorrect && !hintRequestedBeforeAnswer
-      setTimeout(() => onAnswer(selected, firstCorrect), 200)
+      setTimeout(() => onAnswer(selected, firstCorrect, confidence ?? undefined), 200)
       return
     }
 
@@ -222,6 +226,56 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
         })}
       </div>
 
+      {/* Confidence picker — appears once an option is selected (attempt 1 only). */}
+      {selected !== null && attempt === 1 && (
+        <div className="border-t border-border px-6 py-3">
+          <p className="text-xs text-text-secondary mb-2">
+            How confident are you? <span className="opacity-60">(optional — calibrates your metacognition)</span>
+          </p>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setConfidence(v)}
+                disabled={locked}
+                aria-label={`Confidence ${v} of 5`}
+                className={cn(
+                  'flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors',
+                  confidence === v
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-text-secondary hover:border-text-secondary'
+                )}
+              >
+                {v === 1 ? '1 · guess' : v === 5 ? '5 · sure' : v}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Countdown timer — Automation phase. Shown when timeLimitSec is set. */}
+      {timeLimitSec && (
+        <Countdown
+          seconds={timeLimitSec}
+          paused={locked || attempt === 2}
+          onTimeout={() => {
+            if (selected === null && !locked) {
+              // Forced timeout — submit -1 placeholder so server records a wrong attempt.
+              // Easier: just submit current selection or 0 if none.
+              const idx = selected ?? 0
+              if (!submittingRef.current) {
+                submittingRef.current = true
+                setSubmitting(true)
+                setTimeout(() => onAnswer(idx, false, confidence ?? undefined), 100)
+              }
+            } else if (selected !== null && !locked) {
+              handleSubmit()
+            }
+          }}
+        />
+      )}
+
       {/* Submit button */}
       <div className="border-t border-border px-6 py-4">
         <button
@@ -243,6 +297,38 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
             'Confirm answer'
           )}
         </button>
+      </div>
+    </div>
+  )
+}
+
+// Countdown — drives the Automation phase 8s deadline. Shows a coloured bar
+// + numeric seconds remaining, and fires onTimeout exactly once when it hits 0.
+function Countdown({ seconds, paused, onTimeout }: { seconds: number; paused: boolean; onTimeout: () => void }) {
+  const [remaining, setRemaining] = useState(seconds)
+  const firedRef = useRef(false)
+
+  useEffect(() => {
+    if (paused) return
+    if (remaining <= 0) {
+      if (!firedRef.current) { firedRef.current = true; onTimeout() }
+      return
+    }
+    const t = setTimeout(() => setRemaining(r => r - 1), 1000)
+    return () => clearTimeout(t)
+  }, [remaining, paused, onTimeout])
+
+  const pct = Math.max(0, Math.min(100, (remaining / seconds) * 100))
+  const tone = remaining <= 2 ? 'bg-danger' : remaining <= 4 ? 'bg-warning' : 'bg-success'
+
+  return (
+    <div className="border-t border-border px-6 py-3">
+      <div className="flex items-center justify-between text-xs mb-1.5">
+        <span className="font-semibold text-text-secondary">⏱ Automation drill</span>
+        <span className="font-bold tabular-nums">{remaining}s</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-surface overflow-hidden">
+        <div className={cn('h-full transition-all duration-1000 ease-linear', tone)} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )

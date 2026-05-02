@@ -28,33 +28,34 @@ export interface DomainDefinition {
 }
 
 export const DOMAINS: DomainDefinition[] = [
+  // Official SAA-C03 v1.1 weights: Secure 30, Resilient 26, Performing 24, Cost 20.
+  {
+    slug: 'secure-architecture',
+    name: 'Design Secure Architectures',
+    examWeightPercent: 30,
+    color: '#f59e0b',
+    description: 'Design secure access to AWS resources, secure workloads and applications, and appropriate data security controls.',
+  },
   {
     slug: 'resilient-architecture',
-    name: 'Resilient Architecture',
-    examWeightPercent: 30,
+    name: 'Design Resilient Architectures',
+    examWeightPercent: 26,
     color: '#6366f1',
-    description: 'Design resilient, fault-tolerant multi-tier solutions and disaster recovery',
+    description: 'Design scalable, loosely coupled, highly available and fault-tolerant architectures.',
   },
   {
     slug: 'performant-architecture',
-    name: 'High-Performance Architecture',
-    examWeightPercent: 28,
-    color: '#10b981',
-    description: 'Select high-performance storage, compute, network, and DB solutions',
-  },
-  {
-    slug: 'secure-architecture',
-    name: 'Secure Architecture',
+    name: 'Design High-Performing Architectures',
     examWeightPercent: 24,
-    color: '#f59e0b',
-    description: 'Design secure access, secure workloads, and data protection',
+    color: '#10b981',
+    description: 'High-performing and scalable storage, compute, database, network, and data ingestion / transformation solutions.',
   },
   {
     slug: 'cost-optimized-architecture',
-    name: 'Cost-Optimized Architecture',
-    examWeightPercent: 18,
+    name: 'Design Cost-Optimized Architectures',
+    examWeightPercent: 20,
     color: '#ef4444',
-    description: 'Identify cost-optimized storage, compute, and service solutions',
+    description: 'Cost-optimized storage, compute, database, and network architectures.',
   },
 ]
 
