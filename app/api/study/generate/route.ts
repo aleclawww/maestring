@@ -217,14 +217,16 @@ export async function POST(req: NextRequest) {
   if (conceptDef) {
     // ── Path 1: Static generation (no LLM, no API key) ──────────────────
     //
-    // Compute a seed that changes with each session + question attempt so
-    // the same concept gets a different question type / fact on each call.
-    // We use the number of prior attempts the user has on this concept as
-    // the seed — but we don't want to do an extra DB round-trip, so we
-    // approximate with the sessionAttempts count.
-    const staticSeed = sessionAttempts.filter(
-      a => a.questions?.blueprint_task_id === next.conceptId
-    ).length + Math.floor(Date.now() / (1000 * 60 * 60 * 24)); // day-based rotation
+    // Truly randomized seed per question. The previous formula
+    // `filter(blueprint_task_id===conceptId).length + day_number` was
+    // effectively constant within a day (the filter always returned 0
+    // because blueprint_task_id and conceptId are different fields), which
+    // pinned every question of the day to the same generator type, the same
+    // exam tip, and — combined with the position math — the same option
+    // letter. Using a hashed mix of the timestamp + a random component gives
+    // genuine variety on every call.
+    const staticSeed =
+      (Date.now() & 0x7fffffff) ^ ((Math.random() * 0x7fffffff) | 0);
 
     const staticQ = generateQuestionStatic(conceptDef, staticSeed);
 

@@ -111,7 +111,7 @@ export async function buildStudyQueue(
   mode: StudyMode,
   domainId?: string,
   certificationId: string = DEFAULT_CERT_ID,
-  limit = 10
+  limit = 20
 ): Promise<StudyQueueItem[]> {
   const admin = createAdminClient()
 

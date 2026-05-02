@@ -55,8 +55,13 @@ function shuffle<T>(arr: T[], seed: number): T[] {
 /** Place `correct` at position `pos` inside `options`, return [options, newPos]. */
 function placeCorrect(correct: string, distractors: string[], pos: number): [string[], number] {
   const opts = [...distractors.slice(0, 3)]
-  opts.splice(pos % 4, 0, correct)
-  return [opts.slice(0, 4), pos % 4]
+  // Hash the seed once more so callers passing seed+1, seed+2, seed+3 don't all
+  // collapse to the same position (previously a session-day-aligned seed pinned
+  // every question to the same option letter — usually A).
+  const mixed = ((pos * 2654435761) ^ ((pos >>> 16) * 40503)) >>> 0
+  const idx = mixed % 4
+  opts.splice(idx, 0, correct)
+  return [opts.slice(0, 4), idx]
 }
 
 function getConfusedConcepts(concept: ConceptDefinition): ConceptDefinition[] {
@@ -103,6 +108,53 @@ const GENERIC_DISTRACTORS: Record<string, string[]> = {
   network:   ['AWS Global Accelerator', 'Amazon Route 53', 'AWS PrivateLink', 'AWS WAF'],
   security:  ['Amazon GuardDuty', 'Amazon Inspector', 'AWS Config', 'Amazon Macie'],
   messaging: ['Amazon Kinesis', 'Amazon MQ', 'AWS Step Functions', 'Amazon AppFlow'],
+}
+
+// Stem templates rotated by seed so the same question type doesn't repeat the
+// same wording. Each `{cond}` slot is filled with the parsed exam-tip
+// condition (lower-cased natural-language scenario).
+const SCENARIO_STEMS = [
+  'An AWS Solutions Architect is designing a solution where {cond} is required. Which service or approach is MOST appropriate?',
+  'A company needs {cond}. Which AWS service BEST meets the requirement?',
+  'A workload must support {cond}. Which option is MOST suitable?',
+  'You are tasked with implementing {cond}. Which AWS service should you choose?',
+  'A team is evaluating AWS services for {cond}. Which one fits BEST?',
+  'A solutions architect must recommend an AWS service that supports {cond}. Which option is the BEST fit?',
+]
+
+const TRUE_FACT_STEMS = [
+  'Which of the following statements about {name} is CORRECT?',
+  'Which statement BEST describes {name}?',
+  'Which of the following is TRUE about {name}?',
+  'Which fact about {name} is accurate?',
+]
+
+const FALSE_FACT_STEMS = [
+  'Which of the following is NOT a characteristic of {name}?',
+  'Which statement about {name} is INCORRECT?',
+  'All of the following describe {name} EXCEPT which one?',
+  'Which of these is FALSE about {name}?',
+]
+
+const WHEN_TO_USE_STEMS = [
+  'Which of the following use cases is {name} BEST suited to address?',
+  'For which scenario should you choose {name}?',
+  'When is {name} the MOST appropriate choice?',
+  'Which workload BEST justifies using {name}?',
+]
+
+const VS_COMPARISON_STEMS = [
+  'Which statement CORRECTLY describes a key difference between {a} and {b}?',
+  'How does {a} differ from {b}?',
+  'Which option correctly contrasts {a} with {b}?',
+  'What is a meaningful distinction between {a} and {b}?',
+]
+
+function pickStem(stems: string[], seed: number): string {
+  // Use a hashed seed so consecutive callers with seed, seed+1, seed+2 don't
+  // hit the same template just because the modulo is small.
+  const mixed = ((seed * 2246822519) ^ ((seed >>> 13) * 3266489917)) >>> 0
+  return stems[mixed % stems.length]!
 }
 
 function genericDistractors(concept: ConceptDefinition): string[] {
@@ -155,9 +207,7 @@ function generateScenario(
     .replace(/"/g, '"')
     .toLowerCase()
 
-  const questionText =
-    `An AWS Solutions Architect is designing a solution where ${condition} is required. ` +
-    `Which service or approach is MOST appropriate?`
+  const questionText = pickStem(SCENARIO_STEMS, seed).replace('{cond}', condition)
 
   const explanation =
     `${concept.name}: ${tip.condition} → ${tip.answer}. ` +
@@ -209,7 +259,7 @@ function generateTrueFact(
 
   const [options, correctIndex] = placeCorrect(correctFact, distractors, seed + 2)
 
-  const questionText = `Which of the following statements about ${concept.name} is CORRECT?`
+  const questionText = pickStem(TRUE_FACT_STEMS, seed).replace('{name}', concept.name)
   const explanation =
     `${correctFact}. ${concept.description}. ` +
     (confused[0] ? `Note: do not confuse with ${confused[0].name} — ${confused[0].keyFacts[0] ?? ''}` : '')
@@ -253,8 +303,7 @@ function generateFalseFact(
   // In this type, the INCORRECT statement is the "correct answer" (the one to pick)
   const [options, correctIndex] = placeCorrect(incorrectFact, correctFacts, seed + 3)
 
-  const questionText =
-    `Which of the following is NOT a characteristic of ${concept.name}?`
+  const questionText = pickStem(FALSE_FACT_STEMS, seed).replace('{name}', concept.name)
   const explanation =
     `"${incorrectFact}" is INCORRECT for ${concept.name}. ` +
     `The correct characteristics are: ${correctFacts.join('; ')}.`
@@ -318,8 +367,7 @@ function generateWhenToUse(
 
   const [options, correctIndex] = placeCorrect(correctOption, wrongOptions.slice(0, 3), seed + 4)
 
-  const questionText =
-    `Which of the following use cases is ${concept.name} BEST suited to address?`
+  const questionText = pickStem(WHEN_TO_USE_STEMS, seed).replace('{name}', concept.name)
   const explanation =
     `${concept.name} is the ideal solution when ${correctOption}. ` +
     `${concept.keyFacts[0] ?? concept.description}`
@@ -381,9 +429,9 @@ function generateVsComparison(
 
   const [options, correctIndex] = placeCorrect(correctAnswer, distractors, seed + 5)
 
-  const questionText =
-    `Which statement CORRECTLY describes a key difference between ` +
-    `${concept.name} and ${other.name}?`
+  const questionText = pickStem(VS_COMPARISON_STEMS, seed)
+    .replace('{a}', concept.name)
+    .replace('{b}', other.name)
   const explanation =
     `${distinguishingFact}. ` +
     `${concept.name}: ${concept.description}. ` +
@@ -535,7 +583,10 @@ export function generateQuestionStatic(
     () => generateVsComparison(concept, confused, seed),
   ]
 
-  const typeIdx = seed % generators.length
+  // Hash the seed before picking the generator type, otherwise sequential seeds
+  // (seed, seed+1, seed+2…) all hit the same generator because % 5 is small.
+  const mixedType = ((seed * 374761393) ^ ((seed >>> 9) * 668265263)) >>> 0
+  const typeIdx = mixedType % generators.length
 
   // Try the seed-selected type first, then fall back in order
   for (let i = 0; i < generators.length; i++) {
