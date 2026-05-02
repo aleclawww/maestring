@@ -4,8 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
+// Expanded: catch the actual contamination patterns observed in the prod
+// pool (mixed-language strings produced by earlier LLM/static runs against
+// the Spanish knowledge graph). Includes both pure-Spanish words and the
+// Spanish-stem fragments that survive in mixed sentences.
 const SPANISH_PATTERN =
-  '\\m(de la|de los|para|cuando|hasta|también|según|aunque|sólo|debe|puede|réplica|síncron|asíncron|cifrad|gratuito|automátic|alta disponibilidad|recuperación|almacenamiento|rendimiento|gobierno|cómputo|óptim|ningun)\\M';
+  '\\m(de la|de los|para|cuando|hasta|también|según|aunque|sólo|debe|puede|réplica|síncron|asíncron|cifrad|gratuito|automátic|alta disponibilidad|recuperación|almacenamiento|rendimiento|gobierno|cómputo|óptim|ningun|integración|integracion|centralizad|privada|privado|accesa|desde|tipos de|modelos de|familia|familias|tamaño|configuración|configuracion|conexión|conexion|función|funcion|aplicación|aplicacion|región|regiones|disponibilidad|conmutación|conmutacion|copias|cifrad|seguridad|protección|proteccion)\\M';
 
 // One-shot, idempotent. No auth: the only effect is deactivating questions
 // whose text already contains Spanish content from the pre-translation
