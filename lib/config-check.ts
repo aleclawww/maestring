@@ -26,12 +26,11 @@ export const CONFIG_STATUS = {
   get stripe() {
     return isConfigured('STRIPE_SECRET_KEY')
   },
-  /** Stripe price IDs — required for checkout */
+  /** Stripe price IDs — at least monthly is required for checkout. Annual
+   * is optional (we don't sell it on the landing yet) and shouldn't gate
+   * the dashboard banner. */
   get stripePrices() {
-    return (
-      isConfigured('STRIPE_PRICE_PRO_MONTHLY') &&
-      isConfigured('STRIPE_PRICE_PRO_ANNUAL')
-    )
+    return isConfigured('STRIPE_PRICE_PRO_MONTHLY')
   },
   /** Upstash Redis — optional (fails open) */
   get redis() {
@@ -48,8 +47,20 @@ export type SetupWarning = {
   envVars: string[]
 }
 
-/** Returns a list of un-configured features for the dashboard banner. */
+/**
+ * Returns a list of un-configured features for the DEV-ONLY dashboard banner.
+ *
+ * In production we deliberately suppress this banner entirely — the warning is
+ * a developer setup hint ("you forgot to set X env var"), not a user-facing
+ * message. Showing it to a real customer makes the product look broken even
+ * when the affected feature (e.g. PDF upload) is genuinely optional.
+ */
 export function getSetupWarnings(): SetupWarning[] {
+  // Hide in production unless explicitly forced (e.g. for a staging probe).
+  if (process.env.NODE_ENV === 'production' && process.env.SHOW_SETUP_WARNINGS !== '1') {
+    return []
+  }
+
   const warnings: SetupWarning[] = []
 
   // NOTE: ANTHROPIC_API_KEY is optional — the static generator produces full

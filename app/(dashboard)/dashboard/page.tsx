@@ -149,7 +149,7 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-text-secondary mt-1">
           {daysToExam !== null && daysToExam > 0
-            ? `${daysToExam} days until your exam. Let's go!`
+            ? `${daysToExam} day${daysToExam === 1 ? '' : 's'} until your exam. Let's go!`
             : 'Continue your AWS SAA-C03 prep.'}
         </p>
       </div>
@@ -178,6 +178,14 @@ export default async function DashboardPage() {
         </Card>
       )}
 
+      {/* What's next — prioritised actions, above the fold */}
+      {nextActions.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold mb-3 uppercase tracking-wide text-text-secondary">What&rsquo;s next</h2>
+          <WhatsNext actions={nextActions} />
+        </div>
+      )}
+
       {/* Action Card */}
       <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-transparent">
         <CardContent className="flex items-center justify-between">
@@ -203,7 +211,7 @@ export default async function DashboardPage() {
         {[
           {
             label: 'Current streak',
-            value: `${profile?.current_streak ?? 0} days`,
+            value: `${profile?.current_streak ?? 0} day${(profile?.current_streak ?? 0) === 1 ? '' : 's'}`,
             icon: '🔥',
             color: 'text-warning',
             subtitle: `🧊 ${profile?.streak_freezes_available ?? 0} freezes`,
@@ -334,12 +342,6 @@ export default async function DashboardPage() {
       )}
 
       {/* Quick Actions */}
-      {/* Prioritised "What's next" — phase + due-aware */}
-      <div>
-        <h2 className="text-sm font-semibold mb-3 uppercase tracking-wide text-text-secondary">What&rsquo;s next</h2>
-        <WhatsNext actions={nextActions} />
-      </div>
-
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {[
           { href: '/learn', label: 'Learn', desc: 'Read concept-by-concept', icon: '📚' },

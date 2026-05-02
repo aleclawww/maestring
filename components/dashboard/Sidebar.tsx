@@ -87,30 +87,38 @@ export function Sidebar({ userName, userAvatar, plan = 'free' }: SidebarProps) {
         </button>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — longest-prefix-match wins so /learn/session highlights
+          only Coach, not both Coach AND Learn. */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        {navItems.map(item => {
-          const isActive = pathname === item.href || 
-            (item.href !== '/dashboard' && pathname.startsWith(item.href))
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                collapsed ? 'justify-center' : 'gap-3',
-                isActive
-                  ? 'bg-primary/10 text-primary border border-primary/20'
-                  : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary'
-              )}
-            >
-              <span className="text-base">{item.icon}</span>
-              {!collapsed && item.label}
-            </Link>
-          )
-        })}
+        {(() => {
+          const matchPaths = navItems.map(it => (it.href.split('?')[0] ?? it.href))
+          const matchIdx = matchPaths
+            .map((p, i) => ({
+              i,
+              len: pathname === p || (p !== '/dashboard' && pathname.startsWith(p + '/')) ? p.length : -1,
+            }))
+            .reduce((best, cur) => (cur.len > best.len ? cur : best), { i: -1, len: -1 }).i
+          return navItems.map((item, idx) => {
+            const isActive = idx === matchIdx
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                className={cn(
+                  'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  collapsed ? 'justify-center' : 'gap-3',
+                  isActive
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary'
+                )}
+              >
+                <span className="text-base">{item.icon}</span>
+                {!collapsed && item.label}
+              </Link>
+            )
+          })
+        })()}
       </nav>
 
       {/* User section */}

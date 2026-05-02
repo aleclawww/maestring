@@ -172,7 +172,7 @@ export default async function LandingPage() {
               href="/signup"
               className="btn-primary text-sm px-4 py-2 rounded-lg"
             >
-              Get started free
+              Start free trial
             </Link>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default async function LandingPage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/signup" className="btn-primary px-8 py-4 text-lg rounded-xl font-semibold">
-            Start for free →
+            Start free trial →
           </Link>
           <Link href="#how-it-works" className="btn-outline px-8 py-4 text-lg rounded-xl font-semibold">
             See how it works
@@ -472,7 +472,7 @@ export default async function LandingPage() {
         <h2 className="text-4xl font-bold mb-4">Ready to get certified?</h2>
         <p className="text-zinc-400 mb-8 max-w-md mx-auto">Join engineers who passed AWS SAA with Maestring. Free to start, cancel any time.</p>
         <Link href="/signup" className="btn-primary px-10 py-4 text-lg rounded-xl font-semibold inline-block">
-          Start studying for free →
+          Start your 7-day free trial →
         </Link>
       </section>
 

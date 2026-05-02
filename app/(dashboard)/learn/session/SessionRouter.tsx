@@ -57,7 +57,21 @@ export function SessionRouter() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <PhaseBadge phase={activity.phase} rationale={activity.rationale} />
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <PhaseBadge phase={activity.phase} rationale={activity.rationale} />
+        <details className="text-xs text-text-secondary shrink-0 relative">
+          <summary className="cursor-pointer hover:text-text-primary list-none select-none">
+            Switch mode ▾
+          </summary>
+          <div className="absolute right-0 mt-2 w-56 rounded-lg border border-border bg-surface shadow-lg p-2 z-10 space-y-1">
+            <Link href="/study" className="block px-3 py-2 rounded hover:bg-surface-2">⚡ Quick session (MCQ)</Link>
+            <Link href="/flashcards" className="block px-3 py-2 rounded hover:bg-surface-2">🃏 Flashcards</Link>
+            <Link href="/learn" className="block px-3 py-2 rounded hover:bg-surface-2">📚 Browse syllabus</Link>
+            <Link href="/exam" className="block px-3 py-2 rounded hover:bg-surface-2">📝 Mock exam (65q)</Link>
+            <button onClick={load} className="w-full text-left px-3 py-2 rounded hover:bg-surface-2">🔄 Refresh activity</button>
+          </div>
+        </details>
+      </div>
       {progress && <PhaseProgress phase={activity.phase} progress={progress} />}
       {activity.type === 'rest_card' && <RestCard reason={activity.reason ?? 'load_budget_exceeded'} onContinue={load} />}
       {activity.type === 'ambient_card' && <AmbientCard slug={activity.conceptSlug ?? null} onAdvance={load} />}

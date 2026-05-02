@@ -6,13 +6,20 @@ import { NotificationsDropdown } from './NotificationsDropdown'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
+  '/learn/session': 'Coach',
+  '/learn/calibration': 'Calibration',
+  '/learn/exam-guide': 'SAA-C03 Exam Guide',
+  '/learn/c': 'Concept',
+  '/learn': 'Learn',
   '/study': 'Study Session',
+  '/flashcards': 'Flashcards',
   '/exam': 'Exam Simulator',
   '/progress': 'My Progress',
   '/documents': 'Documents',
   '/settings': 'Settings',
   '/referrals': 'Referrals',
   '/onboarding': 'Initial Setup',
+  '/trial-required': 'Start your trial',
 }
 
 interface NavbarProps {
