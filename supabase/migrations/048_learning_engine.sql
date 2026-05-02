@@ -67,7 +67,7 @@ create trigger tg_user_learning_state_updated_at
 create table if not exists metacognitive_calibration (
   id                bigserial primary key,
   user_id           uuid not null references auth.users(id) on delete cascade,
-  question_attempt_id bigint references question_attempts(id) on delete cascade,
+  question_attempt_id uuid references question_attempts(id) on delete cascade,
   concept_id        uuid references concepts(id) on delete set null,
   confidence        smallint not null check (confidence between 1 and 5),
   was_correct       boolean  not null,
