@@ -7,8 +7,12 @@ import { formatRelativeTime } from '@/lib/utils'
 import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import { OutcomeCaptureBanner } from '@/components/dashboard/OutcomeCaptureBanner'
 import { SetupWarningBanner } from '@/components/dashboard/SetupWarningBanner'
+import { WhatsNext, buildNextActions } from '@/components/dashboard/WhatsNext'
 import { getSetupWarnings } from '@/lib/config-check'
 import { logger } from '@/lib/logger'
+import { CONCEPTS, DOMAINS } from '@/lib/knowledge-graph/aws-saa'
+import { THRESHOLDS } from '@/lib/learning-engine/transitions'
+import type { Phase } from '@/lib/learning-engine/types'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -75,6 +79,49 @@ export default async function DashboardPage() {
     (domainStates ?? []).filter(
       s => s.reps === 0 || !s.next_review_date || new Date(s.next_review_date) <= new Date()
     ).length
+
+  // ── What's Next inputs ──────────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: ulsRow } = await (supabase
+    .from('user_learning_state')
+    .select('phase, ambient_exposures' as any) as any)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const phase: Phase | null = (ulsRow?.phase as Phase) ?? null
+  const ambientNeeded =
+    phase === 'ambient'
+      ? Math.max(0, THRESHOLDS.ambient.minExposures - ((ulsRow?.ambient_exposures as number) ?? 0))
+      : null
+
+  // Separate fetch for the JSONB fingerprint — types/supabase-generated.ts
+  // doesn't include cognitive_fingerprint in the select tuple yet, and
+  // adding it via `as any` on `select(...)` strips the inferred profile type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: fpRow } = await (supabase
+    .from('profiles')
+    .select('cognitive_fingerprint' as any) as any)
+    .eq('id', user.id)
+    .maybeSingle()
+  const fpRaw = (fpRow?.cognitive_fingerprint ?? null) as { v2_initialized_at?: string } | null
+  const hasCalibration = Boolean(fpRaw && fpRaw.v2_initialized_at)
+
+  // Stale domain detection: most recent attempt per domain. We use existing
+  // domainStates rows + concepts(domain_id). Cheap heuristic — the user's
+  // overall feed is small enough we can compute in JS.
+  const totalConcepts = CONCEPTS.length
+  const seenIds = new Set((domainStates ?? []).map(s => s.concept_id))
+  const notSeenCount = totalConcepts - seenIds.size
+
+  const nextActions = buildNextActions({
+    hasCalibration,
+    phase,
+    dueCount,
+    ambientNeeded: ambientNeeded ?? undefined,
+    staleDomain: null, // TODO: compute from question_attempts.created_at per domain
+    totalConcepts,
+    notSeenCount,
+  }).slice(0, 4)
+  void DOMAINS // referenced for future stale-domain calc
 
   const daysToExam = profile?.exam_target_date
     ? Math.ceil(
@@ -287,6 +334,12 @@ export default async function DashboardPage() {
       )}
 
       {/* Quick Actions */}
+      {/* Prioritised "What's next" — phase + due-aware */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3 uppercase tracking-wide text-text-secondary">What&rsquo;s next</h2>
+        <WhatsNext actions={nextActions} />
+      </div>
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {[
           { href: '/learn', label: 'Learn', desc: 'Read concept-by-concept', icon: '📚' },

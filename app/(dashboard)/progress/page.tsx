@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
 import { BlueprintAccuracyCard, type BlueprintTaskRow } from '@/components/dashboard/BlueprintAccuracyCard'
+import { KnowledgeMap } from '@/components/dashboard/KnowledgeMap'
+import { CONCEPTS, DOMAINS } from '@/lib/knowledge-graph/aws-saa'
+import { masteryOf, masteryCounts } from '@/lib/learning-engine/mastery'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -38,7 +41,7 @@ export default async function ProgressPage() {
       .eq('certification_id', 'aws-saa-c03'),
     supabase
       .from('user_concept_states')
-      .select('concept_id, state, reps, lapses, stability')
+      .select('concept_id, state, reps, lapses, stability, concepts!inner(slug, domain_id)')
       .eq('user_id', user.id),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     supabase.rpc('get_exam_readiness_v2' as any, { p_user_id: user.id }),
@@ -52,6 +55,16 @@ export default async function ProgressPage() {
   const statsRow = stats?.[0]
   const masteredIds = new Set(
     (conceptStates ?? []).filter(s => s.reps >= 5 && s.lapses <= 1).map(s => s.concept_id)
+  )
+
+  // Build slug → state map for the Knowledge Map.
+  const stateBySlug = new Map<string, { state: number; reps: number; lapses: number; stability: number }>(
+    ((conceptStates ?? []) as unknown as Array<{
+      state: number; reps: number; lapses: number; stability: number;
+      concepts: { slug: string; domain_id: string }
+    }>)
+      .filter(r => r.concepts?.slug)
+      .map(r => [r.concepts.slug, { state: r.state, reps: r.reps, lapses: r.lapses, stability: r.stability }])
   )
 
   // Build heatmap grid (12 weeks x 7 days)
@@ -102,6 +115,9 @@ export default async function ProgressPage() {
           </Card>
         ))}
       </div>
+
+      {/* Knowledge Map — per-concept mastery grid */}
+      <KnowledgeMap stateBySlug={stateBySlug} />
 
       {/* Activity Heatmap */}
       <Card>

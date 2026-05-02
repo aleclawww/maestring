@@ -7,11 +7,14 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { CONCEPTS } from '@/lib/knowledge-graph/aws-saa'
-import { PHASE_LABEL, PHASE_DESCRIPTION, type ActivityDescriptor } from '@/lib/learning-engine/types'
+import { PHASE_LABEL, type ActivityDescriptor, type Phase } from '@/lib/learning-engine/types'
+
+interface ProgressInfo { label: string; num: number; den: number; pct: number }
 
 export function SessionRouter() {
   const router = useRouter()
   const [activity, setActivity] = useState<ActivityDescriptor | null>(null)
+  const [progress, setProgress] = useState<ProgressInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,10 +22,17 @@ export function SessionRouter() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/learn/next-activity')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json()
+      const [actRes, stateRes] = await Promise.all([
+        fetch('/api/learn/next-activity'),
+        fetch('/api/learn/state'),
+      ])
+      if (!actRes.ok) throw new Error(`HTTP ${actRes.status}`)
+      const json = await actRes.json()
       setActivity(json.data as ActivityDescriptor)
+      if (stateRes.ok) {
+        const sj = await stateRes.json()
+        if (sj?.data?.progress) setProgress(sj.data.progress as ProgressInfo)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load activity')
     } finally {
@@ -48,6 +58,7 @@ export function SessionRouter() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
       <PhaseBadge phase={activity.phase} rationale={activity.rationale} />
+      {progress && <PhaseProgress phase={activity.phase} progress={progress} />}
       {activity.type === 'rest_card' && <RestCard reason={activity.reason ?? 'load_budget_exceeded'} onContinue={load} />}
       {activity.type === 'ambient_card' && <AmbientCard slug={activity.conceptSlug ?? null} onAdvance={load} />}
       {activity.type === 'anchoring_prompt' && <AnchoringPrompt onAdvance={load} />}
@@ -64,6 +75,25 @@ function PhaseBadge({ phase, rationale }: { phase: ActivityDescriptor['phase']; 
     <div className="mb-4 flex items-start gap-3">
       <Badge variant="info" className="mt-0.5">{PHASE_LABEL[phase]}</Badge>
       <p className="text-xs text-text-secondary leading-relaxed">{rationale}</p>
+    </div>
+  )
+}
+
+function PhaseProgress({ phase, progress }: { phase: Phase; progress: ProgressInfo }) {
+  return (
+    <div className="mb-5 rounded-lg border border-border bg-surface/40 px-4 py-3">
+      <div className="flex items-center justify-between text-xs mb-1.5">
+        <span className="font-medium">{progress.label}</span>
+        <span className="tabular-nums text-text-secondary">
+          {progress.num} / {progress.den} · {progress.pct}%
+        </span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-surface overflow-hidden">
+        <div className="h-full bg-primary transition-all" style={{ width: `${progress.pct}%` }} />
+      </div>
+      <p className="text-[10px] text-text-secondary mt-1.5 uppercase tracking-wide">
+        Until next phase ({PHASE_LABEL[phase]})
+      </p>
     </div>
   )
 }

@@ -3,13 +3,16 @@ import { notFound } from 'next/navigation'
 import { DOMAINS, TOPICS, CONCEPTS } from '@/lib/knowledge-graph/aws-saa'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { MasteryBadge } from '@/components/learn/MasteryBadge'
+import { SelfRateButtons } from '@/components/learn/SelfRateButtons'
+import { masteryOf } from '@/lib/learning-engine/mastery'
+import { requireAuthenticatedUser, createClient } from '@/lib/supabase/server'
+import { formatRelativeTime } from '@/lib/utils'
 import type { Metadata } from 'next'
 
-type Params = { params: { conceptSlug: string } }
+export const dynamic = 'force-dynamic'
 
-export function generateStaticParams() {
-  return CONCEPTS.map(c => ({ conceptSlug: c.slug }))
-}
+type Params = { params: { conceptSlug: string } }
 
 export function generateMetadata({ params }: Params): Metadata {
   const c = CONCEPTS.find(x => x.slug === params.conceptSlug)
@@ -29,7 +32,7 @@ function parseExamTip(tip: string): { condition: string; answer: string } | null
   return { condition, answer }
 }
 
-export default function ConceptPage({ params }: Params) {
+export default async function ConceptPage({ params }: Params) {
   const concept = CONCEPTS.find(c => c.slug === params.conceptSlug)
   if (!concept) notFound()
 
@@ -38,6 +41,26 @@ export default function ConceptPage({ params }: Params) {
   const related = concept.confusedWith
     .map(slug => CONCEPTS.find(c => c.slug === slug))
     .filter((c): c is NonNullable<typeof c> => Boolean(c))
+
+  // Mastery state for this concept
+  const user = await requireAuthenticatedUser()
+  const supabase = createClient()
+  const { data: stateRow } = await supabase
+    .from('user_concept_states')
+    .select('state, reps, lapses, stability, next_review_date, concepts!inner(slug)')
+    .eq('user_id', user.id)
+    .eq('concepts.slug', params.conceptSlug)
+    .maybeSingle()
+  const stateLike = stateRow as unknown as
+    | { state: number; reps: number; lapses: number; stability: number; next_review_date: string | null }
+    | null
+  const mastery = masteryOf(stateLike)
+  const accuracy = stateLike && stateLike.reps > 0
+    ? Math.round(((stateLike.reps - stateLike.lapses) / stateLike.reps) * 100)
+    : null
+  const nextReview = stateLike?.next_review_date
+    ? formatRelativeTime(stateLike.next_review_date)
+    : null
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -50,12 +73,27 @@ export default function ConceptPage({ params }: Params) {
       <header className="my-6">
         <h1 className="text-3xl font-bold">{concept.name}</h1>
         <p className="text-text-secondary mt-2">{concept.description}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2 items-center">
+          <MasteryBadge descriptor={mastery} />
+          {accuracy !== null && (
+            <span className="text-xs text-text-secondary">
+              · {accuracy}% accuracy ({stateLike!.reps} attempt{stateLike!.reps === 1 ? '' : 's'})
+            </span>
+          )}
+          {nextReview && (
+            <span className="text-xs text-text-secondary">· next review {nextReview}</span>
+          )}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
           {concept.awsServices.map(s => (
             <Badge key={s} variant="info">{s}</Badge>
           ))}
         </div>
       </header>
+
+      <div className="mb-6">
+        <Card><CardContent className="p-4"><SelfRateButtons conceptSlug={concept.slug} /></CardContent></Card>
+      </div>
 
       {/* Key Facts */}
       <section className="mb-8">
