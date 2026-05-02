@@ -317,7 +317,13 @@ export default async function LandingPage() {
               IDEAL STACK
             </div>
             <div className="text-sm font-semibold text-indigo-300 mb-1">Both, together</div>
-            <div className="text-xs text-zinc-500 mb-4">≈ €48/mo combined · pass on first attempt</div>
+            <div className="text-xs text-zinc-500 mb-4">
+              <span className="text-zinc-400">Skill Builder $29</span>
+              <span className="text-zinc-600"> + </span>
+              <span className="text-zinc-400">Maestring Pro $19</span>
+              <span className="text-zinc-600"> = </span>
+              <span className="text-zinc-300 font-semibold">~$48/mo total</span>
+            </div>
             <ul className="text-sm text-zinc-300 space-y-2">
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Learn AWS from AWS itself</li>
               <li className="flex gap-2"><span className="text-emerald-400 shrink-0">✓</span>Measure readiness with Maestring</li>
