@@ -3,12 +3,9 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateQuestion } from "@/lib/question-engine/generator";
 import { generateQuestionStatic } from "@/lib/question-engine/static-generator";
 import { CONCEPTS } from "@/lib/knowledge-graph/aws-saa";
 import { buildStudyQueue, getRecentMistakes } from "@/lib/question-engine/selector";
-import { checkLlmRateLimit, rateLimitHeaders } from "@/lib/redis/rate-limit";
-import { isConfigured } from "@/lib/config-check";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -324,104 +321,16 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ── Path 2: LLM fallback (concept not in knowledge graph, or no static def) ──
-  //
-  // Should only reach here if a concept slug exists in the DB but not in the
-  // local knowledge graph (e.g. newly seeded concept not yet in aws-saa.ts).
-  // Requires ANTHROPIC_API_KEY.
-  if (!isConfigured('ANTHROPIC_API_KEY')) {
-    logger.error(
-      { userId: user.id, conceptSlug: next.conceptSlug },
-      "generate: concept not in knowledge graph and ANTHROPIC_API_KEY not set"
-    );
-    return NextResponse.json(
-      {
-        error: "api_key_not_configured",
-        message:
-          "Question generation is not configured: ANTHROPIC_API_KEY is missing. " +
-          "Add it to .env.local (local dev) or your Vercel environment variables.",
-      },
-      { status: 503 }
-    );
-  }
-
-  const rl = await checkLlmRateLimit(user.id);
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Rate limit exceeded. Please wait before generating more questions." },
-      { status: 429, headers: rateLimitHeaders(rl) }
-    );
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const quotaRes = await supabase.rpc("consume_llm_quota" as any, { p_user_id: user.id });
-  if (quotaRes.error) {
-    logger.error(
-      { err: quotaRes.error, userId: user.id },
-      "consume_llm_quota failed — proceeding without quota decrement (spend control degraded)"
-    );
-  }
-  const quotaRow = Array.isArray(quotaRes.data) ? quotaRes.data[0] : null;
-  if (quotaRow && quotaRow.allowed === false) {
-    return NextResponse.json(
-      {
-        error: "daily_quota_exceeded",
-        message: `You've reached the daily limit for the ${quotaRow.plan} plan (${quotaRow.quota} questions). Come back tomorrow or upgrade to Pro for unlimited access.`,
-        quota: quotaRow.quota,
-        used: quotaRow.used,
-        plan: quotaRow.plan,
-      },
-      { status: 402 }
-    );
-  }
-
-  try {
-    const fingerprint = (profile as { cognitive_fingerprint?: Record<string, unknown> } | null)
-      ?.cognitive_fingerprint as
-      | { background?: 'developer' | 'sysadmin' | 'business' | 'student' | 'other'; explanation_depth?: 'deep' | 'concise'; weakness_pattern?: string }
-      | undefined;
-
-    const question = await generateQuestion({
-      conceptSlug: next.conceptSlug,
-      conceptId: next.conceptId,
-      difficulty: next.difficulty,
-      recentMistakes,
-      mode: selectionMode,
-      fingerprint,
-    });
-
-    logger.info(
-      { userId: user.id, conceptId: next.conceptId, sessionId },
-      "LLM question generated"
-    );
-
-    const paddedQuestion = {
-      hint: null,
-      explanationDeep: null,
-      keyInsight: null,
-      scenarioContext: null,
-      tags: [] as string[],
-      blueprintTaskId: null,
-      patternTag: null,
-      isCanonical: false,
-      ...question,
-    };
-
-    return NextResponse.json(
-      {
-        data: paddedQuestion,
-        metadata: {
-          conceptId: next.conceptId,
-          conceptName: next.conceptName,
-          priority: next.priority,
-          queueRemaining: queue.length - 1,
-          source: "llm",
-        },
-      },
-      { headers: rateLimitHeaders(rl) }
-    );
-  } catch (err) {
-    logger.error({ err, conceptId: next.conceptId }, "LLM question generation failed");
-    return NextResponse.json({ error: "Failed to generate question" }, { status: 500 });
-  }
+  // No LLM fallback. The knowledge graph has full SAA-C03 coverage and the
+  // pool is pre-filled. If we somehow land here it means a concept was added
+  // to the DB but not to the local knowledge graph — fix the graph instead
+  // of paying for an LLM fallback.
+  logger.error(
+    { userId: user.id, conceptSlug: next.conceptSlug, conceptId: next.conceptId },
+    "generate: concept missing from knowledge graph — add it to lib/knowledge-graph/aws-saa.ts"
+  );
+  return NextResponse.json(
+    { error: "concept_not_in_graph", conceptSlug: next.conceptSlug },
+    { status: 500 }
+  );
 }
