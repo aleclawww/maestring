@@ -34,11 +34,15 @@ export default async function DashboardLayout({
   // portal so a past_due user can update their card.
   const isExempt = PAYWALL_EXEMPT_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
   let trialEnd: string | null = null
+  let trialCancelAtEnd = false
   let previewUsage: { questions: number; ambient: number; anchoring: number } | null = null
   if (!isExempt) {
     const ent = await getEntitlement(user.id)
     if (ent.kind === 'gated') redirect('/trial-required')
-    if (ent.kind === 'trialing') trialEnd = ent.trialEnd
+    if (ent.kind === 'trialing') {
+      trialEnd = ent.trialEnd
+      trialCancelAtEnd = ent.cancelAtPeriodEnd
+    }
     if (ent.kind === 'exploring') previewUsage = ent.usage
   }
 
@@ -53,7 +57,7 @@ export default async function DashboardLayout({
       userAvatar={profile?.avatar_url}
       plan={(subscription?.plan ?? 'free') as SubscriptionPlan}
     >
-      {trialEnd && <TrialBanner trialEnd={trialEnd} />}
+      {trialEnd && <TrialBanner trialEnd={trialEnd} cancelAtPeriodEnd={trialCancelAtEnd} />}
       {previewUsage && <PreviewBanner usage={previewUsage} />}
       {children}
     </DashboardShell>

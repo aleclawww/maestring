@@ -41,8 +41,8 @@ export interface UsageSnapshot {
 }
 
 export type Entitlement =
-  | { kind: 'trialing'; trialEnd: string | null; planLabel: 'pro' | 'team' }
-  | { kind: 'active'; planLabel: 'pro' | 'team' }
+  | { kind: 'trialing'; trialEnd: string | null; cancelAtPeriodEnd: boolean; planLabel: 'pro' | 'team' }
+  | { kind: 'active'; cancelAtPeriodEnd: boolean; planLabel: 'pro' | 'team' }
   | { kind: 'exploring'; usage: UsageSnapshot; limits: typeof FREE_PREVIEW }
   | { kind: 'gated'; reason: 'preview_exhausted' | 'past_due' | 'canceled' | 'expired'; usage?: UsageSnapshot }
 
@@ -67,21 +67,30 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: subData } = await (supabase
     .from('subscriptions')
-    .select('plan, status, current_period_end, trial_end' as any) as any)
+    .select('plan, status, current_period_end, trial_end, cancel_at_period_end' as any) as any)
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
   const sub = subData as
-    | { plan: 'free' | 'pro' | 'team'; status: string; trial_end: string | null }
+    | { plan: 'free' | 'pro' | 'team'; status: string; trial_end: string | null; cancel_at_period_end: boolean | null }
     | null
 
   if (sub?.status === 'trialing') {
-    return { kind: 'trialing', trialEnd: sub.trial_end, planLabel: sub.plan === 'team' ? 'team' : 'pro' }
+    return {
+      kind: 'trialing',
+      trialEnd: sub.trial_end,
+      cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+      planLabel: sub.plan === 'team' ? 'team' : 'pro',
+    }
   }
   if (sub?.status === 'active') {
-    return { kind: 'active', planLabel: sub.plan === 'team' ? 'team' : 'pro' }
+    return {
+      kind: 'active',
+      cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+      planLabel: sub.plan === 'team' ? 'team' : 'pro',
+    }
   }
   if (sub?.status === 'past_due') return { kind: 'gated', reason: 'past_due' }
   // Don't auto-gate on `canceled` if the user is mid-preview — they may have
