@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
-import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import { Shell } from '@/components/v2/dashboard/Shell'
 import { TrialBanner } from '@/components/billing/TrialBanner'
 import { PreviewBanner } from '@/components/billing/PreviewBanner'
 import { getEntitlement } from '@/lib/subscription/check'
@@ -26,13 +26,14 @@ export default async function DashboardLayout({
   const supabase = createClient()
 
   const pathname = headers().get('x-pathname') ?? ''
-  const isOnboardingFlow = pathname === '/onboarding' || pathname.startsWith('/onboarding/')
-  if (isOnboardingFlow) return <>{children}</>
+  const isOnboardingFlow =
+    pathname === '/onboarding' || pathname.startsWith('/onboarding/')
+  if (isOnboardingFlow) return <div className="theme-v2">{children}</div>
 
   // Subscription gate: every user needs an active 7-day trial or paid sub.
-  // /trial-required is the paywall page itself; /settings hosts billing
-  // portal so a past_due user can update their card.
-  const isExempt = PAYWALL_EXEMPT_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
+  const isExempt = PAYWALL_EXEMPT_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  )
   let trialEnd: string | null = null
   let trialCancelAtEnd = false
   let previewUsage: { questions: number; ambient: number; anchoring: number } | null = null
@@ -47,19 +48,36 @@ export default async function DashboardLayout({
   }
 
   const [{ data: profile }, { data: subscription }] = await Promise.all([
-    supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).single(),
-    supabase.from('subscriptions').select('plan').eq('user_id', user.id).single(),
+    supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', user.id)
+      .single(),
   ])
 
-  return (
-    <DashboardShell
-      userName={profile?.full_name}
-      userAvatar={profile?.avatar_url}
-      plan={(subscription?.plan ?? 'free') as SubscriptionPlan}
-    >
+  const plan = (subscription?.plan ?? 'free') as SubscriptionPlan
+  const banners = (
+    <>
       {trialEnd && <TrialBanner trialEnd={trialEnd} cancelAtPeriodEnd={trialCancelAtEnd} />}
       {previewUsage && <PreviewBanner usage={previewUsage} />}
-      {children}
-    </DashboardShell>
+    </>
+  )
+
+  return (
+    <div className="theme-v2">
+      <Shell
+        userName={profile?.full_name}
+        userAvatar={profile?.avatar_url}
+        plan={plan}
+        banners={trialEnd || previewUsage ? banners : undefined}
+      >
+        {children}
+      </Shell>
+    </div>
   )
 }

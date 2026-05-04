@@ -44,9 +44,32 @@ const NAV: NavItem[] = [
 interface SidebarProps {
   openMobile?: boolean
   onCloseMobile?: () => void
+  userName?: string | null
+  userAvatar?: string | null
+  plan?: 'free' | 'pro' | 'trial' | 'past_due' | string
 }
 
-export function Sidebar({ openMobile = false, onCloseMobile }: SidebarProps) {
+function initialsFrom(name?: string | null) {
+  if (!name) return 'M'
+  const parts = name.trim().split(/\s+/).slice(0, 2)
+  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('') || 'M'
+}
+
+function planLabel(plan?: string) {
+  if (!plan) return 'Free'
+  if (plan === 'pro') return 'Pro · $19/mo'
+  if (plan === 'trial' || plan === 'trialing') return 'Trial'
+  if (plan === 'past_due') return 'Payment failed'
+  return plan.charAt(0).toUpperCase() + plan.slice(1)
+}
+
+export function Sidebar({
+  openMobile = false,
+  onCloseMobile,
+  userName,
+  userAvatar,
+  plan,
+}: SidebarProps) {
   const pathname = usePathname()
 
   const inner = (
@@ -147,15 +170,24 @@ export function Sidebar({ openMobile = false, onCloseMobile }: SidebarProps) {
         </Link>
 
         <div className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-v2-gradient-brand text-[12px] font-bold text-white shadow-v2-button">
-            AL
-          </div>
+          {userAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={userAvatar}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-v2-gradient-brand text-[12px] font-bold text-white shadow-v2-button">
+              {initialsFrom(userName)}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13px] font-semibold text-v2-foreground">
-              Alex Larsen
+              {userName ?? 'Maestring user'}
             </div>
             <div className="truncate text-[11px] text-v2-foreground-muted">
-              Pro · €29/mo
+              {planLabel(plan)}
             </div>
           </div>
         </div>

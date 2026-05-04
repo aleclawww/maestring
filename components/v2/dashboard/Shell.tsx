@@ -14,6 +14,11 @@ import { TopBar } from './TopBar'
 interface ShellProps {
   children: React.ReactNode
   breadcrumb?: Array<{ label: string; href?: string }>
+  userName?: string | null
+  userAvatar?: string | null
+  plan?: string
+  /** Banners (TrialBanner, PreviewBanner) rendered above the page content. */
+  banners?: React.ReactNode
 }
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -47,7 +52,14 @@ function deriveBreadcrumb(pathname: string) {
   return crumbs
 }
 
-export function Shell({ children, breadcrumb }: ShellProps) {
+export function Shell({
+  children,
+  breadcrumb,
+  userName,
+  userAvatar,
+  plan,
+  banners,
+}: ShellProps) {
   const [openMobile, setOpenMobile] = React.useState(false)
   const pathname = usePathname() ?? ''
   const resolved = breadcrumb ?? deriveBreadcrumb(pathname)
@@ -57,6 +69,9 @@ export function Shell({ children, breadcrumb }: ShellProps) {
       <Sidebar
         openMobile={openMobile}
         onCloseMobile={() => setOpenMobile(false)}
+        userName={userName}
+        userAvatar={userAvatar}
+        plan={plan}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -64,6 +79,8 @@ export function Shell({ children, breadcrumb }: ShellProps) {
           breadcrumb={resolved}
           onOpenMobileSidebar={() => setOpenMobile(true)}
         />
+
+        {banners && <div className="border-b border-v2-border bg-v2-surface">{banners}</div>}
 
         <main className="flex-1 overflow-x-hidden">
           <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 sm:py-10">
