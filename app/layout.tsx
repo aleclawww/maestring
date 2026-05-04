@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import './theme-v2.css'
 import { PostHogProvider } from '@/components/shared/PostHogProvider'
 import { CookieBanner } from '@/components/shared/CookieBanner'
 import { ServiceWorkerRegistration } from '@/components/shared/ServiceWorkerRegistration'
+import { jakarta, jetbrainsMono } from '@/lib/fonts-v2'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -134,7 +136,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${jakarta.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script
           type="application/ld+json"

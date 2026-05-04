@@ -11,6 +11,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // ── v2 theme: Corporate Trust (scoped under .theme-v2) ──
+        v2: {
+          background: 'var(--v2-background)',
+          surface: 'var(--v2-surface)',
+          'surface-subtle': 'var(--v2-surface-subtle)',
+          'surface-sunken': 'var(--v2-surface-sunken)',
+          foreground: 'var(--v2-foreground)',
+          'foreground-muted': 'var(--v2-foreground-muted)',
+          'foreground-subtle': 'var(--v2-foreground-subtle)',
+          border: 'var(--v2-border)',
+          'border-strong': 'var(--v2-border-strong)',
+          'border-subtle': 'var(--v2-border-subtle)',
+          // Brand (indigo)
+          brand: 'var(--v2-brand)',
+          'brand-hover': 'var(--v2-brand-hover)',
+          'brand-soft': 'var(--v2-brand-soft)',
+          'brand-soft-2': 'var(--v2-brand-soft-2)',
+          'brand-foreground': 'var(--v2-brand-foreground)',
+          // Accent (violet, gradient partner)
+          accent: 'var(--v2-accent)',
+          'accent-soft': 'var(--v2-accent-soft)',
+          'accent-soft-2': 'var(--v2-accent-soft-2)',
+          // Deep (final CTA)
+          deep: 'var(--v2-deep)',
+          'deep-darker': 'var(--v2-deep-darker)',
+          'deep-foreground': 'var(--v2-deep-foreground)',
+          // Semantic
+          success: 'var(--v2-success)',
+          'success-soft': 'var(--v2-success-soft)',
+          warning: 'var(--v2-warning)',
+          'warning-soft': 'var(--v2-warning-soft)',
+          error: 'var(--v2-error)',
+          'error-soft': 'var(--v2-error-soft)',
+        },
+        // ── legacy dark theme (do not touch) ──
         background: '#0f1117',
         surface: '#161b27',
         'surface-2': '#1e2535',
@@ -54,6 +89,18 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'JetBrains Mono', 'monospace'],
+        // v2 ramps
+        'v2-display': ['var(--font-jakarta)', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        'v2-body': ['var(--font-jakarta)', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        'v2-mono': ['var(--font-jetbrains)', 'JetBrains Mono', 'ui-monospace', 'monospace'],
+      },
+      letterSpacing: {
+        'v2-display': '-0.02em',
+        'v2-tight': '-0.01em',
+        'v2-wide': '0.08em',
+      },
+      transitionTimingFunction: {
+        'v2': 'cubic-bezier(0.16, 1, 0.3, 1)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
@@ -117,6 +164,10 @@ const config: Config = {
         'hero-gradient': 'linear-gradient(135deg, #0f1117 0%, #161b27 50%, #1a1f35 100%)',
         'card-gradient': 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
         shimmer: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)',
+        // v2 — Corporate Trust gradients
+        'v2-gradient-brand': 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+        'v2-gradient-brand-soft': 'linear-gradient(135deg, #E0E7FF 0%, #EDE9FE 100%)',
+        'v2-gradient-deep': 'linear-gradient(135deg, #312E81 0%, #1E1B4B 100%)',
       },
       boxShadow: {
         glow: '0 0 20px rgba(99, 102, 241, 0.3)',
@@ -124,6 +175,13 @@ const config: Config = {
         'glow-danger': '0 0 20px rgba(239, 68, 68, 0.3)',
         card: '0 4px 24px rgba(0, 0, 0, 0.3)',
         'card-hover': '0 8px 32px rgba(0, 0, 0, 0.4)',
+        // v2 — Corporate Trust colored shadows
+        'v2-soft': '0 4px 20px -2px rgba(79, 70, 229, 0.10)',
+        'v2-elevated':
+          '0 10px 25px -5px rgba(79, 70, 229, 0.15), 0 8px 10px -6px rgba(79, 70, 229, 0.10)',
+        'v2-button': '0 4px 14px 0 rgba(79, 70, 229, 0.30)',
+        'v2-glow': '0 0 20px rgba(79, 70, 229, 0.50)',
+        'v2-modal': '0 24px 48px -12px rgba(15, 23, 42, 0.18)',
       },
       borderRadius: {
         xl: '1rem',

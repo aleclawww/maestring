@@ -1,0 +1,166 @@
+/*
+ * Maestring v2 design tokens — "Corporate Trust" aesthetic, scoped to .theme-v2
+ *
+ * Modern enterprise SaaS — professional yet approachable. Indigo→Violet
+ * gradients are the visual signature; colored shadows replace neutral grays;
+ * subtle isometric depth and atmospheric blur orbs add dimensional polish.
+ *
+ * Token names mirror the design-system spec so a designer reading the doc
+ * can grep them straight to the CSS.
+ */
+
+.theme-v2 {
+  /* ── Surfaces ─────────────────────────────────────────────────── */
+  --v2-background: #F8FAFC;        /* slate-50 — cool, subtle base */
+  --v2-surface: #FFFFFF;           /* cards, raised elements */
+  --v2-surface-subtle: #F1F5F9;    /* slate-100 — alt sections */
+  --v2-surface-sunken: #E2E8F0;    /* slate-200 — code blocks, inputs in dark contexts */
+
+  /* ── Text ─────────────────────────────────────────────────────── */
+  --v2-foreground: #0F172A;        /* slate-900 — high contrast */
+  --v2-foreground-muted: #64748B;  /* slate-500 — supporting text */
+  --v2-foreground-subtle: #94A3B8; /* slate-400 — captions, meta */
+
+  /* ── Borders ──────────────────────────────────────────────────── */
+  --v2-border: #E2E8F0;            /* slate-200 — default 1px */
+  --v2-border-strong: #CBD5E1;     /* slate-300 — hover, focus */
+  --v2-border-subtle: #F1F5F9;     /* slate-100 — internal dividers */
+
+  /* ── Brand: Indigo (primary) ──────────────────────────────────── */
+  --v2-brand: #4F46E5;             /* indigo-600 */
+  --v2-brand-hover: #4338CA;       /* indigo-700 */
+  --v2-brand-soft: #EEF2FF;        /* indigo-50 — badge backgrounds */
+  --v2-brand-soft-2: #E0E7FF;      /* indigo-100 — soft container bg */
+  --v2-brand-foreground: #FFFFFF;
+
+  /* ── Accent: Violet (gradient partner) ────────────────────────── */
+  --v2-accent: #7C3AED;            /* violet-600 */
+  --v2-accent-soft: #F5F3FF;       /* violet-50 */
+  --v2-accent-soft-2: #EDE9FE;     /* violet-100 */
+
+  /* ── Deep (final CTA, dark band) ──────────────────────────────── */
+  --v2-deep: #312E81;              /* indigo-900 */
+  --v2-deep-darker: #1E1B4B;       /* indigo-950 */
+  --v2-deep-foreground: #FFFFFF;
+
+  /* ── Semantic ─────────────────────────────────────────────────── */
+  --v2-success: #10B981;           /* emerald-500 */
+  --v2-success-soft: #ECFDF5;
+  --v2-warning: #F59E0B;
+  --v2-warning-soft: #FFFBEB;
+  --v2-error: #EF4444;
+  --v2-error-soft: #FEF2F2;
+
+  /* ── Gradients (the visual signature) ─────────────────────────── */
+  --v2-gradient-brand: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  --v2-gradient-brand-soft: linear-gradient(135deg, #E0E7FF 0%, #EDE9FE 100%);
+  --v2-gradient-deep: linear-gradient(135deg, #312E81 0%, #1E1B4B 100%);
+
+  /* ── Colored shadows (the second signature) ───────────────────── */
+  --v2-shadow-soft: 0 4px 20px -2px rgba(79, 70, 229, 0.10);
+  --v2-shadow-elevated: 0 10px 25px -5px rgba(79, 70, 229, 0.15),
+                        0 8px 10px -6px rgba(79, 70, 229, 0.10);
+  --v2-shadow-button: 0 4px 14px 0 rgba(79, 70, 229, 0.30);
+  --v2-shadow-glow: 0 0 20px rgba(79, 70, 229, 0.50);
+  --v2-shadow-modal: 0 24px 48px -12px rgba(15, 23, 42, 0.18);
+
+  /* ── Type ramps ───────────────────────────────────────────────── */
+  --v2-font-display: var(--font-jakarta), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --v2-font-body: var(--font-jakarta), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --v2-font-mono: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ── Motion ───────────────────────────────────────────────────── */
+  --v2-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Apply at root of preview ─────────────────────────────────── */
+  background-color: var(--v2-background);
+  color: var(--v2-foreground);
+  font-family: var(--v2-font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* ── Utilities scoped to the theme ────────────────────────────── */
+
+.theme-v2 .v2-display {
+  font-family: var(--v2-font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.theme-v2 .v2-mono {
+  font-family: var(--v2-font-mono);
+  font-feature-settings: 'zero', 'ss01';
+}
+
+/* The signature: gradient text — strategic, never on every heading. */
+.theme-v2 .v2-text-gradient {
+  background: var(--v2-gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Atmospheric blur orbs for hero / final CTA backgrounds. */
+.theme-v2 .v2-blob {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.5;
+  z-index: 0;
+}
+
+/* Selection */
+.theme-v2 ::selection {
+  background: var(--v2-brand-soft-2);
+  color: var(--v2-foreground);
+}
+
+/* Focus ring — visible, branded, never removed */
+.theme-v2 :focus-visible {
+  outline: 2px solid var(--v2-brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .theme-v2 *,
+  .theme-v2 *::before,
+  .theme-v2 *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
+
+/* Scrollbar */
+.theme-v2 ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.theme-v2 ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.theme-v2 ::-webkit-scrollbar-thumb {
+  background: var(--v2-border);
+  border-radius: 999px;
+  border: 2px solid var(--v2-background);
+}
+.theme-v2 ::-webkit-scrollbar-thumb:hover {
+  background: var(--v2-border-strong);
+}
+
+/* Pulse (used by floating decorative elements per spec §6) */
+@keyframes v2-soft-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+.theme-v2 .v2-animate-pulse-soft {
+  animation: v2-soft-pulse 4s ease-in-out infinite;
+}

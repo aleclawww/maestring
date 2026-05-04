@@ -109,6 +109,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // v2 design preview routes are fully static and unauthenticated — bypass
+  // Supabase entirely so the preview works without env vars wired up.
+  if (pathname.startsWith('/preview') || pathname === '/preview') {
+    return NextResponse.next()
+  }
+
   // Refresh Supabase session
   const { response, user } = await updateSession(request)
 

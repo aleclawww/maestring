@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import LoginForm from './LoginForm'
 import type { Metadata } from 'next'
+import { Logo } from '@/components/v2'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,48 +27,73 @@ export default async function LoginPage({
   }
 
   const errorMessages: Record<string, string> = {
-    'invalid_credentials': 'Incorrect email or password.',
-    'email_not_confirmed': 'Please confirm your email before signing in.',
-    'too_many_requests': 'Too many attempts. Try again in a few minutes.',
-    'user_not_found': 'No account exists for that email.',
-    'oauth_expired': 'The sign-in link expired. Please try again.',
-    'oauth_invalid_grant': 'This sign-in link was already used (e.g. by clicking back). Click "Continue with Google" again to start fresh.',
-    'oauth_exchange_failed': "Couldn't complete sign-in. If you're on Safari or have third-party cookies blocked, try another browser or enable cookies and retry.",
-    'oauth_exchange_threw': "Couldn't reach the auth server. Check your connection and try again.",
-    'oauth_pkce_missing': "Your browser dropped the auth session (third-party cookies blocked or you opened the sign-in on a different device/tab). Please start again in a regular window.",
-    'oauth_missing_code': "Sign-in didn't complete. Please start again from this page.",
-    'oauth_provider_error': 'Google rejected the sign-in. See details below.',
-    'auth_callback_failed': 'Sign-in error. Please try again.',
+    invalid_credentials: 'Incorrect email or password.',
+    email_not_confirmed: 'Please confirm your email before signing in.',
+    too_many_requests: 'Too many attempts. Try again in a few minutes.',
+    user_not_found: 'No account exists for that email.',
+    oauth_expired: 'The sign-in link expired. Please try again.',
+    oauth_invalid_grant:
+      'This sign-in link was already used (e.g. by clicking back). Click "Continue with Google" again to start fresh.',
+    oauth_exchange_failed:
+      "Couldn't complete sign-in. If you're on Safari or have third-party cookies blocked, try another browser or enable cookies and retry.",
+    oauth_exchange_threw:
+      "Couldn't reach the auth server. Check your connection and try again.",
+    oauth_pkce_missing:
+      'Your browser dropped the auth session (third-party cookies blocked or you opened the sign-in on a different device/tab). Please start again in a regular window.',
+    oauth_missing_code:
+      "Sign-in didn't complete. Please start again from this page.",
+    oauth_provider_error: 'Google rejected the sign-in. See details below.',
+    auth_callback_failed: 'Sign-in error. Please try again.',
   }
 
   const errorMessage = searchParams.error
-    ? (errorMessages[searchParams.error] ?? 'Sign-in error. Please try again.')
+    ? errorMessages[searchParams.error] ?? 'Sign-in error. Please try again.'
     : null
-  // Raw provider/Supabase message (if any) — displayed as a secondary line so
-  // users can see the real reason when the high-level copy is too generic to
-  // act on (e.g. "redirect_uri_mismatch", "Email not allowed by domain").
   const errorDetail = searchParams.msg ? searchParams.msg.slice(0, 300) : null
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
-            <span className="text-2xl">🎓</span>
-          </div>
-          <h1 className="text-2xl font-bold text-text-primary">Welcome back</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+    <div className="theme-v2 relative isolate min-h-screen overflow-hidden bg-v2-surface-subtle">
+      {/* Atmospheric brand orbs */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full opacity-40 blur-3xl"
+        style={{ background: 'var(--v2-gradient-brand)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-40 bottom-0 h-[480px] w-[480px] rounded-full opacity-50 blur-3xl"
+        style={{ background: 'var(--v2-gradient-brand-soft)' }}
+      />
+
+      <header className="relative z-10 mx-auto flex max-w-[1200px] items-center justify-between px-6 py-6">
+        <Logo size={22} href="/" />
+        <Link
+          href="/"
+          className="text-[13px] font-medium text-v2-foreground-muted transition-colors hover:text-v2-foreground"
+        >
+          ← Back to site
+        </Link>
+      </header>
+
+      <main className="relative z-10 mx-auto flex w-full max-w-[480px] flex-col items-stretch px-6 pb-16 pt-8 sm:pt-16">
+        <div className="text-center">
+          <h1 className="v2-display text-[28px] text-v2-foreground sm:text-[32px]">
+            Welcome back
+          </h1>
+          <p className="mt-1.5 text-[14px] text-v2-foreground-muted">
             Continue your AWS prep
           </p>
         </div>
 
         {/* Error message */}
         {errorMessage && (
-          <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            <p>{errorMessage}</p>
+          <div
+            role="alert"
+            className="mt-6 rounded-lg border border-v2-error/30 bg-v2-error-soft px-4 py-3 text-[13px] text-v2-error"
+          >
+            <p className="font-semibold">{errorMessage}</p>
             {errorDetail && (
-              <p className="mt-1 font-mono text-xs text-danger/70 break-words">
+              <p className="mt-1 break-words font-v2-mono text-[11px] opacity-80">
                 {errorDetail}
               </p>
             )}
@@ -75,20 +102,28 @@ export default async function LoginPage({
 
         {/* Success message */}
         {searchParams.message && (
-          <div className="mb-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          <div
+            role="status"
+            className="mt-6 rounded-lg border border-v2-success/30 bg-v2-success-soft px-4 py-3 text-[13px] text-v2-success"
+          >
             {searchParams.message}
           </div>
         )}
 
-        <LoginForm nextUrl={searchParams.next} />
+        <div className="mt-8">
+          <LoginForm nextUrl={searchParams.next} />
+        </div>
 
-        <p className="mt-6 text-center text-sm text-text-muted">
+        <p className="mt-6 text-center text-[13px] text-v2-foreground-muted">
           Don't have an account?{' '}
-          <a href="/signup" className="text-primary hover:underline">
+          <Link
+            href="/signup"
+            className="font-semibold text-v2-brand hover:text-v2-brand-hover"
+          >
             Sign up free
-          </a>
+          </Link>
         </p>
-      </div>
+      </main>
     </div>
   )
 }
