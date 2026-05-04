@@ -37,7 +37,7 @@ export default async function TrialRequiredPage() {
 
   const body =
     reason === 'preview_exhausted'
-      ? "You've completed the free preview — calibration, a handful of questions, the Coach. Start your 7-day trial to unlock the full curriculum, FSRS scheduling, and the mock exam. $0 today, $19 after day 7 only if you don't cancel."
+      ? "You've completed the free preview — calibration, a handful of questions, the Coach. Start your 7-day trial to unlock the full curriculum, FSRS scheduling, and the mock exam. $0 today, $29 after day 7 only if you don't cancel."
       : reason === 'past_due'
         ? 'Your last payment failed. Update your card in the billing portal to restore access.'
         : reason === 'canceled'

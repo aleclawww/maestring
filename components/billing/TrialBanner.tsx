@@ -70,8 +70,8 @@ export function TrialBanner({
           </span>
           <span className="ml-2 text-[12px] opacity-80">
             {daysRemaining === 0
-              ? 'Your card will be charged $19 at the end of today.'
-              : `Your card will be charged $19 on ${endDateStr}.`}
+              ? 'Your card will be charged $29 at the end of today.'
+              : `Your card will be charged $29 on ${endDateStr}.`}
           </span>
         </div>
       </div>

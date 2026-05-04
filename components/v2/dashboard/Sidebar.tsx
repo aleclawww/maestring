@@ -58,7 +58,7 @@ function initialsFrom(name?: string | null) {
 
 function planLabel(plan?: string) {
   if (!plan) return 'Free'
-  if (plan === 'pro') return 'Pro · $19/mo'
+  if (plan === 'pro') return 'Pro · $29/mo'
   if (plan === 'trial' || plan === 'trialing') return 'Trial'
   if (plan === 'past_due') return 'Payment failed'
   return plan.charAt(0).toUpperCase() + plan.slice(1)
