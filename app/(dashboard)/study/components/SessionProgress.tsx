@@ -21,33 +21,38 @@ export function SessionProgress({
   const progress = Math.round((current / total) * 100)
 
   return (
-    <div className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur-sm px-6 py-3">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-text-muted">
+    <div className="sticky top-0 z-10 -mx-4 border-b border-v2-border bg-v2-background/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle">
           Question {current} of {total}
         </span>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-text-muted">{progress}%</span>
+          <span className="font-v2-mono text-[11px] font-semibold text-v2-foreground-muted">
+            {progress}%
+          </span>
           {onAbandon && !confirmingAbandon && (
             <button
               onClick={() => setConfirmingAbandon(true)}
-              className="text-xs text-text-muted hover:text-danger transition-colors"
+              className="text-[11px] font-medium text-v2-foreground-muted transition-colors hover:text-v2-error"
             >
               Abandon
             </button>
           )}
           {onAbandon && confirmingAbandon && (
-            <span className="flex items-center gap-2 text-xs">
-              <span className="text-text-muted">Abandon session?</span>
+            <span className="flex items-center gap-2 text-[11px]">
+              <span className="text-v2-foreground-muted">Abandon session?</span>
               <button
-                onClick={() => { setConfirmingAbandon(false); onAbandon() }}
-                className="text-danger font-semibold hover:underline"
+                onClick={() => {
+                  setConfirmingAbandon(false)
+                  onAbandon()
+                }}
+                className="font-bold text-v2-error hover:underline"
               >
                 Yes
               </button>
               <button
                 onClick={() => setConfirmingAbandon(false)}
-                className="text-text-muted hover:text-text-primary"
+                className="text-v2-foreground-muted hover:text-v2-foreground"
               >
                 Cancel
               </button>
@@ -63,10 +68,10 @@ export function SessionProgress({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={`Session progress: ${progress}%`}
-        className="h-1.5 rounded-full bg-surface-2 overflow-hidden mb-2"
+        className="mb-2 h-1.5 overflow-hidden rounded-full bg-v2-surface-sunken"
       >
         <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
+          className="h-full rounded-full bg-v2-gradient-brand transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -77,14 +82,14 @@ export function SessionProgress({
           <div
             key={i}
             className={cn(
-              'h-1.5 flex-1 rounded-full transition-colors',
+              'h-1 flex-1 rounded-full transition-colors',
               i < answered.length
                 ? answered[i]
-                  ? 'bg-success'
-                  : 'bg-danger'
+                  ? 'bg-v2-success'
+                  : 'bg-v2-error'
                 : i === current - 1
-                ? 'bg-primary'
-                : 'bg-surface-2'
+                  ? 'bg-v2-foreground'
+                  : 'bg-v2-surface-sunken',
             )}
           />
         ))}
