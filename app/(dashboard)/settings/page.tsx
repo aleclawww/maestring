@@ -27,8 +27,17 @@ export default async function SettingsPage() {
   ])
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-8">
-      <h1 className="text-xl font-bold text-text-primary">Settings</h1>
+    <div className="mx-auto max-w-3xl space-y-10">
+      <header>
+        <p className="font-v2-mono text-[12px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+          Account
+        </p>
+        <h1 className="v2-display mt-2 text-[32px] sm:text-[36px]">Settings</h1>
+        <p className="mt-2 max-w-[560px] text-[15px] leading-[1.6] text-v2-foreground-muted">
+          Profile, notifications, billing, and the door out. Changes save as you
+          edit — no submit buttons unless you see one.
+        </p>
+      </header>
 
       <ProfileSettings
         userId={user.id}

@@ -3,6 +3,7 @@ import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { OnboardingForm } from './OnboardingForm'
+import { Logo } from '@/components/v2'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,12 +71,34 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="rounded-2xl border border-border bg-surface overflow-hidden">
+    <div className="theme-v2 relative isolate min-h-screen overflow-hidden bg-v2-surface-subtle">
+      {/* Atmospheric brand orbs */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full opacity-35 blur-3xl"
+        style={{ background: 'var(--v2-gradient-brand)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-40 bottom-0 h-[480px] w-[480px] rounded-full opacity-50 blur-3xl"
+        style={{ background: 'var(--v2-gradient-brand-soft)' }}
+      />
+
+      <header className="relative z-10 mx-auto flex max-w-[1200px] items-center justify-between px-6 py-6">
+        <Logo size={22} href="/" />
+        <span className="font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+          Setup · Step 1 of 3
+        </span>
+      </header>
+
+      <main className="relative z-10 mx-auto w-full max-w-[640px] px-6 pb-16">
+        <div className="overflow-hidden rounded-2xl border border-v2-border bg-v2-surface shadow-v2-elevated">
           <OnboardingForm domains={domains ?? []} />
         </div>
-      </div>
+        <p className="mt-5 text-center text-[12px] text-v2-foreground-subtle">
+          About 3 minutes · You can change all of this later in Settings.
+        </p>
+      </main>
     </div>
   )
 }
