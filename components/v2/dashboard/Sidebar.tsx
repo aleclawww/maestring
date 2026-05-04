@@ -34,11 +34,12 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { label: 'Home', href: '/preview/dashboard', Icon: Home },
-  { label: 'My courses', href: '/preview/dashboard/courses', Icon: BookOpen },
-  { label: 'Mock exams', href: '/preview/dashboard/exams', Icon: FileCheck },
-  { label: 'Progress', href: '/preview/dashboard/progress', Icon: TrendingUp },
-  { label: 'Community', href: '/preview/dashboard/community', Icon: Users },
+  { label: 'Home', href: '/dashboard', Icon: Home },
+  { label: 'Learn', href: '/learn', Icon: BookOpen },
+  { label: 'Study', href: '/study', Icon: TrendingUp },
+  { label: 'Mock exams', href: '/exam', Icon: FileCheck },
+  { label: 'Progress', href: '/progress', Icon: TrendingUp },
+  { label: 'Referrals', href: '/referrals', Icon: Users },
 ]
 
 interface SidebarProps {
@@ -76,7 +77,7 @@ export function Sidebar({
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-6">
-        <Logo size={20} href="/preview/dashboard" />
+        <Logo size={20} href="/dashboard" />
         {onCloseMobile && (
           <button
             type="button"
@@ -94,7 +95,7 @@ export function Sidebar({
         <ul className="space-y-0.5">
           {NAV.map((item) => {
             const active =
-              item.href === '/preview/dashboard'
+              item.href === '/dashboard'
                 ? pathname === item.href
                 : pathname.startsWith(item.href)
             return (
@@ -126,7 +127,7 @@ export function Sidebar({
       {/* Current cert card */}
       <div className="px-3 pb-3">
         <Link
-          href="/preview/dashboard/courses/saa-c03"
+          href="/learn"
           className="group block rounded-xl border border-v2-border bg-v2-surface p-3.5 shadow-v2-soft transition-all duration-200 ease-v2 hover:-translate-y-0.5 hover:shadow-v2-elevated"
         >
           <div className="flex items-center justify-between">
@@ -162,7 +163,7 @@ export function Sidebar({
       {/* Bottom: settings + avatar */}
       <div className="border-t border-v2-border-subtle p-3">
         <Link
-          href="/preview/dashboard/settings"
+          href="/settings"
           className="group flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] font-medium text-v2-foreground-muted transition-colors hover:bg-v2-surface-subtle hover:text-v2-foreground"
         >
           <Settings className="h-4 w-4" strokeWidth={2} />

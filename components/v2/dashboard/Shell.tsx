@@ -23,29 +23,35 @@ interface ShellProps {
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: 'Home',
-  courses: 'My courses',
-  exams: 'Mock exams',
+  learn: 'Learn',
+  study: 'Study',
+  exam: 'Mock exam',
+  flashcards: 'Flashcards',
   progress: 'Progress',
-  community: 'Community',
   settings: 'Settings',
-  lesson: 'Lesson',
+  referrals: 'Referrals',
+  documents: 'Documents',
+  onboarding: 'Setup',
+  c: 'Concept',
+  results: 'Results',
 }
 
 function deriveBreadcrumb(pathname: string) {
-  // /preview/dashboard or /preview/dashboard/courses/saa-c03/lesson/03
-  const parts = pathname.replace(/^\/preview\//, '').split('/').filter(Boolean)
+  // /dashboard, /learn/c/iam-policies, /study, /exam/[id], etc.
+  const parts = pathname.split('/').filter(Boolean)
   if (parts.length === 0) return [{ label: 'Home' }]
-  // Strip leading "dashboard"
-  const rest = parts[0] === 'dashboard' ? parts.slice(1) : parts
-  if (rest.length === 0) return [{ label: 'Home' }]
+  // /dashboard alone is the home
+  if (parts[0] === 'dashboard' && parts.length === 1) {
+    return [{ label: 'Home' }]
+  }
 
   const crumbs: Array<{ label: string; href?: string }> = [
-    { label: 'Home', href: '/preview/dashboard' },
+    { label: 'Home', href: '/dashboard' },
   ]
-  let acc = '/preview/dashboard'
-  rest.forEach((seg, idx) => {
+  let acc = ''
+  parts.forEach((seg, idx) => {
     acc += `/${seg}`
-    const isLast = idx === rest.length - 1
+    const isLast = idx === parts.length - 1
     const label = ROUTE_LABELS[seg] ?? seg.toUpperCase()
     crumbs.push(isLast ? { label } : { label, href: acc })
   })
