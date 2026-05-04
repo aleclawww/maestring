@@ -1,8 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Lightbulb,
+  Sparkles,
+  Wrench,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
+import { Card } from '@/components/v2'
 import type { Question, EvaluationResult } from '@/types/study'
 
 const TASK_LABELS: Record<string, string> = {
@@ -22,35 +31,55 @@ const TASK_LABELS: Record<string, string> = {
   '4.4': 'Cost-optimized network architectures',
 }
 
-function DeepDive({ content, tags, questionId, conceptId }: { content: string; tags: string[]; questionId: string; conceptId: string }) {
+function DeepDive({
+  content,
+  tags,
+  questionId,
+  conceptId,
+}: {
+  content: string
+  tags: string[]
+  questionId: string
+  conceptId: string
+}) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-lg border border-border bg-surface-2">
+    <div className="overflow-hidden rounded-lg border border-v2-border bg-v2-surface-subtle">
       <button
         onClick={() => {
-          setOpen(v => {
-            if (!v) track({ name: 'deep_explanation_opened', properties: { concept_id: conceptId, question_id: questionId } })
+          setOpen((v) => {
+            if (!v)
+              track({
+                name: 'deep_explanation_opened',
+                properties: { concept_id: conceptId, question_id: questionId },
+              })
             return !v
           })
         }}
-        className="flex w-full items-center justify-between px-4 py-3 text-left"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-v2-surface-sunken/40"
       >
-        <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+        <span className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-foreground-muted">
           {open ? 'Hide deep dive' : 'Dive deeper into this concept'}
         </span>
-        <span className={cn('text-text-muted transition-transform', open && 'rotate-180')}>▾</span>
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 text-v2-foreground-muted transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+          strokeWidth={2.25}
+        />
       </button>
       {open && (
-        <div className="border-t border-border/40 px-4 py-3 space-y-3">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
+        <div className="space-y-3 border-t border-v2-border-subtle px-4 py-4">
+          <p className="whitespace-pre-wrap text-[13px] leading-[1.65] text-v2-foreground-muted">
             {content}
           </p>
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {tags.map(t => (
+              {tags.map((t) => (
                 <span
                   key={t}
-                  className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary"
+                  className="rounded-full bg-v2-brand-soft px-2 py-0.5 font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-brand"
                 >
                   {t}
                 </span>
@@ -71,11 +100,9 @@ interface AnswerFeedbackProps {
   isLast?: boolean
 }
 
-// Safe experimentation environment: negative feedback is NOT bright red with
-// "You failed!". It's amber (constructive, not alarming), regular typography,
-// non-punitive language. The micro-elaboration question (Bjork generation
-// effect) is shown BEFORE revealing the full reasoning, prompting the user
-// to actively process the error.
+// Safe experimentation environment: negative feedback is NOT alarming red.
+// It's amber-toned, constructive copy. The micro-elaboration step is shown
+// BEFORE revealing the full reasoning (Bjork generation effect).
 export function AnswerFeedback({
   question,
   selectedIndex,
@@ -86,56 +113,69 @@ export function AnswerFeedback({
   const isOptimal = evaluation.isCorrect
   const [elaborationRevealed, setElaborationRevealed] = useState(false)
   const [userElaboration, setUserElaboration] = useState('')
-  const showElaborationStep = !isOptimal && !!evaluation.elaboration && !elaborationRevealed
+  const showElaborationStep =
+    !isOptimal && !!evaluation.elaboration && !elaborationRevealed
 
   return (
-    <div
+    <Card
+      padding="none"
       className={cn(
-        'rounded-2xl border shadow-card animate-fade-in-up',
-        isOptimal ? 'border-success/30 bg-success/5' : 'border-warning/30 bg-warning/5'
+        'overflow-hidden border-l-[3px]',
+        isOptimal
+          ? 'border-l-v2-success bg-v2-success-soft/30'
+          : 'border-l-v2-warning bg-v2-warning-soft/30',
       )}
     >
-      {/* Header — construcción, no alarma */}
+      {/* Header */}
       <div
         className={cn(
-          'flex items-center gap-3 border-b px-6 py-4',
-          isOptimal ? 'border-success/20' : 'border-warning/20'
+          'flex items-start gap-3 border-b px-6 py-4',
+          isOptimal ? 'border-v2-success/20' : 'border-v2-warning/20',
         )}
       >
         <div
           className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-full text-xl',
-            isOptimal ? 'bg-success/20' : 'bg-warning/20'
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+            isOptimal
+              ? 'bg-v2-success-soft text-v2-success'
+              : 'bg-v2-warning-soft text-v2-warning',
           )}
         >
-          {isOptimal ? '✓' : '🔧'}
+          {isOptimal ? (
+            <Check className="h-5 w-5" strokeWidth={2.5} />
+          ) : (
+            <Wrench className="h-4 w-4" strokeWidth={2.25} />
+          )}
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <p
             className={cn(
-              'text-base font-semibold',
-              isOptimal ? 'text-success' : 'text-warning'
+              'text-[15px] font-bold',
+              isOptimal ? 'text-v2-success' : 'text-v2-warning',
             )}
           >
             {isOptimal ? 'Optimal choice' : 'Another option is preferable here'}
           </p>
-          <p className="text-xs text-text-muted">
+          <p className="mt-0.5 text-[12px] leading-[1.5] text-v2-foreground-muted">
             {isOptimal
               ? 'The system reinforced this concept in your schedule.'
               : 'The system adjusted your schedule — this moves you closer to passing.'}
           </p>
           {question.blueprintTaskId && (
-            <p className="text-xs text-text-muted mt-0.5">
-              Exam area {question.blueprintTaskId} · {TASK_LABELS[question.blueprintTaskId] ?? ''}
+            <p className="mt-1 font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+              Exam area {question.blueprintTaskId}
+              {TASK_LABELS[question.blueprintTaskId]
+                ? ` · ${TASK_LABELS[question.blueprintTaskId]}`
+                : ''}
             </p>
           )}
         </div>
       </div>
 
-      {/* Comparativa de respuestas */}
-      <div className="px-6 py-4 space-y-3">
-        <p className="text-sm font-medium text-text-secondary mb-3">
-          {isOptimal ? 'Your choice:' : 'Comparison:'}
+      {/* Comparison */}
+      <div className="space-y-2 bg-v2-surface px-6 py-5">
+        <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-foreground-muted">
+          {isOptimal ? 'Your choice' : 'Comparison'}
         </p>
 
         {question.options.map((option, i) => {
@@ -146,101 +186,133 @@ export function AnswerFeedback({
             <div
               key={i}
               className={cn(
-                'flex items-start gap-3 rounded-xl border px-4 py-3 text-sm',
+                'flex items-start gap-3 rounded-xl border px-4 py-3 text-[14px]',
                 isOptionOptimal
-                  ? 'border-success/40 bg-success/10'
+                  ? 'border-v2-success bg-v2-success-soft text-v2-foreground'
                   : isSelected && !isOptionOptimal
-                  ? 'border-warning/40 bg-warning/10'
-                  : 'border-border/50 opacity-50'
+                    ? 'border-v2-warning bg-v2-warning-soft text-v2-foreground'
+                    : 'border-v2-border-subtle bg-v2-surface text-v2-foreground-muted',
               )}
             >
               <span
                 className={cn(
-                  'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold mt-0.5',
+                  'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-v2-mono text-[10px] font-bold',
                   isOptionOptimal
-                    ? 'bg-success text-white'
+                    ? 'bg-v2-success text-white'
                     : isSelected
-                    ? 'bg-warning text-white'
-                    : 'bg-surface text-text-muted border border-border'
+                      ? 'bg-v2-warning text-white'
+                      : 'border border-v2-border-strong text-v2-foreground-subtle',
                 )}
               >
-                {isOptionOptimal ? '✓' : isSelected ? '·' : String.fromCharCode(65 + i)}
+                {isOptionOptimal ? (
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                ) : isSelected ? (
+                  '·'
+                ) : (
+                  String.fromCharCode(65 + i)
+                )}
               </span>
               <span
                 className={cn(
+                  'leading-[1.55]',
                   isOptionOptimal
-                    ? 'text-success font-medium'
+                    ? 'font-semibold text-v2-foreground'
                     : isSelected
-                    ? 'text-warning'
-                    : 'text-text-muted'
+                      ? 'text-v2-foreground'
+                      : 'text-v2-foreground-muted',
                 )}
               >
                 {option}
               </span>
+              {(isOptionOptimal || (isSelected && !isOptionOptimal)) && (
+                <span
+                  className={cn(
+                    'ml-auto shrink-0 font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide',
+                    isOptionOptimal
+                      ? isSelected
+                        ? 'text-v2-success'
+                        : 'text-v2-success'
+                      : 'text-v2-warning',
+                  )}
+                >
+                  {isOptionOptimal && isSelected
+                    ? 'Your answer'
+                    : isOptionOptimal
+                      ? 'Best answer'
+                      : 'Your answer'}
+                </span>
+              )}
             </div>
           )
         })}
       </div>
 
-      {/* Micro-elaboration: prompt the user to process the error BEFORE
-          showing the full explanation (Bjork generation effect). */}
+      {/* Micro-elaboration */}
       {showElaborationStep && evaluation.elaboration && (
-        <div className="border-t border-border/30 px-6 py-4 space-y-3 bg-warning/5">
-          <p className="text-xs font-semibold text-warning uppercase tracking-wide">
+        <div className="space-y-3 border-t border-v2-border-subtle bg-v2-warning-soft/40 px-6 py-5">
+          <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-warning">
             Before you continue
           </p>
-          <p className="text-sm text-text-primary">{evaluation.elaboration.prompt}</p>
+          <p className="text-[14px] leading-[1.55] text-v2-foreground">
+            {evaluation.elaboration.prompt}
+          </p>
           <textarea
             value={userElaboration}
-            onChange={e => setUserElaboration(e.target.value)}
+            onChange={(e) => setUserElaboration(e.target.value)}
             placeholder="Write one line (optional, not graded — the point is to think it through)"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-warning focus:outline-none resize-none"
+            className="w-full resize-none rounded-lg border border-v2-border bg-v2-surface px-3 py-2 text-[14px] leading-[1.5] text-v2-foreground placeholder:text-v2-foreground-subtle focus:border-v2-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-v2-warning/30"
             rows={2}
           />
           <button
             onClick={() => setElaborationRevealed(true)}
-            className="text-xs text-warning hover:underline"
+            className="inline-flex items-center gap-1 text-[12px] font-semibold text-v2-warning hover:underline"
           >
-            Show the system’s reasoning →
+            Show the system's reasoning
+            <ArrowRight className="h-3 w-3" strokeWidth={2.5} />
           </button>
         </div>
       )}
 
-      {/* Explicación — sólo cuando isOptimal o cuando el usuario reveló */}
+      {/* Explanation */}
       {(isOptimal || elaborationRevealed || !evaluation.elaboration) && (
-        <div className="border-t border-border/30 px-6 py-4 space-y-3">
+        <div className="space-y-4 border-t border-v2-border-subtle bg-v2-surface px-6 py-5">
           {!isOptimal && evaluation.elaboration?.validReasoningHint && (
-            <div className="rounded-lg bg-surface-2 px-4 py-3">
-              <p className="text-xs font-semibold text-text-muted mb-1">
+            <div className="rounded-lg bg-v2-surface-subtle px-4 py-3">
+              <p className="font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-foreground-muted">
                 Your reasoning
               </p>
-              <p className="text-sm text-text-secondary italic">
+              <p className="mt-1 text-[13px] italic leading-[1.6] text-v2-foreground-muted">
                 {evaluation.elaboration.validReasoningHint}
               </p>
             </div>
           )}
 
           <div>
-            <p className="text-xs font-semibold text-text-muted mb-1 uppercase tracking-wide">
-              {isOptimal ? 'Why it’s optimal' : 'Why the other is preferable here'}
+            <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-foreground-muted">
+              {isOptimal ? "Why it's optimal" : 'Why the other is preferable here'}
             </p>
-            <p className="text-sm text-text-secondary leading-relaxed">
+            <p className="mt-1.5 text-[14px] leading-[1.65] text-v2-foreground">
               {evaluation.explanation}
             </p>
           </div>
 
-          {/* Rich keyInsight (from pool) beats the generic one from the evaluator
-              — and both can coexist if the question author wrote one. */}
           {(question.keyInsight || evaluation.keyInsight) && (
-            <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3">
-              <p className="text-xs font-semibold text-primary mb-1">Key takeaway</p>
-              <p className="text-sm text-text-primary">
-                {question.keyInsight || evaluation.keyInsight}
-              </p>
+            <div className="flex gap-3 rounded-lg border border-v2-brand/20 bg-v2-brand-soft/60 px-4 py-3">
+              <Lightbulb
+                className="mt-0.5 h-4 w-4 shrink-0 text-v2-brand"
+                strokeWidth={2.25}
+              />
+              <div>
+                <p className="font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-brand">
+                  Key takeaway
+                </p>
+                <p className="mt-1 text-[14px] leading-[1.55] text-v2-foreground">
+                  {question.keyInsight || evaluation.keyInsight}
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Deep dive — only shown on demand to avoid wall-of-text. */}
           {question.explanationDeep && (
             <DeepDive
               content={question.explanationDeep}
@@ -251,21 +323,37 @@ export function AnswerFeedback({
           )}
 
           {evaluation.studyTip && (
-            <p className="text-xs text-text-muted italic">{evaluation.studyTip}</p>
+            <p className="text-[12px] italic text-v2-foreground-muted">
+              {evaluation.studyTip}
+            </p>
           )}
         </div>
       )}
 
       {/* Continue */}
-      <div className="border-t border-border/30 px-6 py-4">
+      <div className="border-t border-v2-border-subtle bg-v2-surface px-6 py-4">
         <button
           onClick={onContinue}
           disabled={showElaborationStep}
-          className={cn('w-full btn-primary', showElaborationStep && 'opacity-50 cursor-not-allowed')}
+          className={cn(
+            'inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-v2-gradient-brand text-[14px] font-semibold text-white shadow-v2-button transition-all duration-200 ease-v2',
+            !showElaborationStep && 'hover:-translate-y-0.5 hover:shadow-v2-elevated',
+            showElaborationStep && 'cursor-not-allowed opacity-50',
+          )}
         >
-          {isLast ? 'See results' : 'Next question →'}
+          {isLast ? (
+            <>
+              <Sparkles className="h-4 w-4" strokeWidth={2.25} />
+              See results
+            </>
+          ) : (
+            <>
+              Next question
+              <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+            </>
+          )}
         </button>
       </div>
-    </div>
+    </Card>
   )
 }
