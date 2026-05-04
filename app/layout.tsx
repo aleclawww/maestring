@@ -93,8 +93,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f1117',
-  colorScheme: 'dark',
+  themeColor: '#F8FAFC',
+  colorScheme: 'light',
   width: 'device-width',
   initialScale: 1,
 }
@@ -151,7 +151,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
       </head>
-      <body className="min-h-screen bg-background text-text-primary antialiased">
+      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         <PostHogProvider>
           {children}
           <CookieBanner />
