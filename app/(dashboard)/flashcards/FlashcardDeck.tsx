@@ -2,9 +2,17 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  RotateCcw,
+  Sparkles,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from 'lucide-react'
+import { Card, Button, Badge, Pill } from '@/components/v2'
 import { DOMAINS } from '@/lib/knowledge-graph/aws-saa'
 import type { Flashcard } from './page'
 
@@ -17,7 +25,13 @@ function shuffle<T>(arr: T[]): T[] {
   return out
 }
 
-export function FlashcardDeck({ cards: initial, filterLabel }: { cards: Flashcard[]; filterLabel: string }) {
+export function FlashcardDeck({
+  cards: initial,
+  filterLabel,
+}: {
+  cards: Flashcard[]
+  filterLabel: string
+}) {
   const [cards] = useState(() => shuffle(initial).slice(0, 50))
   const [idx, setIdx] = useState(0)
   const [revealed, setRevealed] = useState(false)
@@ -28,110 +42,203 @@ export function FlashcardDeck({ cards: initial, filterLabel }: { cards: Flashcar
   const total = cards.length
   const done = idx >= total
 
-  const progressPct = useMemo(() => Math.round((idx / Math.max(total, 1)) * 100), [idx, total])
+  const progressPct = useMemo(
+    () => Math.round((idx / Math.max(total, 1)) * 100),
+    [idx, total],
+  )
 
   if (total === 0) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-2">No cards available</h1>
-        <p className="text-text-secondary mb-6">No flashcards could be built from this filter.</p>
-        <Link href="/flashcards"><Button>Back to all cards</Button></Link>
-      </div>
+      <Card padding="lg" className="mx-auto max-w-[480px] text-center">
+        <h2 className="v2-display text-[24px]">No cards available</h2>
+        <p className="mt-2 text-[14px] text-v2-foreground-muted">
+          No flashcards could be built from this filter.
+        </p>
+        <Link href="/flashcards" className="mt-6 inline-block">
+          <Button variant="secondary">
+            <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
+            Back to all cards
+          </Button>
+        </Link>
+      </Card>
     )
   }
 
   if (done) {
+    const accuracy = total > 0 ? Math.round((knew / total) * 100) : 0
     return (
-      <div className="mx-auto max-w-xl px-4 py-12 text-center">
-        <h1 className="text-3xl font-bold mb-2">Deck finished 🎉</h1>
-        <p className="text-text-secondary mb-6">{filterLabel}</p>
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          <Card><CardContent className="p-5">
-            <p className="text-3xl font-bold text-success">{knew}</p>
-            <p className="text-xs text-text-secondary mt-1">Got it</p>
-          </CardContent></Card>
-          <Card><CardContent className="p-5">
-            <p className="text-3xl font-bold text-warning">{needsWork}</p>
-            <p className="text-xs text-text-secondary mt-1">Needs work</p>
-          </CardContent></Card>
-        </div>
-        <div className="flex gap-3 justify-center">
-          <Button onClick={() => { setIdx(0); setRevealed(false); setKnew(0); setNeedsWork(0) }}>
-            Restart deck
-          </Button>
-          <Link href="/learn"><Button variant="ghost">Browse concepts</Button></Link>
-        </div>
+      <div className="mx-auto max-w-[640px] space-y-6">
+        <Card padding="lg" tone="emphasized" className="text-center sm:p-10">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-v2-gradient-brand text-white shadow-v2-button">
+            <Sparkles className="h-6 w-6" strokeWidth={2} />
+          </div>
+          <Pill tone="brand" size="md" className="mx-auto mt-5">
+            <span className="font-v2-mono text-[10px] uppercase tracking-v2-wide">
+              Deck complete
+            </span>
+          </Pill>
+          <h2 className="v2-display mt-4 text-[28px] sm:text-[32px]">
+            {accuracy >= 80
+              ? 'Crushed it.'
+              : accuracy >= 50
+                ? 'Solid pass.'
+                : 'Worth another loop.'}
+          </h2>
+          <p className="mt-2 text-[14px] text-v2-foreground-muted">
+            {filterLabel}
+          </p>
+
+          <div className="mx-auto mt-7 grid max-w-[400px] grid-cols-2 gap-3">
+            <div className="rounded-xl border border-v2-border bg-v2-success-soft p-5">
+              <div className="flex items-center justify-center gap-2">
+                <Check className="h-4 w-4 text-v2-success" strokeWidth={2.5} />
+                <span className="v2-display text-[28px] leading-none text-v2-success">
+                  {knew}
+                </span>
+              </div>
+              <p className="mt-2 font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-success">
+                Got it
+              </p>
+            </div>
+            <div className="rounded-xl border border-v2-border bg-v2-warning-soft p-5">
+              <div className="flex items-center justify-center gap-2">
+                <X className="h-4 w-4 text-v2-warning" strokeWidth={2.5} />
+                <span className="v2-display text-[28px] leading-none text-v2-warning">
+                  {needsWork}
+                </span>
+              </div>
+              <p className="mt-2 font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-warning">
+                Needs work
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-7 flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <Button
+              onClick={() => {
+                setIdx(0)
+                setRevealed(false)
+                setKnew(0)
+                setNeedsWork(0)
+              }}
+            >
+              <RotateCcw className="h-4 w-4" strokeWidth={2.25} />
+              Restart deck
+            </Button>
+            <Link href="/learn">
+              <Button variant="secondary">Browse concepts</Button>
+            </Link>
+          </div>
+        </Card>
       </div>
     )
   }
 
   function next(memorized: boolean) {
-    if (memorized) setKnew(k => k + 1); else setNeedsWork(n => n + 1)
+    if (memorized) setKnew((k) => k + 1)
+    else setNeedsWork((n) => n + 1)
     setRevealed(false)
-    setIdx(i => i + 1)
+    setIdx((i) => i + 1)
   }
 
+  const domainName =
+    DOMAINS.find((d) => d.color === card!.domainColor)?.name ?? 'Concept'
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <header className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <Link href="/learn" className="text-sm text-text-secondary hover:underline">← Learn</Link>
-          <span className="text-xs text-text-secondary">Filter: {filterLabel}</span>
+    <div className="mx-auto max-w-[680px]">
+      <header className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Link
+            href="/learn"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-v2-foreground-muted transition-colors hover:text-v2-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
+            Learn
+          </Link>
+          <span className="font-v2-mono text-[11px] text-v2-foreground-subtle">
+            Filter: {filterLabel}
+          </span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-medium">Card {idx + 1} of {total}</span>
-          <span className="text-text-secondary">{progressPct}%</span>
+        <div className="flex items-center justify-between text-[13px]">
+          <span className="font-semibold text-v2-foreground">
+            Card {idx + 1} of {total}
+          </span>
+          <span className="font-v2-mono text-v2-foreground-muted">
+            {progressPct}%
+          </span>
         </div>
-        <div className="mt-2 h-1.5 w-full rounded-full bg-surface overflow-hidden">
-          <div className="h-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-v2-surface-sunken">
+          <div
+            className="h-full rounded-full bg-v2-gradient-brand transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
       </header>
 
-      <Card glow={revealed} className="min-h-[280px]">
-        <CardContent className="p-8 flex flex-col h-full">
-          <div className="flex items-center justify-between mb-4">
-            <Link
-              href={`/learn/c/${card!.conceptSlug}`}
-              className="text-xs text-text-secondary hover:underline"
-            >
-              {card!.conceptName} →
-            </Link>
-            <Badge variant="outline" style={{ borderColor: card!.domainColor, color: card!.domainColor }}>
-              {DOMAINS.find(d => d.color === card!.domainColor)?.name ?? 'Concept'}
-            </Badge>
-          </div>
+      <Card
+        padding="lg"
+        className={`mt-6 min-h-[300px] sm:p-10 ${revealed ? 'border-v2-brand/40 shadow-v2-elevated' : ''}`}
+      >
+        <div className="flex items-center justify-between">
+          <Link
+            href={`/learn/c/${card!.conceptSlug}`}
+            className="text-[12px] font-medium text-v2-foreground-muted transition-colors hover:text-v2-foreground hover:underline"
+          >
+            {card!.conceptName} →
+          </Link>
+          <Badge tone="neutral" size="sm">
+            {domainName}
+          </Badge>
+        </div>
 
-          <div className="flex-1 flex items-center justify-center text-center">
-            {!revealed ? (
-              <p className="text-lg leading-relaxed">{card!.front}</p>
-            ) : (
-              <p className="text-lg leading-relaxed text-success">{card!.back}</p>
-            )}
-          </div>
-        </CardContent>
+        <div className="mt-8 flex min-h-[160px] items-center justify-center text-center">
+          {!revealed ? (
+            <p className="text-[18px] leading-[1.55] text-v2-foreground sm:text-[20px]">
+              {card!.front}
+            </p>
+          ) : (
+            <p className="text-[18px] leading-[1.55] text-v2-foreground sm:text-[20px]">
+              <span className="rounded-md bg-v2-success-soft px-2 py-1 font-semibold text-v2-success">
+                {card!.back}
+              </span>
+            </p>
+          )}
+        </div>
       </Card>
 
-      <div className="mt-6 flex justify-center gap-3">
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
         {!revealed ? (
-          <Button onClick={() => setRevealed(true)} className="min-w-[200px]">
+          <Button
+            size="lg"
+            onClick={() => setRevealed(true)}
+            className="min-w-[220px]"
+          >
+            <Eye className="h-4 w-4" strokeWidth={2.25} />
             Show answer
           </Button>
         ) : (
           <>
-            <Button variant="ghost" onClick={() => next(false)}>
-              ❌ Need more practice
+            <Button variant="secondary" size="lg" onClick={() => next(false)}>
+              <ThumbsDown className="h-4 w-4" strokeWidth={2.25} />
+              Need more practice
             </Button>
-            <Button onClick={() => next(true)}>
-              ✅ Got it
+            <Button size="lg" onClick={() => next(true)}>
+              <ThumbsUp className="h-4 w-4" strokeWidth={2.25} />
+              Got it
             </Button>
           </>
         )}
       </div>
 
-      <div className="mt-6 flex justify-center gap-3 text-xs text-text-secondary">
-        <span>{knew} ✅</span>
-        <span>·</span>
-        <span>{needsWork} ❌</span>
+      <div className="mt-6 flex justify-center gap-4 font-v2-mono text-[12px] text-v2-foreground-subtle">
+        <span className="inline-flex items-center gap-1.5">
+          <Check className="h-3 w-3 text-v2-success" strokeWidth={2.5} /> {knew}
+        </span>
+        <span aria-hidden>·</span>
+        <span className="inline-flex items-center gap-1.5">
+          <X className="h-3 w-3 text-v2-warning" strokeWidth={2.5} />{' '}
+          {needsWork}
+        </span>
       </div>
     </div>
   )

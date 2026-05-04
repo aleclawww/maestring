@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
+import { ArrowRight, Sparkles } from 'lucide-react'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
-import { formatDate } from '@/lib/utils'
+import { formatDate, cn } from '@/lib/utils'
+import { Card, Badge, Button, Eyebrow } from '@/components/v2'
+import { buttonVariants } from '@/components/v2/Button'
 import type { SubscriptionPlan, SubscriptionStatus } from '@/types/database'
 
 interface SubscriptionSettingsProps {
@@ -28,110 +29,151 @@ export function SubscriptionSettings({
   async function handlePortal() {
     setLoading(true)
     setPortalError(null)
-    // Previously this treated any response as success: it destructured
-    // `url` from `await res.json()` and only redirected `if (url)`, so a
-    // 401/500/network failure silently reset the loading state and the
-    // user saw nothing happen after clicking "Manage subscription".
     try {
       const res = await fetch('/api/lemonsqueezy/portal', { method: 'POST' })
-      const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; message?: string }
+      const body = (await res.json().catch(() => ({}))) as {
+        url?: string
+        error?: string
+        message?: string
+      }
       if (!res.ok || !body.url) {
-        console.error('SubscriptionSettings portal failed', { status: res.status, body })
+        console.error('SubscriptionSettings portal failed', {
+          status: res.status,
+          body,
+        })
         setPortalError(
           body.message ??
             body.error ??
-            `Couldn't open the billing portal (HTTP ${res.status}). Please try again.`
+            `Couldn't open the billing portal (HTTP ${res.status}). Please try again.`,
         )
         setLoading(false)
         return
       }
-      // Validate the portal URL is hosted by Lemon Squeezy.
       try {
         const parsed = new URL(body.url)
         const ok =
           parsed.protocol === 'https:' &&
-          (parsed.hostname.endsWith('.lemonsqueezy.com') || parsed.hostname === 'lemonsqueezy.com')
+          (parsed.hostname.endsWith('.lemonsqueezy.com') ||
+            parsed.hostname === 'lemonsqueezy.com')
         if (!ok) throw new Error('unexpected hostname')
       } catch {
-        console.error('SubscriptionSettings: portal URL failed origin check', { url: body.url })
-        setPortalError("Unexpected portal response. Please try again.")
+        console.error('SubscriptionSettings: portal URL failed origin check', {
+          url: body.url,
+        })
+        setPortalError('Unexpected portal response. Please try again.')
         setLoading(false)
         return
       }
       window.location.href = body.url
     } catch (err) {
       console.error('SubscriptionSettings portal network error', err)
-      setPortalError("Network error. Couldn't open the billing portal — please try again.")
+      setPortalError(
+        "Network error. Couldn't open the billing portal — please try again.",
+      )
       setLoading(false)
     }
   }
 
+  const planLabel =
+    plan === 'free'
+      ? 'Free'
+      : plan === 'pro_annual'
+        ? 'Pro Annual'
+        : plan === 'enterprise'
+          ? 'Enterprise'
+          : 'Pro'
+
+  const statusTone =
+    status === 'active'
+      ? 'success'
+      : status === 'trialing'
+        ? 'brand'
+        : 'error'
+  const statusLabel =
+    status === 'active'
+      ? 'Active'
+      : status === 'trialing'
+        ? 'Trial'
+        : status
+
   return (
     <section>
-      <h2 className="text-sm font-semibold text-text-primary mb-4 pb-2 border-b border-border">
-        Subscription
-      </h2>
-      <div className="rounded-xl border border-border bg-surface-2 p-4 space-y-3">
+      <Eyebrow>Subscription</Eyebrow>
+
+      <Card padding="lg" className="mt-3 space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-text-primary">Current plan</p>
-          <Badge variant={plan === 'free' ? 'outline' : 'default'}>
-            {plan === 'free' ? 'Free' : plan === 'pro_annual' ? 'Pro Annual' : plan === 'enterprise' ? 'Enterprise' : 'Pro'}
+          <p className="text-[14px] font-semibold text-v2-foreground">
+            Current plan
+          </p>
+          <Badge tone={plan === 'free' ? 'neutral' : 'brand'} size="md">
+            {planLabel}
           </Badge>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-text-secondary">Status</p>
-          <Badge variant={status === 'active' ? 'success' : status === 'trialing' ? 'info' : 'danger'}>
-            {status === 'active' ? 'Active' : status === 'trialing' ? 'Trial' : status}
+        <div className="flex items-center justify-between border-t border-v2-border-subtle pt-4">
+          <p className="text-[14px] text-v2-foreground-muted">Status</p>
+          <Badge tone={statusTone} size="md">
+            {statusLabel}
           </Badge>
         </div>
         {periodEnd && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-text-secondary">
+          <div className="flex items-center justify-between border-t border-v2-border-subtle pt-4">
+            <p className="text-[14px] text-v2-foreground-muted">
               {cancelAtPeriodEnd ? 'Cancels on' : 'Next charge'}
             </p>
-            <p className="text-sm text-text-primary">{formatDate(periodEnd)}</p>
+            <p className="font-v2-mono text-[13px] font-semibold text-v2-foreground">
+              {formatDate(periodEnd)}
+            </p>
           </div>
         )}
-      </div>
+      </Card>
 
       {plan === 'free' ? (
-        <UpgradeButton
-          plan="monthly"
-          className="btn-primary mt-4 block text-center w-full"
-        >
-          ✨ Upgrade to Pro
-        </UpgradeButton>
+        <div className="mt-4">
+          <UpgradeButton
+            plan="monthly"
+            className={cn(
+              buttonVariants({ variant: 'primary', size: 'lg' }),
+              'w-full',
+            )}
+          >
+            <Sparkles className="h-4 w-4" strokeWidth={2.25} />
+            Upgrade to Pro
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+          </UpgradeButton>
+        </div>
       ) : stripeCustomerId ? (
-        <>
+        <div className="mt-4">
           <Button
             onClick={handlePortal}
             loading={loading}
-            loadingText="Opening portal..."
-            variant="outline"
-            className="mt-4 w-full"
+            variant="secondary"
+            size="lg"
+            className="w-full"
           >
-            Manage subscription
+            {loading ? 'Opening portal…' : 'Manage subscription'}
           </Button>
           {portalError && (
-            <p className="mt-2 text-xs text-danger" role="alert">
+            <p
+              role="alert"
+              className="mt-2 text-[12px] font-medium text-v2-error"
+            >
               {portalError}
             </p>
           )}
-        </>
+        </div>
       ) : (
-        // Enterprise or manually-provisioned plans don't have a Stripe
-        // customer attached — show a support contact prompt instead of
-        // silently rendering nothing.
-        <p className="mt-4 text-sm text-text-secondary rounded-lg border border-border bg-surface-2 px-4 py-3">
-          Your plan is managed by your organisation.{' '}
-          <a
-            href="mailto:support@maestring.com"
-            className="text-primary hover:underline"
-          >
-            Contact support
-          </a>{' '}
-          to make changes.
-        </p>
+        <Card padding="md" className="mt-4 bg-v2-surface-subtle">
+          <p className="text-[13px] leading-[1.55] text-v2-foreground-muted">
+            Your plan is managed by your organisation.{' '}
+            <a
+              href="mailto:support@maestring.com"
+              className="font-semibold text-v2-brand hover:text-v2-brand-hover"
+            >
+              Contact support
+            </a>{' '}
+            to make changes.
+          </p>
+        </Card>
       )}
     </section>
   )

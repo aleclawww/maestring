@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { Check } from 'lucide-react'
+import { Card, Button, Eyebrow } from '@/components/v2'
 
 interface NotificationSettingsProps {
   userId: string
@@ -49,61 +51,72 @@ export function NotificationSettings({
 
   return (
     <section>
-      <h2 className="text-sm font-semibold text-text-primary mb-4 pb-2 border-b border-border">
-        Notifications and study
-      </h2>
-      <div className="space-y-4">
+      <Eyebrow>Notifications &amp; study</Eyebrow>
+      <Card padding="lg" className="mt-3 space-y-6">
+        {/* Minutes/day slider */}
         <div>
-          <label className="text-sm font-medium text-text-secondary mb-2 block">
-            Study minutes per day: <span className="text-text-primary font-bold">{mins}</span>
-          </label>
+          <div className="flex items-baseline justify-between">
+            <label
+              htmlFor="study-mins"
+              className="text-[13px] font-semibold text-v2-foreground"
+            >
+              Study minutes per day
+            </label>
+            <span className="font-v2-mono text-[14px] font-bold text-v2-brand">
+              {mins} min
+            </span>
+          </div>
           <input
+            id="study-mins"
             type="range"
             min={10}
             max={120}
             step={10}
             value={mins}
-            onChange={e => setMins(Number(e.target.value))}
-            className="w-full accent-primary"
-            aria-label="Study minutes per day"
+            onChange={(e) => setMins(Number(e.target.value))}
+            className="mt-3 w-full accent-v2-brand"
           />
-          <div className="flex justify-between text-xs text-text-muted mt-1">
+          <div className="mt-1 flex justify-between font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
             <span>10 min</span>
             <span>2 hours</span>
           </div>
         </div>
 
-        <label className="flex items-center gap-3 cursor-pointer">
+        {/* Email nudges */}
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-v2-border bg-v2-surface-subtle/50 p-4 transition-colors hover:border-v2-border-strong">
           <input
             type="checkbox"
             checked={emailNudges}
-            onChange={e => setEmailNudges(e.target.checked)}
-            className="h-4 w-4 rounded border-border text-primary accent-primary"
+            onChange={(e) => setEmailNudges(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-v2-border text-v2-brand accent-v2-brand"
           />
           <div>
-            <p className="text-sm font-medium text-text-primary">Email reminders</p>
-            <p className="text-xs text-text-muted">
-              {"You'll get an email when you have overdue concepts and haven't studied today."}
+            <p className="text-[14px] font-bold text-v2-foreground">
+              Email reminders
+            </p>
+            <p className="mt-0.5 text-[12px] leading-[1.55] text-v2-foreground-muted">
+              You'll get an email when you have overdue concepts and haven't
+              studied today.
             </p>
           </div>
         </label>
 
-        <div className="flex items-center gap-3 pt-1">
-          <button
+        <div className="flex items-center gap-3">
+          <Button
             onClick={handleSave}
             disabled={saving || !isDirty}
-            className="btn-primary text-sm px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={saving}
           >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
-          {saved && (
-            <span className="text-sm text-success">✓ Saved</span>
-          )}
+            {saved && <Check className="h-4 w-4" strokeWidth={2.5} />}
+            {saved ? 'Saved' : saving ? 'Saving…' : 'Save changes'}
+          </Button>
           {error && (
-            <span className="text-sm text-danger">{error}</span>
+            <span className="text-[13px] font-medium text-v2-error">
+              {error}
+            </span>
           )}
         </div>
-      </div>
+      </Card>
     </section>
   )
 }
