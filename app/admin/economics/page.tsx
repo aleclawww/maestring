@@ -30,7 +30,7 @@ export default async function AdminEconomicsPage({
       <header className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold">Unit Economics</h1>
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-v2-foreground-subtle">
             {days}d · {o.paying_users} paying · {o.active_users_window} active · single source of truth para decisiones de pricing y capping.
           </p>
         </div>
@@ -39,7 +39,7 @@ export default async function AdminEconomicsPage({
             <Link
               key={n}
               href={`/admin/economics?days=${n}`}
-              className={`px-2 py-1 rounded ${n === days ? 'bg-primary/15 text-primary' : 'text-text-muted hover:bg-surface-2'}`}
+              className={`px-2 py-1 rounded ${n === days ? 'bg-v2-brand/15 text-v2-brand' : 'text-v2-foreground-subtle hover:bg-v2-surface-subtle'}`}
             >
               {n}d
             </Link>
@@ -54,8 +54,8 @@ export default async function AdminEconomicsPage({
               key={i}
               className={`rounded-lg border px-3 py-2 text-xs ${
                 a.severity === 'danger'
-                  ? 'border-danger/40 bg-danger/5 text-danger'
-                  : 'border-warning/40 bg-warning/5 text-warning'
+                  ? 'border-v2-error/40 bg-v2-error/5 text-v2-error'
+                  : 'border-v2-warning/40 bg-v2-warning/5 text-v2-warning'
               }`}
             >
               <span className="font-mono text-[10px] uppercase tracking-wider opacity-70 mr-2">{a.code}</span>
@@ -110,7 +110,7 @@ export default async function AdminEconomicsPage({
               key: 'cpu',
               label: 'Cost / user',
               render: r => (
-                <span className={r.cost_per_active_user_usd > 2 ? 'text-danger' : r.cost_per_active_user_usd > 1 ? 'text-warning' : ''}>
+                <span className={r.cost_per_active_user_usd > 2 ? 'text-v2-error' : r.cost_per_active_user_usd > 1 ? 'text-v2-warning' : ''}>
                   {formatUsd(r.cost_per_active_user_usd, 4)}
                 </span>
               ),
@@ -120,7 +120,7 @@ export default async function AdminEconomicsPage({
               label: 'Gross margin',
               render: r => {
                 const tone = marginTone(r.gross_margin)
-                const cls = tone === 'danger' ? 'text-danger font-semibold' : tone === 'warning' ? 'text-warning' : tone === 'success' ? 'text-success' : ''
+                const cls = tone === 'danger' ? 'text-v2-error font-semibold' : tone === 'warning' ? 'text-v2-warning' : tone === 'success' ? 'text-v2-success' : ''
                 return <span className={cls}>{formatPct(r.gross_margin)}</span>
               },
             },
@@ -140,7 +140,7 @@ export default async function AdminEconomicsPage({
               label: 'Active 30d',
               render: r => (
                 <span>
-                  {r.active_30d} <span className="text-text-muted text-[11px]">({formatPct(r.retention_30d)})</span>
+                  {r.active_30d} <span className="text-v2-foreground-subtle text-[11px]">({formatPct(r.retention_30d)})</span>
                 </span>
               ),
             },
@@ -149,7 +149,7 @@ export default async function AdminEconomicsPage({
               label: 'Converted',
               render: r => (
                 <span>
-                  {r.paying_now} <span className="text-text-muted text-[11px]">({formatPct(r.conversion)})</span>
+                  {r.paying_now} <span className="text-v2-foreground-subtle text-[11px]">({formatPct(r.conversion)})</span>
                 </span>
               ),
             },
@@ -171,7 +171,7 @@ export default async function AdminEconomicsPage({
               key: 'user',
               label: 'User',
               render: r => (
-                <Link href={`/admin/users/${r.user_id}`} className="hover:text-primary text-xs">
+                <Link href={`/admin/users/${r.user_id}`} className="hover:text-v2-brand text-xs">
                   {r.email ?? r.user_id.slice(0, 8)}
                 </Link>
               ),
@@ -185,7 +185,7 @@ export default async function AdminEconomicsPage({
                 const danger = r.plan === 'free' && r.cost_usd > 1
                 const warn = r.plan === 'free' && r.cost_usd > 0.5
                 return (
-                  <span className={danger ? 'text-danger font-semibold' : warn ? 'text-warning' : ''}>
+                  <span className={danger ? 'text-v2-error font-semibold' : warn ? 'text-v2-warning' : ''}>
                     {formatUsd(r.cost_usd, 4)}
                   </span>
                 )

@@ -37,31 +37,31 @@ export function GrantProButton({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface-2 p-4 space-y-3">
+    <div className="rounded-lg border border-v2-border bg-v2-surface-subtle p-4 space-y-3">
       <p className="text-xs font-semibold">Grant Pro (manual)</p>
       <div className="flex items-center gap-2">
-        <label className="text-xs text-text-muted">Days</label>
+        <label className="text-xs text-v2-foreground-subtle">Days</label>
         <input
           type="number"
           value={days}
           onChange={e => setDays(Math.max(1, Number(e.target.value)))}
-          className="w-20 bg-surface border border-border rounded px-2 py-1 text-xs"
+          className="w-20 bg-v2-surface border border-v2-border rounded px-2 py-1 text-xs"
         />
         <input
           value={reason}
           onChange={e => setReason(e.target.value)}
           placeholder="reason"
-          className="flex-1 bg-surface border border-border rounded px-2 py-1 text-xs"
+          className="flex-1 bg-v2-surface border border-v2-border rounded px-2 py-1 text-xs"
         />
         <button
           onClick={handle}
           disabled={isPending}
-          className="btn-primary text-xs px-3 py-1 disabled:opacity-50"
+          className="inline-flex h-8 items-center justify-center rounded-lg bg-v2-gradient-brand px-3 text-[12px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 disabled:opacity-50"
         >
           {isPending ? '…' : 'Grant'}
         </button>
       </div>
-      {err && <p className="text-xs text-danger">{err}</p>}
+      {err && <p className="text-xs text-v2-error">{err}</p>}
     </div>
   )
 }

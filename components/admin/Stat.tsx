@@ -13,17 +13,17 @@ export function Stat({
 }) {
   const toneClass =
     tone === 'success'
-      ? 'text-success'
+      ? 'text-v2-success'
       : tone === 'warning'
-      ? 'text-warning'
+      ? 'text-v2-warning'
       : tone === 'danger'
-      ? 'text-danger'
-      : 'text-text-primary'
+      ? 'text-v2-error'
+      : 'text-v2-foreground'
   return (
-    <div className="rounded-xl border border-border bg-surface px-4 py-3">
-      <p className="text-[11px] uppercase tracking-wider text-text-muted">{label}</p>
+    <div className="rounded-xl border border-v2-border bg-v2-surface px-4 py-3">
+      <p className="text-[11px] uppercase tracking-wider text-v2-foreground-subtle">{label}</p>
       <p className={cn('text-2xl font-bold mt-1', toneClass)}>{value}</p>
-      {hint && <p className="text-xs text-text-muted mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-v2-foreground-subtle mt-0.5">{hint}</p>}
     </div>
   )
 }
@@ -38,9 +38,9 @@ export function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-border bg-surface overflow-hidden">
-      <header className="flex items-center justify-between border-b border-border px-5 py-3">
-        <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+    <section className="rounded-xl border border-v2-border bg-v2-surface overflow-hidden">
+      <header className="flex items-center justify-between border-b border-v2-border px-5 py-3">
+        <h2 className="text-sm font-semibold text-v2-foreground">{title}</h2>
         {action}
       </header>
       <div className="p-5">{children}</div>
@@ -58,15 +58,15 @@ export function Table<T>({
   empty?: string
 }) {
   if (!rows.length) {
-    return <p className="text-sm text-text-muted italic">{empty}</p>
+    return <p className="text-sm text-v2-foreground-subtle italic">{empty}</p>
   }
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border text-left">
+          <tr className="border-b border-v2-border text-left">
             {columns.map(c => (
-              <th key={c.key} className="px-2 py-2 text-[11px] uppercase tracking-wider text-text-muted font-normal">
+              <th key={c.key} className="px-2 py-2 text-[11px] uppercase tracking-wider text-v2-foreground-subtle font-normal">
                 {c.label}
               </th>
             ))}
@@ -74,7 +74,7 @@ export function Table<T>({
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-border/60 hover:bg-surface-2/40 transition-colors">
+            <tr key={i} className="border-b border-v2-border/60 hover:bg-v2-surface-subtle/40 transition-colors">
               {columns.map(c => (
                 <td key={c.key} className={cn('px-2 py-2', c.className)}>
                   {c.render(row)}
@@ -109,10 +109,10 @@ export function formatDateTime(d: string | null | undefined): string {
 
 export function PlanPill({ plan }: { plan: string }) {
   const map: Record<string, string> = {
-    free: 'bg-surface-2 text-text-muted',
-    pro: 'bg-primary/15 text-primary',
-    pro_annual: 'bg-success/15 text-success',
-    enterprise: 'bg-warning/15 text-warning',
+    free: 'bg-v2-surface-subtle text-v2-foreground-subtle',
+    pro: 'bg-v2-brand/15 text-v2-brand',
+    pro_annual: 'bg-v2-success/15 text-v2-success',
+    enterprise: 'bg-v2-warning/15 text-v2-warning',
   }
   const klass = map[plan] ?? map['free']
   return <span className={cn('inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase', klass)}>{plan}</span>

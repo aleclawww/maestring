@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { MDXRemote } from 'next-mdx-remote/rsc'
+import { ArrowLeft, ArrowRight, Clock, Sparkles } from 'lucide-react'
 import {
   canonicalUrl,
   formatPublishedDate,
@@ -9,6 +10,7 @@ import {
   getPostBySlug,
 } from '@/lib/blog'
 import { mdxComponents } from '@/components/blog/mdx'
+import { Nav, Footer } from '@/components/v2/marketing'
 
 // JSON.stringify does NOT escape `</script>`, so a frontmatter title containing
 // `</script><script>alert(1)</script>` would break out of the JSON-LD context
@@ -90,68 +92,89 @@ export default async function BlogPostPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-v2 flex min-h-screen flex-col">
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
-      <article className="mx-auto max-w-3xl px-6 py-16">
-        <nav className="mb-8 text-xs text-text-muted">
-          <Link href="/blog" className="hover:text-primary">
-            ← Back to blog
-          </Link>
-        </nav>
+      <Nav />
+      <main className="flex-1">
+        <article className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
+          <nav className="mb-8">
+            <Link
+              href="/blog"
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-v2-foreground-muted transition-colors hover:text-v2-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
+              Back to blog
+            </Link>
+          </nav>
 
-        <header className="mb-10">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-            <time dateTime={frontmatter.publishedAt}>
-              {formatPublishedDate(frontmatter.publishedAt)}
-            </time>
-            {frontmatter.readingMinutes && (
-              <>
-                <span>·</span>
-                <span>{frontmatter.readingMinutes} min read</span>
-              </>
-            )}
-            {frontmatter.tags.map(t => (
-              <span
-                key={t}
-                className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-text-muted"
-              >
-                {t}
-              </span>
-            ))}
+          <header className="mb-10">
+            <div className="flex flex-wrap items-center gap-2 font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+              <time dateTime={frontmatter.publishedAt}>
+                {formatPublishedDate(frontmatter.publishedAt)}
+              </time>
+              {frontmatter.readingMinutes && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" strokeWidth={2.25} />
+                    {frontmatter.readingMinutes} min read
+                  </span>
+                </>
+              )}
+              {frontmatter.tags.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-md bg-v2-brand-soft px-1.5 py-0.5 font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-brand"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+            <h1 className="v2-display mt-4 text-[36px] leading-[1.15] sm:text-[44px]">
+              {frontmatter.title}
+            </h1>
+            <p className="mt-4 text-[18px] leading-[1.65] text-v2-foreground-muted">
+              {frontmatter.description}
+            </p>
+          </header>
+
+          <div className="prose-blog">
+            <MDXRemote source={content} components={mdxComponents} />
           </div>
-          <h1 className="mt-3 text-4xl font-bold leading-tight">{frontmatter.title}</h1>
-          <p className="mt-4 text-lg text-text-secondary leading-relaxed">
-            {frontmatter.description}
-          </p>
-        </header>
 
-        <div className="prose-invert">
-          <MDXRemote source={content} components={mdxComponents} />
-        </div>
-
-        <aside className="mt-16 rounded-xl border border-primary/40 bg-primary/5 p-6">
-          <p className="text-xs uppercase tracking-wider text-primary font-semibold">
-            Try Maestring
-          </p>
-          <h2 className="mt-2 text-xl font-bold">
-            Pass AWS SAA-C03 in less time
-          </h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            AI-generated questions targeting your real weak spots + FSRS spaced repetition.
-            Don&apos;t memorize — understand.
-          </p>
-          <Link
-            href="/signup"
-            className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-          >
-            Start for free →
-          </Link>
-        </aside>
-      </article>
+          <aside className="mt-16 overflow-hidden rounded-2xl border border-v2-brand/30 bg-v2-brand-soft/40 p-6 shadow-v2-soft sm:p-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-v2-gradient-brand text-white shadow-v2-button">
+                <Sparkles className="h-5 w-5" strokeWidth={2.25} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-brand">
+                  Try Maestring
+                </p>
+                <h2 className="mt-2 text-[20px] font-bold text-v2-foreground">
+                  Pass AWS SAA-C03 in less time
+                </h2>
+                <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
+                  AI-generated questions targeting your real weak spots + FSRS
+                  spaced repetition. Don't memorize — understand.
+                </p>
+                <Link
+                  href="/signup"
+                  className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-v2-gradient-brand px-4 text-[13px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 hover:shadow-v2-elevated"
+                >
+                  Start for free
+                  <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+                </Link>
+              </div>
+            </div>
+          </aside>
+        </article>
+      </main>
+      <Footer />
     </div>
   )
 }

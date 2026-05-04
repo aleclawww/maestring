@@ -50,23 +50,23 @@ export default async function AdminTestimonialsPage() {
   return (
     <div className="p-8 max-w-6xl">
       <h1 className="text-2xl font-bold mb-2">Testimonials</h1>
-      <p className="text-sm text-text-muted mb-6">
+      <p className="text-sm text-v2-foreground-subtle mb-6">
         Manually approve each testimonial before it appears on the landing page.
         Only publish real, verified quotes (FTC compliance).
       </p>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
-          <p className="text-xs text-warning uppercase tracking-wide">Pending</p>
-          <p className="text-2xl font-bold text-warning">{counts.pending}</p>
+        <div className="rounded-xl border border-v2-warning/30 bg-v2-warning/10 p-4">
+          <p className="text-xs text-v2-warning uppercase tracking-wide">Pending</p>
+          <p className="text-2xl font-bold text-v2-warning">{counts.pending}</p>
         </div>
-        <div className="rounded-xl border border-success/30 bg-success/10 p-4">
-          <p className="text-xs text-success uppercase tracking-wide">Approved</p>
-          <p className="text-2xl font-bold text-success">{counts.approved}</p>
+        <div className="rounded-xl border border-v2-success/30 bg-v2-success/10 p-4">
+          <p className="text-xs text-v2-success uppercase tracking-wide">Approved</p>
+          <p className="text-2xl font-bold text-v2-success">{counts.approved}</p>
         </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-xs text-text-muted uppercase tracking-wide">Rejected</p>
-          <p className="text-2xl font-bold text-text-primary">{counts.rejected}</p>
+        <div className="rounded-xl border border-v2-border bg-v2-surface p-4">
+          <p className="text-xs text-v2-foreground-subtle uppercase tracking-wide">Rejected</p>
+          <p className="text-2xl font-bold text-v2-foreground">{counts.rejected}</p>
         </div>
       </div>
 

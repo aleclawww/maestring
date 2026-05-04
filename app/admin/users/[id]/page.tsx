@@ -26,16 +26,16 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
     <div className="p-6 space-y-6 max-w-[1400px]">
       <header className="flex items-start justify-between">
         <div>
-          <Link href="/admin/users" className="text-xs text-primary hover:underline">← Users</Link>
+          <Link href="/admin/users" className="text-xs text-v2-brand hover:underline">← Users</Link>
           <h1 className="text-xl font-bold mt-1">{email}</h1>
-          <p className="text-sm text-text-muted">{profile['full_name'] ?? '—'} · {params.id}</p>
+          <p className="text-sm text-v2-foreground-subtle">{profile['full_name'] ?? '—'} · {params.id}</p>
         </div>
         <div className="flex items-center gap-2">
           <PlanPill plan={plan} />
           {profile['onboarding_completed'] ? (
-            <span className="text-[10px] uppercase text-success">onboarded</span>
+            <span className="text-[10px] uppercase text-v2-success">onboarded</span>
           ) : (
-            <span className="text-[10px] uppercase text-warning">not onboarded</span>
+            <span className="text-[10px] uppercase text-v2-warning">not onboarded</span>
           )}
         </div>
       </header>
@@ -79,7 +79,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
               <Row k="Stripe sub id" v={sub['stripe_subscription_id'] ?? '—'} />
             </dl>
           ) : (
-            <p className="text-xs text-text-muted">No active subscription.</p>
+            <p className="text-xs text-v2-foreground-subtle">No active subscription.</p>
           )}
           <div className="mt-4">
             <GrantProButton userId={params.id} />
@@ -89,18 +89,18 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
 
       <Section title={`Sessions (last 30d) · ${sessions.length}`}>
         {sessions.length === 0 ? (
-          <p className="text-xs text-text-muted">Sin actividad.</p>
+          <p className="text-xs text-v2-foreground-subtle">Sin actividad.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
             {sessions.slice(0, 10).map((s, i) => (
-              <div key={i} className="rounded-md border border-border px-2 py-1.5">
-                <p className="text-text-muted">{formatDateTime(s['created_at'])}</p>
+              <div key={i} className="rounded-md border border-v2-border px-2 py-1.5">
+                <p className="text-v2-foreground-subtle">{formatDateTime(s['created_at'])}</p>
                 <p>
-                  <span className={s['status'] === 'completed' ? 'text-success' : 'text-text-muted'}>
+                  <span className={s['status'] === 'completed' ? 'text-v2-success' : 'text-v2-foreground-subtle'}>
                     {s['status']}
                   </span>
                 </p>
-                <p className="text-text-muted">{s['questions_answered'] ?? 0} Q · {s['xp_earned'] ?? 0} XP</p>
+                <p className="text-v2-foreground-subtle">{s['questions_answered'] ?? 0} Q · {s['xp_earned'] ?? 0} XP</p>
               </div>
             ))}
           </div>
@@ -109,13 +109,13 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
 
       <Section title={`Documents · ${docs.length}`}>
         {docs.length === 0 ? (
-          <p className="text-xs text-text-muted">Sin documentos.</p>
+          <p className="text-xs text-v2-foreground-subtle">Sin documentos.</p>
         ) : (
           <ul className="space-y-1 text-xs">
             {docs.map((d, i) => (
-              <li key={i} className="flex items-center justify-between border-b border-border/60 py-1.5">
+              <li key={i} className="flex items-center justify-between border-b border-v2-border/60 py-1.5">
                 <span className="truncate">{d['filename']}</span>
-                <span className={d['processing_status'] === 'failed' ? 'text-danger' : d['processing_status'] === 'completed' ? 'text-success' : 'text-text-muted'}>
+                <span className={d['processing_status'] === 'failed' ? 'text-v2-error' : d['processing_status'] === 'completed' ? 'text-v2-success' : 'text-v2-foreground-subtle'}>
                   {d['processing_status']}
                 </span>
               </li>
@@ -130,8 +130,8 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <dt className="text-text-muted w-32 shrink-0">{k}</dt>
-      <dd className="text-text-primary truncate">{v ?? '—'}</dd>
+      <dt className="text-v2-foreground-subtle w-32 shrink-0">{k}</dt>
+      <dd className="text-v2-foreground truncate">{v ?? '—'}</dd>
     </div>
   )
 }

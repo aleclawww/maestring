@@ -83,7 +83,7 @@ export default async function QuestionsAdminPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-1">Question Pool</h1>
-      <p className="text-sm text-text-muted mb-6">
+      <p className="text-sm text-v2-foreground-subtle mb-6">
         Review AI-generated questions before they reach users. Approved → served from pool. Rejected → disabled.
       </p>
 

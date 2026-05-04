@@ -12,7 +12,7 @@ export default async function AdminDocumentsPage() {
     <div className="p-6 space-y-6 max-w-[1400px]">
       <header>
         <h1 className="text-xl font-bold">Failed Documents</h1>
-        <p className="text-xs text-text-muted">{rows.length} failed · retry individually via the button on each row</p>
+        <p className="text-xs text-v2-foreground-subtle">{rows.length} failed · retry individually via the button on each row</p>
       </header>
 
       <Section title="Failures (most recent first)">
@@ -26,7 +26,7 @@ export default async function AdminDocumentsPage() {
               render: r => (
                 <div>
                   <div className="font-medium truncate max-w-xs">{r.filename}</div>
-                  <div className="text-[11px] text-text-muted">{(Number(r.file_size) / 1024 / 1024).toFixed(2)} MB</div>
+                  <div className="text-[11px] text-v2-foreground-subtle">{(Number(r.file_size) / 1024 / 1024).toFixed(2)} MB</div>
                 </div>
               ),
             },
@@ -34,21 +34,21 @@ export default async function AdminDocumentsPage() {
               key: 'user',
               label: 'User',
               render: r => r.user_id ? (
-                <Link href={`/admin/users/${r.user_id}`} className="hover:text-primary text-xs">
+                <Link href={`/admin/users/${r.user_id}`} className="hover:text-v2-brand text-xs">
                   {r.email ?? r.user_id.slice(0, 8)}
                 </Link>
-              ) : <span className="text-text-muted">—</span>,
+              ) : <span className="text-v2-foreground-subtle">—</span>,
             },
             {
               key: 'error',
               label: 'Error',
               render: r => (
-                <code className="text-[11px] text-danger/80 bg-danger/5 px-1.5 py-0.5 rounded max-w-md truncate inline-block">
+                <code className="text-[11px] text-v2-error/80 bg-v2-error/5 px-1.5 py-0.5 rounded max-w-md truncate inline-block">
                   {r.error_message ?? '—'}
                 </code>
               ),
             },
-            { key: 'created', label: 'When', render: r => <span className="text-[11px] text-text-muted">{formatDateTime(r.created_at)}</span> },
+            { key: 'created', label: 'When', render: r => <span className="text-[11px] text-v2-foreground-subtle">{formatDateTime(r.created_at)}</span> },
             { key: 'action', label: '', render: r => <RetryButton documentId={r.id} /> },
           ]}
         />

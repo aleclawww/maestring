@@ -23,7 +23,7 @@ export default async function AdminOverviewPage() {
     <div className="p-6 space-y-6 max-w-[1400px]">
       <header>
         <h1 className="text-xl font-bold">Overview</h1>
-        <p className="text-xs text-text-muted">Live metrics · refrescado en cada carga</p>
+        <p className="text-xs text-v2-foreground-subtle">Live metrics · refrescado en cada carga</p>
       </header>
 
       {/* Money row */}
@@ -53,7 +53,7 @@ export default async function AdminOverviewPage() {
       {/* Outcomes row (for calibration) */}
       <Section
         title="Exam outcomes (calibration signal)"
-        action={<Link href="/admin/outcomes" className="text-xs text-primary hover:underline">View detail →</Link>}
+        action={<Link href="/admin/outcomes" className="text-xs text-v2-brand hover:underline">View detail →</Link>}
       >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Stat label="Passed" value={o.outcomes_passed} tone="success" />
@@ -67,7 +67,7 @@ export default async function AdminOverviewPage() {
       <div className="space-y-2">
         {poolToneWarn && (
           <AlertRow tone="warning">
-            <strong>Pool coverage {o.pool_coverage}%</strong> — below 80% means users exhaust pool questions and fall back to on-the-fly generation. Run <code className="px-1 bg-surface-2 rounded">seed-question-pool</code>.
+            <strong>Pool coverage {o.pool_coverage}%</strong> — below 80% means users exhaust pool questions and fall back to on-the-fly generation. Run <code className="px-1 bg-v2-surface-subtle rounded">seed-question-pool</code>.
           </AlertRow>
         )}
         {spendToneWarn && (
@@ -98,9 +98,9 @@ function AlertRow({
   tone: 'info' | 'warning' | 'danger'
 }) {
   const map = {
-    info: 'border-primary/30 bg-primary/5 text-text-secondary',
-    warning: 'border-warning/30 bg-warning/10 text-warning',
-    danger: 'border-danger/30 bg-danger/10 text-danger',
+    info: 'border-v2-brand/30 bg-v2-brand/5 text-v2-foreground-muted',
+    warning: 'border-v2-warning/30 bg-v2-warning/10 text-v2-warning',
+    danger: 'border-v2-error/30 bg-v2-error/10 text-v2-error',
   }
   return <div className={`rounded-lg border px-4 py-2.5 text-xs ${map[tone]}`}>{children}</div>
 }

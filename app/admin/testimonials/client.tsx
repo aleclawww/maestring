@@ -82,7 +82,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
             onClick={() => setTab(t)}
             className={cn(
               'px-3 py-1.5 rounded-lg text-sm transition-colors',
-              tab === t ? 'bg-primary text-white' : 'border border-border text-text-secondary hover:bg-surface-2'
+              tab === t ? 'bg-primary text-white' : 'border border-v2-border text-v2-foreground-muted hover:bg-v2-surface-subtle'
             )}
           >
             {t}
@@ -90,24 +90,24 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
         ))}
       </div>
 
-      {err && <div className="mb-4 text-danger text-sm">{err}</div>}
+      {err && <div className="mb-4 text-v2-error text-sm">{err}</div>}
 
       {filtered.length === 0 && (
-        <div className="rounded-xl border border-border bg-surface p-10 text-center text-text-muted">
+        <div className="rounded-xl border border-v2-border bg-v2-surface p-10 text-center text-v2-foreground-subtle">
           Nothing in this category.
         </div>
       )}
 
       <div className="space-y-3">
         {filtered.map((r) => (
-          <div key={r.id} className="rounded-xl border border-border bg-surface p-4">
+          <div key={r.id} className="rounded-xl border border-v2-border bg-v2-surface p-4">
             <div className="flex items-start justify-between gap-4 mb-2">
               <div>
                 <p className="font-semibold">
                   {r.display_name}{' '}
-                  {r.role && <span className="text-text-muted font-normal">· {r.role}</span>}
+                  {r.role && <span className="text-v2-foreground-subtle font-normal">· {r.role}</span>}
                 </p>
-                <p className="text-xs text-text-muted">
+                <p className="text-xs text-v2-foreground-subtle">
                   {r.user_email} · {new Date(r.submitted_at).toLocaleDateString()}
                   {r.exam_passed && r.scaled_score && ` · Passed ${r.scaled_score}`}
                 </p>
@@ -117,25 +117,25 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
                 <span
                   className={cn(
                     'text-xs px-2 py-0.5 rounded',
-                    r.status === 'approved' && 'bg-success/20 text-success',
-                    r.status === 'pending' && 'bg-warning/20 text-warning',
-                    r.status === 'rejected' && 'bg-surface-2 text-text-muted'
+                    r.status === 'approved' && 'bg-v2-success/20 text-v2-success',
+                    r.status === 'pending' && 'bg-v2-warning/20 text-v2-warning',
+                    r.status === 'rejected' && 'bg-v2-surface-subtle text-v2-foreground-subtle'
                   )}
                 >
                   {r.status}
                 </span>
                 {r.featured && (
-                  <span className="text-xs px-2 py-0.5 rounded bg-primary/20 text-primary">featured</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-v2-brand/20 text-v2-brand">featured</span>
                 )}
               </div>
             </div>
-            <p className="text-sm text-text-secondary mb-3 leading-relaxed">&ldquo;{r.content}&rdquo;</p>
+            <p className="text-sm text-v2-foreground-muted mb-3 leading-relaxed">&ldquo;{r.content}&rdquo;</p>
             <div className="flex flex-wrap gap-2">
               {r.status !== 'approved' && (
                 <button
                   onClick={() => patch(r.id, { status: 'approved' })}
                   disabled={busy}
-                  className="btn-primary text-xs px-3 py-1.5"
+                  className="inline-flex h-8 items-center justify-center rounded-lg bg-v2-gradient-brand px-3 text-[12px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 disabled:opacity-50"
                 >
                   Approve
                 </button>
@@ -144,7 +144,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
                 <button
                   onClick={() => patch(r.id, { status: 'rejected' })}
                   disabled={busy}
-                  className="btn-outline text-xs px-3 py-1.5"
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
                 >
                   Reject
                 </button>
@@ -153,7 +153,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
                 <button
                   onClick={() => patch(r.id, { featured: !r.featured })}
                   disabled={busy}
-                  className="btn-outline text-xs px-3 py-1.5"
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
                 >
                   {r.featured ? 'Remove featured' : 'Mark featured'}
                 </button>
@@ -161,7 +161,7 @@ export function TestimonialsAdminClient({ rows }: { rows: Row[] }) {
               <button
                 onClick={() => remove(r.id)}
                 disabled={busy}
-                className="btn-outline text-xs px-3 py-1.5 text-danger hover:bg-danger/10"
+                className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
               >
                 Delete
               </button>
