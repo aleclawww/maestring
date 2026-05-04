@@ -25,8 +25,12 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
-import { type ReadinessData } from '@/components/dashboard/ReadinessCard'
-import { type BlueprintTaskRow } from '@/components/dashboard/BlueprintAccuracyCard'
+import { ReadinessCard, type ReadinessData } from '@/components/dashboard/ReadinessCard'
+import {
+  BlueprintAccuracyCard,
+  type BlueprintTaskRow,
+} from '@/components/dashboard/BlueprintAccuracyCard'
+import { KnowledgeMap } from '@/components/dashboard/KnowledgeMap'
 import { Card, Eyebrow, Badge } from '@/components/v2'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
@@ -75,15 +79,37 @@ export default async function ProgressPage() {
   ])
 
   const readiness = (readinessRows as ReadinessData[] | null)?.[0] ?? null
-  const _blueprint = (_blueprintRows as BlueprintTaskRow[] | null) ?? []
-  void _blueprint // reserved for Stage D BlueprintAccuracyCard rebuild
-  void CONCEPTS
+  const blueprintTasks = (_blueprintRows as BlueprintTaskRow[] | null) ?? []
 
   const statsRow = stats?.[0]
   const masteredIds = new Set(
     (conceptStates ?? [])
       .filter((s) => s.reps >= 5 && s.lapses <= 1)
       .map((s) => s.concept_id),
+  )
+
+  // Build slug→state map for the Knowledge Map.
+  const stateBySlug = new Map<
+    string,
+    { state: number; reps: number; lapses: number; stability: number }
+  >(
+    ((conceptStates ?? []) as unknown as Array<{
+      state: number
+      reps: number
+      lapses: number
+      stability: number
+      concepts: { slug: string; domain_id: string }
+    }>)
+      .filter((r) => r.concepts?.slug)
+      .map((r) => [
+        r.concepts.slug,
+        {
+          state: r.state,
+          reps: r.reps,
+          lapses: r.lapses,
+          stability: r.stability,
+        },
+      ]),
   )
 
   // Heatmap grid (12 weeks x 7 days)
@@ -134,62 +160,9 @@ export default async function ProgressPage() {
         </p>
       </header>
 
-      {/* Readiness summary */}
+      {/* Readiness — full card with gauge + sparkline + at-risk drawer */}
       {readiness ? (
-        <Card padding="lg" className="relative overflow-hidden">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full opacity-50 blur-3xl"
-            style={{ background: 'var(--v2-gradient-brand-soft)' }}
-          />
-          <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[auto_1fr]">
-            <div>
-              <Eyebrow>Exam readiness</Eyebrow>
-              <div className="mt-3 flex items-baseline gap-2">
-                <span className="v2-display text-[64px] leading-none">
-                  {Math.round(readiness.score)}
-                </span>
-                <span className="text-[16px] text-v2-foreground-muted">
-                  / 1000
-                </span>
-              </div>
-              <p className="mt-3 text-[13px] text-v2-foreground-muted">
-                Pass probability ~
-                {Math.round(readiness.pass_probability * 100)}%
-                {readiness.weakest_domain
-                  ? ` · weakest: ${readiness.weakest_domain}`
-                  : ''}
-              </p>
-            </div>
-            <div className="space-y-3 lg:border-l lg:border-v2-border-subtle lg:pl-8">
-              <p className="font-v2-mono text-[12px] uppercase tracking-v2-wide text-v2-foreground-subtle">
-                By domain
-              </p>
-              {(readiness.by_domain ?? []).map((d) => (
-                <div key={d.domain_id}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[14px] font-semibold text-v2-foreground">
-                      {d.name}
-                    </span>
-                    <span className="font-v2-mono text-[12px] font-semibold text-v2-foreground-muted">
-                      {Math.round(d.score)}%
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-v2-surface-sunken">
-                    <div
-                      className="h-full rounded-full bg-v2-gradient-brand transition-all duration-500"
-                      style={{ width: `${Math.round(d.score)}%` }}
-                    />
-                  </div>
-                  <p className="mt-0.5 font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
-                    {d.studied} of {d.concepts} concepts · {d.weight_percent}%
-                    of exam
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
+        <ReadinessCard data={readiness} />
       ) : (
         <Card padding="lg">
           <Eyebrow>Exam readiness</Eyebrow>
@@ -230,6 +203,14 @@ export default async function ProgressPage() {
           />
         </div>
       </section>
+
+      {/* Knowledge map — per-concept mastery dots */}
+      <KnowledgeMap stateBySlug={stateBySlug} />
+
+      {/* Blueprint accuracy — per-task official exam blueprint */}
+      {blueprintTasks.length > 0 && (
+        <BlueprintAccuracyCard tasks={blueprintTasks} />
+      )}
 
       {/* Heatmap */}
       <section>
