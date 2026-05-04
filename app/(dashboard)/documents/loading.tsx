@@ -9,7 +9,7 @@ export default function DocumentsLoading() {
       </div>
 
       {/* Upload zone */}
-      <div className="rounded-xl border-2 border-dashed border-border p-10 flex flex-col items-center gap-3">
+      <div className="rounded-xl border-2 border-dashed border-slate-200 p-10 flex flex-col items-center gap-3">
         <Skeleton className="h-10 w-10" rounded="lg" />
         <Skeleton className="h-5 w-48" />
         <Skeleton className="h-4 w-64" />
@@ -19,7 +19,7 @@ export default function DocumentsLoading() {
       {/* Document list */}
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 rounded-lg border border-border bg-surface p-4">
+          <div key={i} className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4">
             <Skeleton className="h-10 w-10 shrink-0" rounded="lg" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-48" />

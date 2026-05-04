@@ -2,7 +2,7 @@ import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton'
 
 export default function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6 animate-pulse">
+    <div className="min-h-screen bg-slate-50 p-6 space-y-6 animate-pulse">
       {/* Header: streak + XP */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
@@ -16,7 +16,7 @@ export default function DashboardLoading() {
       </div>
 
       {/* Readiness card */}
-      <div className="rounded-xl border border-border bg-surface p-6 space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-6 w-16" rounded="full" />
@@ -43,7 +43,7 @@ export default function DashboardLoading() {
       <div className="space-y-3">
         <Skeleton className="h-5 w-36" />
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 rounded-lg border border-border bg-surface p-4">
+          <div key={i} className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4">
             <Skeleton className="h-10 w-10" rounded="lg" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-40" />

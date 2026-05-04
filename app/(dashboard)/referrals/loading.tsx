@@ -9,7 +9,7 @@ export default function ReferralsLoading() {
       </div>
 
       {/* Share block */}
-      <div className="rounded-xl border border-border bg-surface p-6 space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="h-4 w-72" />
         <div className="flex gap-2">
@@ -25,7 +25,7 @@ export default function ReferralsLoading() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-border bg-surface p-4 space-y-2">
+          <div key={i} className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
             <Skeleton className="h-8 w-12" />
             <Skeleton className="h-4 w-20" />
           </div>
@@ -36,7 +36,7 @@ export default function ReferralsLoading() {
       <div className="space-y-3">
         <Skeleton className="h-5 w-32" />
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-surface p-4">
+          <div key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4">
             <div className="space-y-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-20" />

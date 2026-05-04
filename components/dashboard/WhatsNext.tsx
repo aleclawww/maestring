@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { ArrowRight } from 'lucide-react'
+import { Card } from '@/components/v2'
 import { PHASE_LABEL, type Phase } from '@/lib/learning-engine/types'
 
 export interface NextAction {
@@ -13,36 +13,59 @@ export interface NextAction {
   tone: 'primary' | 'warning' | 'success' | 'info'
 }
 
-const TONE_CLASSES: Record<NextAction['tone'], string> = {
-  primary: 'border-primary/40 bg-primary/5',
-  warning: 'border-warning/40 bg-warning/5',
-  success: 'border-success/40 bg-success/5',
-  info:    'border-blue-500/40 bg-blue-500/5',
+const TONE_BORDER: Record<NextAction['tone'], string> = {
+  primary: 'border-l-v2-brand',
+  warning: 'border-l-v2-warning',
+  success: 'border-l-v2-success',
+  info: 'border-l-sky-500',
+}
+
+const TONE_CTA: Record<NextAction['tone'], string> = {
+  primary: 'text-v2-brand',
+  warning: 'text-v2-warning',
+  success: 'text-v2-success',
+  info: 'text-sky-700',
 }
 
 export function WhatsNext({ actions }: { actions: NextAction[] }) {
   if (actions.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-5 text-sm text-text-secondary">
-          You&rsquo;re all caught up. Next review opens automatically when concepts come due.
-        </CardContent>
+      <Card padding="md">
+        <p className="text-[14px] leading-[1.55] text-v2-foreground-muted">
+          You're all caught up. Next review opens automatically when concepts
+          come due.
+        </p>
       </Card>
     )
   }
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      {actions.map(a => (
-        <Link key={a.id} href={a.href}>
-          <Card hover className={`h-full ${TONE_CLASSES[a.tone]}`}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="text-2xl">{a.icon}</div>
-                <span className="text-xs text-primary font-semibold">{a.cta} →</span>
-              </div>
-              <h3 className="font-semibold text-sm">{a.title}</h3>
-              <p className="text-xs text-text-secondary mt-1.5">{a.reason}</p>
-            </CardContent>
+      {actions.map((a) => (
+        <Link key={a.id} href={a.href} className="group block">
+          <Card
+            interactive
+            className={`h-full border-l-[3px] ${TONE_BORDER[a.tone]}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-2xl" aria-hidden>
+                {a.icon}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 text-[12px] font-semibold ${TONE_CTA[a.tone]}`}
+              >
+                {a.cta}
+                <ArrowRight
+                  className="h-3 w-3 transition-transform duration-200 ease-v2 group-hover:translate-x-0.5"
+                  strokeWidth={2.5}
+                />
+              </span>
+            </div>
+            <h3 className="mt-3 text-[14px] font-bold text-v2-foreground">
+              {a.title}
+            </h3>
+            <p className="mt-1.5 text-[12px] leading-[1.55] text-v2-foreground-muted">
+              {a.reason}
+            </p>
           </Card>
         </Link>
       ))}
@@ -59,7 +82,7 @@ export function buildNextActions(input: {
   phase: Phase | null
   dueCount: number
   staleDomain?: { name: string; daysSince: number } | null
-  ambientNeeded?: number          // count remaining for phase advance
+  ambientNeeded?: number
   totalConcepts: number
   notSeenCount: number
 }): NextAction[] {
@@ -70,7 +93,8 @@ export function buildNextActions(input: {
       id: 'calibrate',
       icon: '🧪',
       title: 'Run calibration',
-      reason: '5 minutes — measures memory, speed and best study window. Required before the Coach can recommend anything.',
+      reason:
+        '5 minutes — measures memory, speed and best study window. Required before the Coach can recommend anything.',
       href: '/learn/calibration',
       cta: 'Start',
       tone: 'primary',
@@ -83,7 +107,8 @@ export function buildNextActions(input: {
       id: 'due',
       icon: '🔥',
       title: `${input.dueCount} concept${input.dueCount === 1 ? '' : 's'} due for review`,
-      reason: 'These are the highest-leverage minutes today — FSRS scheduled them right at the forgetting curve.',
+      reason:
+        'These are the highest-leverage minutes today — FSRS scheduled them right at the forgetting curve.',
       href: '/study',
       cta: 'Review',
       tone: 'primary',
@@ -95,7 +120,8 @@ export function buildNextActions(input: {
       id: 'ambient',
       icon: '🎯',
       title: `${input.ambientNeeded} ambient cards to unlock the next phase`,
-      reason: 'Passive exposure builds the familiarity scaffolding. Quick reads, no testing.',
+      reason:
+        'Passive exposure builds the familiarity scaffolding. Quick reads, no testing.',
       href: '/learn/session',
       cta: 'Continue',
       tone: 'info',
@@ -107,7 +133,8 @@ export function buildNextActions(input: {
       id: 'stale',
       icon: '⚠️',
       title: `${input.staleDomain.name} hasn't been touched in ${input.staleDomain.daysSince} days`,
-      reason: 'Domain decay is the leading cause of late-session surprises. A short refresher resets the timer.',
+      reason:
+        'Domain decay is the leading cause of late-session surprises. A short refresher resets the timer.',
       href: '/learn',
       cta: 'Refresh',
       tone: 'warning',
@@ -115,7 +142,9 @@ export function buildNextActions(input: {
   }
 
   if (input.notSeenCount > 0 && input.dueCount === 0) {
-    const pct = Math.round(((input.totalConcepts - input.notSeenCount) / input.totalConcepts) * 100)
+    const pct = Math.round(
+      ((input.totalConcepts - input.notSeenCount) / input.totalConcepts) * 100,
+    )
     out.push({
       id: 'discover',
       icon: '🌱',
@@ -132,7 +161,8 @@ export function buildNextActions(input: {
       id: 'coach',
       icon: '🧭',
       title: `You're in ${PHASE_LABEL[input.phase]}`,
-      reason: 'The Coach picks the right activity for this phase — phase-aware orchestration.',
+      reason:
+        'The Coach picks the right activity for this phase — phase-aware orchestration.',
       href: '/learn/session',
       cta: 'Go to Coach',
       tone: 'info',

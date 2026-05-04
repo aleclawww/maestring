@@ -2,9 +2,9 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function ExamLoading() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 gap-6">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 gap-6">
       {/* Intro card */}
-      <div className="w-full max-w-lg rounded-xl border border-border bg-surface p-8 space-y-6">
+      <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-8 space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <Skeleton className="h-14 w-14" rounded="lg" />
           <Skeleton className="h-7 w-48" />
@@ -14,7 +14,7 @@ export default function ExamLoading() {
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-1 rounded-lg bg-background p-3">
+            <div key={i} className="flex flex-col items-center gap-1 rounded-lg bg-slate-50 p-3">
               <Skeleton className="h-6 w-12" />
               <Skeleton className="h-3 w-16" />
             </div>

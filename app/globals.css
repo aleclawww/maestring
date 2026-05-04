@@ -89,11 +89,12 @@ body {
   }
 
   .skeleton {
+    /* v2 light skeleton — slate-100 → slate-200 shimmer */
     background: linear-gradient(
       90deg,
-      var(--surface) 25%,
-      var(--surface-2) 50%,
-      var(--surface) 75%
+      #F1F5F9 25%,
+      #E2E8F0 50%,
+      #F1F5F9 75%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
