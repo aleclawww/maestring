@@ -5,7 +5,7 @@ import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { getEntitlement } from '@/lib/subscription/check'
 import { Card, BlurBlob, Pill } from '@/components/v2'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
-import { buttonVariants } from '@/components/v2/Button'
+import { buttonVariants } from '@/components/v2/button-variants'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 

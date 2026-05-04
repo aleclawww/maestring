@@ -5,7 +5,7 @@ import { Pricing, FAQ } from '@/components/v2/marketing/sections'
 import { Nav, Footer } from '@/components/v2/marketing'
 import { Card, Eyebrow, BlurBlob, Pill, Button } from '@/components/v2'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
-import { buttonVariants } from '@/components/v2/Button'
+import { buttonVariants } from '@/components/v2/button-variants'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = {
