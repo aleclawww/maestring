@@ -1,88 +1,19 @@
 export const runtime = 'nodejs'
 
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createCheckoutSession } from "@/lib/stripe";
-import { isConfigured } from "@/lib/config-check";
-import { logger } from "@/lib/logger";
+import { NextResponse } from 'next/server'
 
-export async function POST(req: NextRequest) {
-  const user = await requireAuthenticatedUser();
-
-  // Fast-fail with an actionable message when Stripe is not configured.
-  // The old code either passed "TODO_*" strings to the SDK (which got a 401
-  // from Stripe after network round-trips) or surfaced a generic 500.
-  if (!isConfigured('STRIPE_SECRET_KEY')) {
-    logger.error({ userId: user.id }, "checkout: STRIPE_SECRET_KEY not configured");
-    return NextResponse.json(
-      {
-        error: "payments_not_configured",
-        message:
-          "Payments are not configured: STRIPE_SECRET_KEY is missing or not set. " +
-          "Add it to .env.local (local dev) or your Vercel environment variables.",
-      },
-      { status: 503 }
-    );
-  }
-
-  let body: { plan?: "monthly" | "annual"; referralCode?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    // empty body is fine — defaults below
-  }
-
-  const plan = body.plan ?? "monthly";
-  const priceId = isConfigured(`STRIPE_PRICE_PRO_${plan.toUpperCase()}`)
-    ? (plan === "annual"
-        ? process.env["STRIPE_PRICE_PRO_ANNUAL"]
-        : process.env["STRIPE_PRICE_PRO_MONTHLY"])
-    : null;
-
-  if (!priceId) {
-    logger.error({ plan }, "Missing or unconfigured Stripe price ID env var");
-    return NextResponse.json(
-      {
-        error: "payments_not_configured",
-        message: `Stripe price ID for the ${plan} plan is not configured. Set STRIPE_PRICE_PRO_${plan.toUpperCase()} in your environment.`,
-      },
-      { status: 503 }
-    );
-  }
-
-  // Validate referral code before passing it to Stripe.
-  // Without this check, any user can pass an arbitrary string as referralCode
-  // and receive a 7-day free trial — even if the code doesn't exist in the DB.
-  let validatedReferralCode: string | undefined;
-  if (body.referralCode) {
-    const supabase = createAdminClient();
-    const { data: referral } = await supabase
-      .from("referrals")
-      .select("id")
-      .eq("code", body.referralCode)
-      .eq("referred_id", user.id)
-      .is("converted_at", null) // not already used
-      .maybeSingle();
-
-    if (referral) {
-      validatedReferralCode = body.referralCode;
-    } else {
-      logger.warn(
-        { userId: user.id, referralCode: body.referralCode },
-        "checkout: referral code not found or already used — trial not applied"
-      );
-    }
-  }
-
-  try {
-    const url = await createCheckoutSession(user.id, priceId, validatedReferralCode);
-    return NextResponse.json({ url });
-  } catch (err) {
-    logger.error({ err, userId: user.id, plan }, "Failed to create checkout session");
-    return NextResponse.json(
-      { error: "Failed to start checkout" },
-      { status: 500 }
-    );
-  }
+/**
+ * Billing migrated to Lemon Squeezy (May 2026). This Stripe endpoint is
+ * intentionally disabled. The replacement is /api/lemonsqueezy/checkout,
+ * which the UpgradeButton already calls. Any old client cache hitting this
+ * URL gets a clean 410 with a hint instead of a misleading 5xx.
+ */
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: 'gone',
+      message: 'Billing has moved to Lemon Squeezy. Use /api/lemonsqueezy/checkout.',
+    },
+    { status: 410 }
+  )
 }

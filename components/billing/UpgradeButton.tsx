@@ -67,11 +67,12 @@ export function UpgradeButton({
         return;
       }
 
-      // Validate the redirect URL is a legitimate Stripe-hosted page before
-      // following it. The URL comes from our own API, but a defence-in-depth
-      // check ensures a compromised server response can't redirect the user to
-      // an arbitrary phishing domain.
-      const ALLOWED_STRIPE_HOSTS = ['checkout.stripe.com', 'billing.stripe.com']
+      // Defence-in-depth: validate the checkout URL is hosted by a known
+      // billing provider before redirecting. URL comes from our own API but
+      // a compromised server response shouldn't be able to phish users.
+      // Lemon Squeezy hosts checkouts under <store-slug>.lemonsqueezy.com
+      // (per-store subdomain) or sometimes app.lemonsqueezy.com. We allow
+      // any *.lemonsqueezy.com hostname.
       let parsedUrl: URL
       try {
         parsedUrl = new URL(data.url)
@@ -81,7 +82,11 @@ export function UpgradeButton({
         setLoading(false)
         return
       }
-      if (parsedUrl.protocol !== 'https:' || !ALLOWED_STRIPE_HOSTS.includes(parsedUrl.hostname)) {
+      const allowed =
+        parsedUrl.protocol === 'https:' &&
+        (parsedUrl.hostname.endsWith('.lemonsqueezy.com') ||
+          parsedUrl.hostname === 'lemonsqueezy.com')
+      if (!allowed) {
         console.error("UpgradeButton: checkout URL failed origin check", { url: data.url })
         setError("Unexpected checkout response. Please try again.")
         setLoading(false)

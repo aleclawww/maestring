@@ -33,7 +33,7 @@ export function SubscriptionSettings({
     // 401/500/network failure silently reset the loading state and the
     // user saw nothing happen after clicking "Manage subscription".
     try {
-      const res = await fetch('/api/stripe/portal', { method: 'POST' })
+      const res = await fetch('/api/lemonsqueezy/portal', { method: 'POST' })
       const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; message?: string }
       if (!res.ok || !body.url) {
         console.error('SubscriptionSettings portal failed', { status: res.status, body })
@@ -45,12 +45,13 @@ export function SubscriptionSettings({
         setLoading(false)
         return
       }
-      // Validate the portal URL is a legitimate Stripe-hosted page.
+      // Validate the portal URL is hosted by Lemon Squeezy.
       try {
         const parsed = new URL(body.url)
-        if (parsed.protocol !== 'https:' || !['billing.stripe.com', 'checkout.stripe.com', 'invoice.stripe.com'].includes(parsed.hostname)) {
-          throw new Error('unexpected hostname')
-        }
+        const ok =
+          parsed.protocol === 'https:' &&
+          (parsed.hostname.endsWith('.lemonsqueezy.com') || parsed.hostname === 'lemonsqueezy.com')
+        if (!ok) throw new Error('unexpected hostname')
       } catch {
         console.error('SubscriptionSettings: portal URL failed origin check', { url: body.url })
         setPortalError("Unexpected portal response. Please try again.")
