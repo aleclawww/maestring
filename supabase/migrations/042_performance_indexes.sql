@@ -63,10 +63,8 @@ CREATE INDEX IF NOT EXISTS idx_ss_user_status
 CREATE INDEX IF NOT EXISTS idx_ss_user_completed
   ON study_sessions(user_id, is_completed, created_at DESC);
 
--- 8. cron_runs — runCron reads the most recent row for a given job_name
---    to detect concurrent runs and record status. Grows unbounded over time.
-CREATE INDEX IF NOT EXISTS idx_cron_runs_job_started
-  ON cron_runs(job_name, started_at DESC);
+-- 8. cron_runs — already covered by cron_runs_name_started_idx in 031
+--    (the column is `name`, not `job_name`). Skipping redundant index.
 
 -- 9. profiles — referral code lookups (/r/[code] redirect handler)
 --    The referral route does WHERE referral_code = $1 on every link click.
