@@ -28,6 +28,16 @@ Estas tablas existen en prod (con datos, posiblemente con RLS policies) pero su 
 
 **Hasta que esto se resuelva: NO tocar schema de prod manualmente.** Cualquier nueva tabla DEBE ser vía migración versionada.
 
+**STATUS (2026-05-05): Reconciliación BLOQUEADA hasta upgrade a Supabase Pro.** Razón: plan gratis no incluye Point-in-Time Recovery, requisito imprescindible para tocar schema de producción con seguridad.
+
+Hallazgos confirmados durante investigación:
+- Las 9 tablas huérfanas no se usan en código de aplicación (cero referencias en `lib/`, `app/`, `types/`, `components/`).
+- No hay vectores activos de introducción de schema no versionado (endpoints tipo `apply-migration-XXX` no existen).
+- La rama `claude/nifty-hugle-8b8fb4` ya estaba mergeada — no hay diseño original recuperable.
+- El plan original (cherry-pick) queda descartado; cuando se desbloquee, será reconstrucción desde `pg_dump` de prod.
+
+Pre-requisito para reanudar: Supabase Pro activo + backup manual reciente verificado restorable.
+
 ## Sidebar — hardcoded values
 - `components/v2/dashboard/Sidebar.tsx:158` — "Exam in 18 days" is a literal string, not derived from `profile.exam_target_date`.
 - `components/v2/dashboard/Sidebar.tsx:150` — progress bar width "68%" is a literal style, not derived from readiness or progress.
