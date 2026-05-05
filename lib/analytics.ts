@@ -25,6 +25,8 @@ export type AnalyticsEvent =
   | { name: "document_failed"; properties: { document_id: string; stage: "parse" | "chunk" | "embed" | "generate"; error?: string } }
   // Monetization
   | { name: "quota_hit"; properties: { used: number; quota: number; plan: string } }
+  | { name: "preview_banner_impression"; properties: { dimension: "questions" | "ambient" | "anchoring"; ratio: number; used: number; max: number } }
+  | { name: "preview_banner_click"; properties: { dimension: "questions" | "ambient" | "anchoring"; ratio: number; used: number; max: number } }
   | { name: "checkout_started"; properties?: { plan?: string } }
   | { name: "subscription_created"; properties?: { plan?: string } }
   | { name: "subscription_cancelled"; properties?: { plan?: string; reason?: string } }
