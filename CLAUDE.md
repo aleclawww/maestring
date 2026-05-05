@@ -100,6 +100,16 @@ Cron endpoints under `app/api/cron/*` are guarded by the `CRON_SECRET` header an
 
 `GET /api/health` is a public liveness probe — pings Supabase + Redis with a 3s timeout each, returns JSON + 200/503. Listed in `PUBLIC_PREFIXES` in `middleware.ts` so uptime monitors (BetterUptime/UptimeRobot/Vercel) don't get 307'd to `/login`.
 
+## UX decisions
+
+### Mejora 1 — Adaptive cold-start dashboard (2026-05-05)
+- Computamos journey phase en runtime ([lib/journey/compute.ts](lib/journey/compute.ts)) en lugar de leer `profiles.journey_phase` porque el campo está stale: nada en el código recomputa o persiste el valor (ver [TODO.md](TODO.md)).
+- Dashboard se adapta a `hasCompletedSession` para no mostrar métricas en cero a usuarios pre-primera-sesión. Cambios quirúrgicos solo en Zona A (card "Today's session") y Zona C (subhead del greeting). Zonas B (Readiness fallback) y D ("What's next" vía `hasCalibration`) ya tenían adaptación propia.
+- `hasCompletedSession` se deriva de `(recentSessions?.length ?? 0) > 0` — la query existente ya filtra `is_completed=true`. Sin queries nuevas. Caveat: `recentSessions.limit(3)` significa que `length` no es un conteo real, solo un proxy de "alguna existe".
+- Feature flag: `FF_ADAPTIVE_DASHBOARD` (server-only, [lib/featureFlags.ts](lib/featureFlags.ts)). Default OFF. Supports per-user allowlist via `FF_ADAPTIVE_DASHBOARD_USERS` (comma-separated user IDs) for gradual rollout / dogfooding before global enable.
+- Métrica esperada: reducción de bounce rate del primer día. Telemetría de CTAs queda fuera de scope (Mejora 6).
+- Nota lingüística: durante el desarrollo se planearon las strings en español, pero el merge final dejó todas las strings nuevas en **inglés** para consistencia con el resto del dashboard. Si lees el historial de la branch (`claude/hopeful-hertz-a98813`) verás un commit "translate Mejora 1 adaptive copy to English for consistency" que materializó esa decisión.
+
 ## Notes for future Claude sessions
 
 - `CONSOLIDATION_NOTES.md` documents that this workspace was reconstructed from prior sandboxed sessions; some modules (notably `question-engine/`) may exist as skeletons. Verify a file's actual contents before assuming functionality.

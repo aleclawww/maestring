@@ -47,6 +47,8 @@ import { logger } from '@/lib/logger'
 import { CONCEPTS } from '@/lib/knowledge-graph/aws-saa'
 import { THRESHOLDS } from '@/lib/learning-engine/transitions'
 import type { Phase } from '@/lib/learning-engine/types'
+import { FLAGS } from '@/lib/featureFlags'
+import { computeJourneyPhase } from '@/lib/journey/compute'
 import type { Metadata } from 'next'
 import { Card, Pill, Eyebrow, Badge } from '@/components/v2'
 import { cn } from '@/lib/utils'
@@ -161,6 +163,33 @@ export default async function DashboardPage() {
       )
     : null
 
+  // Mejora 1 — adaptive cold-start dashboard. Behind FF_ADAPTIVE_DASHBOARD.
+  // `recentSessions` is fetched with .limit(3); we only use `>0` here, never
+  // its raw length as a count. We pass sessionCount: 1 (vs 0) because
+  // computeJourneyPhase only branches on ==0 vs >0 to decide pre_study.
+  const hasCompletedSession = (recentSessions?.length ?? 0) > 0
+  const journeyPhase = computeJourneyPhase({
+    examTargetDate: profile?.exam_target_date ?? null,
+    sessionCount: hasCompletedSession ? 1 : 0,
+    examOutcome:
+      (profile as { exam_outcome?: 'passed' | 'failed' | null } | null)
+        ?.exam_outcome ?? null,
+  })
+  const adaptiveDashboardEnabled = FLAGS.ADAPTIVE_DASHBOARD(user.id)
+  const adaptiveColdStart =
+    adaptiveDashboardEnabled && !hasCompletedSession && dueCount === 0
+
+  logger.debug(
+    {
+      userId: user.id,
+      journeyPhase,
+      hasCompletedSession,
+      dueCount,
+      flag: adaptiveDashboardEnabled,
+    },
+    'mejora1: dashboard adaptive context',
+  )
+
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Learner'
   const fullDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -176,14 +205,17 @@ export default async function DashboardPage() {
     Date.now() - new Date(profile.exam_target_date).getTime() <= 60 * 86400000 &&
     (examOutcome === null || examOutcome === 'unknown')
 
-  const subhead =
-    daysToExam !== null && daysToExam > 0
+  const subhead = adaptiveColdStart
+    ? daysToExam !== null && daysToExam > 0
+      ? `${daysToExam} day${daysToExam === 1 ? '' : 's'} until your exam. Let's start.`
+      : "Set your exam date when you're ready. Let's start."
+    : daysToExam !== null && daysToExam > 0
       ? `${daysToExam} day${daysToExam === 1 ? '' : 's'} until your exam${
           dueCount > 0 ? ` · ${dueCount} concepts due today` : ''
         }.`
       : dueCount > 0
         ? `${dueCount} concept${dueCount === 1 ? '' : 's'} ready to review.`
-        : "All caught up. New AI-generated questions surface as you advance."
+        : 'All caught up. New AI-generated questions surface as you advance.'
 
   return (
     <div className="space-y-10">
@@ -229,14 +261,20 @@ export default async function DashboardPage() {
             </Pill>
 
             <h2 className="v2-display mt-5 text-[28px] sm:text-[32px]">
-              {dueCount > 0 ? 'Ready to study?' : 'Stay sharp.'}
+              {adaptiveColdStart
+                ? 'Start with your first concepts'
+                : dueCount > 0
+                  ? 'Ready to study?'
+                  : 'Stay sharp.'}
             </h2>
             <p className="mt-2 max-w-[440px] text-[15px] leading-[1.6] text-v2-foreground-muted">
-              {dueCount > 0
-                ? `FSRS scheduled ${dueCount} concept${
-                    dueCount === 1 ? '' : 's'
-                  } for review. The window stays open until midnight CET.`
-                : 'No reviews due. Open Learn to advance into new concepts before your queue stacks up.'}
+              {adaptiveColdStart
+                ? 'One step at a time. Your Readiness will calibrate after your first full session.'
+                : dueCount > 0
+                  ? `FSRS scheduled ${dueCount} concept${
+                      dueCount === 1 ? '' : 's'
+                    } for review. The window stays open until midnight CET.`
+                  : 'No reviews due. Open Learn to advance into new concepts before your queue stacks up.'}
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -246,7 +284,11 @@ export default async function DashboardPage() {
                   'inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-v2-gradient-brand px-5 text-[14px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 hover:shadow-v2-elevated',
                 )}
               >
-                {dueCount > 0 ? `Start review · ${dueCount}` : 'Open Learn'}
+                {adaptiveColdStart
+                  ? 'Start your first session'
+                  : dueCount > 0
+                    ? `Start review · ${dueCount}`
+                    : 'Open Learn'}
                 <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
               </Link>
               <Link
