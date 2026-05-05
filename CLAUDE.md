@@ -6,7 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SaaS platform for AWS certification preparation (currently AWS SAA-C03). Core differentiator: AI-adaptive question generation + FSRS-based spaced repetition, not a static question bank.
 
-Stack: Next.js 14 (App Router) · TypeScript strict · Supabase (Postgres + pgvector + Auth) · ts-fsrs (FSRS-4.5) · Claude Haiku · OpenAI embeddings · Stripe · Resend · Upstash Redis.
+Stack: Next.js 14 (App Router) · TypeScript strict · Supabase (Postgres + pgvector + Auth) · ts-fsrs (FSRS-4.5) · Claude Haiku · OpenAI embeddings · Lemon Squeezy (Merchant of Record) · Resend · Upstash Redis.
+
+## Current status (2026-05-05)
+
+**Soft launch with SAA-C03 only.** The marketing site, dashboard, and study loop are live in production at maestring.com with the new "Corporate Trust" v2 design system (indigo→violet gradient, Plus Jakarta Sans, slate-50 surfaces, scoped under `.theme-v2`). The other 5 AWS certs (DVA-C02, SOA-C02, SAP-C02, MLA-C01, ANS-C01) render as faded "Coming soon" cards in the CertGrid with a mailto-notify fallback — no `/signup` link.
+
+**Pricing structure:**
+- Lifetime SAA-C03 — $119 once
+- Pro — $29/mo with 7-day free trial (card on file required), unlocks every future cert as we ship them
+- Teams — custom (mailto:hello@maestring.com)
+
+Payments via **Lemon Squeezy** (migrated from Stripe in commits 30cfaa6 / 32320cc). Frontend uses `<UpgradeButton>` from `components/billing/`. Migration 049 holds the LS subscription schema.
+
+**Known CI gap:** `DB tests (pgTAP)` is currently red on `main` due to pre-existing bugs in migrations 040 (return-type change without DROP) and 042 (referenced non-existent `certification_id`/`job_name` columns + `CREATE INDEX CONCURRENTLY` inside a tx). The fixes for those landed in PR #72 along with the v2 redesign. Worth verifying the next push is green before assuming pgTAP is healthy.
+
+**Most recent PR:** [#72](https://github.com/aleclawww/maestring/pull/72) (squash-merged as `65941cb`) — Corporate Trust redesign + SAA-C03 soft-launch copy + the three pgTAP migration fixes.
 
 ## Commands
 
