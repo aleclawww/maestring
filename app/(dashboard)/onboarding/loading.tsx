@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function OnboardingLoading() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -18,7 +18,7 @@ export default function OnboardingLoading() {
         </div>
 
         {/* Form card */}
-        <div className="rounded-xl border border-border bg-surface p-6 space-y-5">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
           <div className="space-y-1">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-4 w-60" />

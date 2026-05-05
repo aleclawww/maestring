@@ -95,7 +95,7 @@ export function QuestionsAdminClient({
             onClick={() => setTab(t)}
             className={cn(
               'px-3 py-1.5 rounded-lg text-sm transition-colors',
-              tab === t ? 'bg-primary text-white' : 'border border-border text-text-secondary hover:bg-surface-2',
+              tab === t ? 'bg-primary text-white' : 'border border-v2-border text-v2-foreground-muted hover:bg-v2-surface-subtle',
             )}
           >
             {t === 'pending' && `Pending (${pending.length})`}
@@ -105,14 +105,14 @@ export function QuestionsAdminClient({
         ))}
       </div>
 
-      {err && <div className="mb-4 text-danger text-sm">{err}</div>}
+      {err && <div className="mb-4 text-v2-error text-sm">{err}</div>}
 
       {tab === 'generate' && <BatchGenerate concepts={concepts} onDone={() => startTransition(() => router.refresh())} />}
 
       {tab === 'pending' && (
         <div className="space-y-3">
           {pending.length === 0 && (
-            <div className="rounded-xl border border-border bg-surface p-10 text-center text-text-muted">
+            <div className="rounded-xl border border-v2-border bg-v2-surface p-10 text-center text-v2-foreground-subtle">
               Empty queue. Nothing to approve.
             </div>
           )}
@@ -136,32 +136,32 @@ export function QuestionsAdminClient({
       {tab === 'rejected' && (
         <div className="space-y-3">
           {rejected.length === 0 && (
-            <div className="rounded-xl border border-border bg-surface p-10 text-center text-text-muted">
+            <div className="rounded-xl border border-v2-border bg-v2-surface p-10 text-center text-v2-foreground-subtle">
               Nothing rejected.
             </div>
           )}
           {rejected.map((q) => (
-            <div key={q.id} className="rounded-xl border border-border bg-surface p-4">
-              <p className="text-xs text-text-muted mb-1">
+            <div key={q.id} className="rounded-xl border border-v2-border bg-v2-surface p-4">
+              <p className="text-xs text-v2-foreground-subtle mb-1">
                 {conceptById.get(q.concept_id)?.name ?? q.concept_id} ·{' '}
                 {new Date(q.created_at).toLocaleDateString()}
               </p>
-              <p className="text-sm text-text-secondary mb-2">{q.question_text}</p>
+              <p className="text-sm text-v2-foreground-muted mb-2">{q.question_text}</p>
               {q.reject_reason && (
-                <p className="text-xs text-danger mb-2">Reason: {q.reject_reason}</p>
+                <p className="text-xs text-v2-error mb-2">Reason: {q.reject_reason}</p>
               )}
               <div className="flex gap-2">
                 <button
                   onClick={() => review(q.id, { status: 'approved' })}
                   disabled={busy}
-                  className="btn-outline text-xs px-3 py-1.5"
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
                 >
                   Restore
                 </button>
                 <button
                   onClick={() => remove(q.id)}
                   disabled={busy}
-                  className="btn-outline text-xs px-3 py-1.5 text-danger hover:bg-danger/10"
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
                 >
                   Delete
                 </button>
@@ -203,13 +203,13 @@ function QuestionCard({
   const [rejectReason, setRejectReason] = useState('')
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="rounded-xl border border-v2-border bg-v2-surface p-4">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-text-muted">
+        <p className="text-xs text-v2-foreground-subtle">
           {concept?.name ?? q.concept_id} · pool: {concept?.approvedCount ?? 0} · diff {q.difficulty.toFixed(2)} ·{' '}
           {new Date(q.created_at).toLocaleDateString()}
         </p>
-        <span className="text-xs px-2 py-0.5 rounded bg-warning/20 text-warning">pending</span>
+        <span className="text-xs px-2 py-0.5 rounded bg-v2-warning/20 text-v2-warning">pending</span>
       </div>
 
       {!editing ? (
@@ -221,7 +221,7 @@ function QuestionCard({
                 key={i}
                 className={cn(
                   'px-2 py-1 rounded',
-                  i === q.correct_index ? 'bg-success/10 border border-success/30 text-success' : 'text-text-secondary',
+                  i === q.correct_index ? 'bg-v2-success/10 border border-v2-success/30 text-v2-success' : 'text-v2-foreground-muted',
                 )}
               >
                 <span className="font-mono text-xs mr-2">{String.fromCharCode(65 + i)}.</span>
@@ -229,7 +229,7 @@ function QuestionCard({
               </li>
             ))}
           </ul>
-          <p className="text-xs text-text-muted leading-relaxed mb-3 whitespace-pre-wrap">{q.explanation}</p>
+          <p className="text-xs text-v2-foreground-subtle leading-relaxed mb-3 whitespace-pre-wrap">{q.explanation}</p>
         </>
       ) : (
         <div className="space-y-2 mb-3">
@@ -237,7 +237,7 @@ function QuestionCard({
             value={qt}
             onChange={(e) => setQt(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-v2-border bg-v2-surface-subtle px-3 py-2 text-sm"
           />
           {opts.map((o, i) => (
             <div key={i} className="flex gap-2 items-center">
@@ -254,7 +254,7 @@ function QuestionCard({
                   n[i] = e.target.value
                   setOpts(n)
                 }}
-                className="flex-1 rounded border border-border bg-surface-2 px-2 py-1 text-sm"
+                className="flex-1 rounded border border-v2-border bg-v2-surface-subtle px-2 py-1 text-sm"
               />
             </div>
           ))}
@@ -262,10 +262,10 @@ function QuestionCard({
             value={expl}
             onChange={(e) => setExpl(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-v2-border bg-v2-surface-subtle px-3 py-2 text-sm"
             placeholder="Explanation"
           />
-          <label className="text-xs text-text-muted flex items-center gap-2">
+          <label className="text-xs text-v2-foreground-subtle flex items-center gap-2">
             Difficulty
             <input
               type="number"
@@ -274,7 +274,7 @@ function QuestionCard({
               max={1}
               value={diff}
               onChange={(e) => setDiff(Number(e.target.value))}
-              className="w-20 rounded border border-border bg-surface-2 px-2 py-1 text-sm"
+              className="w-20 rounded border border-v2-border bg-v2-surface-subtle px-2 py-1 text-sm"
             />
           </label>
         </div>
@@ -283,29 +283,29 @@ function QuestionCard({
       <div className="flex flex-wrap gap-2 items-center">
         {!editing ? (
           <>
-            <button onClick={onApprove} disabled={busy} className="btn-primary text-xs px-3 py-1.5">
+            <button onClick={onApprove} disabled={busy} className="inline-flex h-8 items-center justify-center rounded-lg bg-v2-gradient-brand px-3 text-[12px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 disabled:opacity-50">
               Approve
             </button>
             <input
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Reason (optional)"
-              className="text-xs rounded border border-border bg-surface-2 px-2 py-1"
+              className="text-xs rounded border border-v2-border bg-v2-surface-subtle px-2 py-1"
             />
             <button
               onClick={() => onReject(rejectReason)}
               disabled={busy}
-              className="btn-outline text-xs px-3 py-1.5"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
             >
               Reject
             </button>
-            <button onClick={onEditToggle} disabled={busy} className="btn-outline text-xs px-3 py-1.5">
+            <button onClick={onEditToggle} disabled={busy} className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50">
               Edit
             </button>
             <button
               onClick={onDelete}
               disabled={busy}
-              className="btn-outline text-xs px-3 py-1.5 text-danger hover:bg-danger/10"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
             >
               Delete
             </button>
@@ -323,11 +323,11 @@ function QuestionCard({
                 })
               }
               disabled={busy}
-              className="btn-primary text-xs px-3 py-1.5"
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-v2-gradient-brand px-3 text-[12px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 disabled:opacity-50"
             >
               Save changes
             </button>
-            <button onClick={onEditToggle} disabled={busy} className="btn-outline text-xs px-3 py-1.5">
+            <button onClick={onEditToggle} disabled={busy} className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50">
               Cancel
             </button>
           </>
@@ -388,18 +388,18 @@ function BatchGenerate({ concepts, onDone }: { concepts: Concept[]; onDone: () =
   const sorted = [...concepts].sort((a, b) => a.approvedCount - b.approvedCount)
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-5 max-w-xl">
+    <div className="rounded-xl border border-v2-border bg-v2-surface p-5 max-w-xl">
       <h2 className="font-semibold mb-2">Generate batch</h2>
-      <p className="text-xs text-text-muted mb-4">
+      <p className="text-xs text-v2-foreground-subtle mb-4">
         Triggers question generation via Claude Haiku. Questions will appear in &ldquo;Pending&rdquo; for review.
       </p>
       <div className="space-y-3">
         <div>
-          <label className="text-xs text-text-muted">Concept (ordered by emptiest pool)</label>
+          <label className="text-xs text-v2-foreground-subtle">Concept (ordered by emptiest pool)</label>
           <select
             value={conceptId}
             onChange={(e) => setConceptId(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-v2-border bg-v2-surface-subtle px-3 py-2 text-sm"
           >
             {sorted.map((c) => (
               <option key={c.id} value={c.id}>
@@ -409,22 +409,22 @@ function BatchGenerate({ concepts, onDone }: { concepts: Concept[]; onDone: () =
           </select>
         </div>
         <div>
-          <label className="text-xs text-text-muted">Quantity (1–20)</label>
+          <label className="text-xs text-v2-foreground-subtle">Quantity (1–20)</label>
           <input
             type="number"
             min={1}
             max={20}
             value={count}
             onChange={(e) => setCount(Number(e.target.value))}
-            className="mt-1 w-32 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"
+            className="mt-1 w-32 rounded-lg border border-v2-border bg-v2-surface-subtle px-3 py-2 text-sm"
           />
         </div>
-        <button onClick={run} disabled={running || !conceptId} className="btn-primary text-sm">
+        <button onClick={run} disabled={running || !conceptId} className="inline-flex h-9 items-center justify-center rounded-lg bg-v2-gradient-brand px-4 text-[13px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 disabled:opacity-50">
           {running ? 'Generating…' : 'Generate'}
         </button>
-        {err && <div className="text-danger text-sm">{err}</div>}
+        {err && <div className="text-v2-error text-sm">{err}</div>}
         {result && (
-          <div className="text-sm text-success">
+          <div className="text-sm text-v2-success">
             Generated: {result.generated} · Failed: {result.failed}
           </div>
         )}

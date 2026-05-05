@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { ArrowRight } from 'lucide-react'
 import { DOMAINS, TOPICS, CONCEPTS } from '@/lib/knowledge-graph/aws-saa'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { Card, Badge, Eyebrow } from '@/components/v2'
 import { MasteryBadge } from '@/components/learn/MasteryBadge'
 import { masteryOf } from '@/lib/learning-engine/mastery'
 import { requireAuthenticatedUser, createClient } from '@/lib/supabase/server'
@@ -13,73 +13,127 @@ export const dynamic = 'force-dynamic'
 type Params = { params: { domainSlug: string; topicSlug: string } }
 
 export function generateMetadata({ params }: Params): Metadata {
-  const t = TOPICS.find(x => x.slug === params.topicSlug)
+  const t = TOPICS.find((x) => x.slug === params.topicSlug)
   return { title: t ? `${t.name} — Learn` : 'Learn' }
 }
 
-function difficultyLabel(d: number): { label: string; variant: 'success' | 'warning' | 'danger' } {
-  if (d < 0.45) return { label: 'Beginner', variant: 'success' }
-  if (d < 0.7) return { label: 'Intermediate', variant: 'warning' }
-  return { label: 'Advanced', variant: 'danger' }
+function difficultyLabel(d: number): {
+  label: string
+  tone: 'success' | 'warning' | 'error'
+} {
+  if (d < 0.45) return { label: 'Beginner', tone: 'success' }
+  if (d < 0.7) return { label: 'Intermediate', tone: 'warning' }
+  return { label: 'Advanced', tone: 'error' }
 }
 
 export default async function TopicPage({ params }: Params) {
-  const domain = DOMAINS.find(d => d.slug === params.domainSlug)
-  const topic = TOPICS.find(t => t.slug === params.topicSlug && t.domainSlug === params.domainSlug)
+  const domain = DOMAINS.find((d) => d.slug === params.domainSlug)
+  const topic = TOPICS.find(
+    (t) =>
+      t.slug === params.topicSlug && t.domainSlug === params.domainSlug,
+  )
   if (!domain || !topic) notFound()
 
-  const concepts = CONCEPTS.filter(c => c.topicSlug === topic.slug)
+  const concepts = CONCEPTS.filter((c) => c.topicSlug === topic.slug)
 
-  // Fetch this user's FSRS state for the concepts in this topic.
   const user = await requireAuthenticatedUser()
   const supabase = createClient()
   const { data: stateRows } = await supabase
     .from('user_concept_states')
     .select('concepts!inner(slug), state, reps, lapses, stability')
     .eq('user_id', user.id)
-  const stateBySlug = new Map<string, { state: number; reps: number; lapses: number; stability: number }>(
+  const stateBySlug = new Map<
+    string,
+    { state: number; reps: number; lapses: number; stability: number }
+  >(
     ((stateRows ?? []) as unknown as Array<{
-      concepts: { slug: string }; state: number; reps: number; lapses: number; stability: number
+      concepts: { slug: string }
+      state: number
+      reps: number
+      lapses: number
+      stability: number
     }>)
-      .filter(r => r.concepts?.slug)
-      .map(r => [r.concepts.slug, { state: r.state, reps: r.reps, lapses: r.lapses, stability: r.stability }])
+      .filter((r) => r.concepts?.slug)
+      .map((r) => [
+        r.concepts.slug,
+        {
+          state: r.state,
+          reps: r.reps,
+          lapses: r.lapses,
+          stability: r.stability,
+        },
+      ]),
   )
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <nav className="text-sm text-text-secondary">
-        <Link href="/learn" className="hover:underline">Learn</Link>
-        {' / '}
-        <Link href={`/learn/${domain.slug}`} className="hover:underline">{domain.name}</Link>
+    <div className="space-y-8">
+      <nav className="flex items-center gap-1.5 font-v2-mono text-[12px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+        <Link
+          href="/learn"
+          className="transition-colors hover:text-v2-foreground"
+        >
+          Learn
+        </Link>
+        <span aria-hidden>/</span>
+        <Link
+          href={`/learn/${domain.slug}`}
+          className="transition-colors hover:text-v2-foreground"
+        >
+          {domain.name}
+        </Link>
       </nav>
-      <header className="my-6">
-        <h1 className="text-3xl font-bold">{topic.name}</h1>
-        <p className="text-text-secondary mt-2">{concepts.length} concepts in this topic</p>
+
+      <header>
+        <Eyebrow>Topic</Eyebrow>
+        <h1 className="v2-display mt-2 text-[32px] sm:text-[40px]">
+          {topic.name}
+        </h1>
+        <p className="mt-2 text-[14px] text-v2-foreground-muted">
+          {concepts.length} concept{concepts.length === 1 ? '' : 's'} in this
+          topic
+        </p>
       </header>
 
-      <div className="grid gap-3">
-        {concepts.map(c => {
+      <div className="grid gap-4">
+        {concepts.map((c) => {
           const diff = difficultyLabel(c.difficulty)
           const m = masteryOf(stateBySlug.get(c.slug))
           return (
-            <Link key={c.slug} href={`/learn/c/${c.slug}`}>
-              <Card hover>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h2 className="font-semibold flex items-center gap-2">
-                      <span className={`h-2.5 w-2.5 rounded-full ${m.color}`} title={m.label} />
-                      {c.name}
-                    </h2>
-                    <Badge variant={diff.variant}>{diff.label}</Badge>
+            <Link
+              key={c.slug}
+              href={`/learn/c/${c.slug}`}
+              className="group block"
+            >
+              <Card interactive padding="lg">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="flex items-center gap-2 text-[17px] font-bold text-v2-foreground">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${m.color}`}
+                      title={m.label}
+                    />
+                    {c.name}
+                  </h2>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge tone={diff.tone} size="sm">
+                      {diff.label}
+                    </Badge>
+                    <ArrowRight
+                      className="h-4 w-4 text-v2-foreground-subtle transition-transform duration-200 ease-v2 group-hover:translate-x-1 group-hover:text-v2-brand"
+                      strokeWidth={2.25}
+                    />
                   </div>
-                  <p className="text-sm text-text-secondary mb-3 line-clamp-2">{c.description}</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <MasteryBadge descriptor={m} />
-                    {c.awsServices.slice(0, 3).map(s => (
-                      <Badge key={s} variant="outline">{s}</Badge>
-                    ))}
-                  </div>
-                </CardContent>
+                </div>
+                <p className="mt-2 line-clamp-2 text-[14px] leading-[1.55] text-v2-foreground-muted">
+                  {c.description}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <MasteryBadge descriptor={m} />
+                  {c.awsServices.slice(0, 3).map((s) => (
+                    <Badge key={s} tone="neutral" size="sm">
+                      {s}
+                    </Badge>
+                  ))}
+                </div>
               </Card>
             </Link>
           )

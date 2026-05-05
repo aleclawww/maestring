@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { requireAdmin } from '@/lib/auth/admin'
+import { Logo } from '@/components/v2'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -20,38 +22,48 @@ const NAV = [
   { href: '/admin/actions', label: 'Audit Log', icon: '🗒️' },
 ]
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const user = await requireAdmin()
   return (
-    <div className="min-h-screen bg-background text-text-primary">
+    <div className="theme-v2 min-h-screen bg-v2-background text-v2-foreground">
       <div className="flex">
-        <aside className="sticky top-0 h-screen w-56 shrink-0 border-r border-border bg-surface flex flex-col">
-          <div className="px-5 py-5 border-b border-border">
-            <Link href="/admin" className="block">
-              <p className="text-[11px] uppercase tracking-wider text-text-muted">Maestring</p>
-              <p className="text-base font-bold">Admin Console</p>
-            </Link>
+        <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-v2-border bg-v2-surface">
+          <div className="border-b border-v2-border-subtle px-5 py-5">
+            <Logo size={20} href="/admin" />
+            <p className="mt-2 font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+              Admin console
+            </p>
           </div>
-          <nav className="flex-1 px-2 py-3 space-y-0.5">
-            {NAV.map(item => (
+          <nav className="flex-1 space-y-0.5 px-2 py-3">
+            {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-v2-foreground-muted transition-colors hover:bg-v2-surface-subtle hover:text-v2-foreground"
               >
-                <span className="text-base">{item.icon}</span>
+                <span className="text-base" aria-hidden>
+                  {item.icon}
+                </span>
                 {item.label}
               </Link>
             ))}
           </nav>
-          <div className="border-t border-border px-4 py-3 text-xs text-text-muted">
-            <p className="truncate">{user.email}</p>
-            <Link href="/dashboard" className="text-primary hover:underline">
-              ← Back to app
+          <div className="border-t border-v2-border-subtle px-4 py-3 text-[11px]">
+            <p className="truncate text-v2-foreground-muted">{user.email}</p>
+            <Link
+              href="/dashboard"
+              className="mt-1 inline-flex items-center gap-1 font-semibold text-v2-brand transition-colors hover:text-v2-brand-hover"
+            >
+              <ArrowLeft className="h-3 w-3" strokeWidth={2.25} />
+              Back to app
             </Link>
           </div>
         </aside>
-        <main className="flex-1 min-w-0">{children}</main>
+        <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
   )

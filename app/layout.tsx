@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import './theme-v2.css'
 import { PostHogProvider } from '@/components/shared/PostHogProvider'
 import { CookieBanner } from '@/components/shared/CookieBanner'
 import { ServiceWorkerRegistration } from '@/components/shared/ServiceWorkerRegistration'
+import { jakarta, jetbrainsMono } from '@/lib/fonts-v2'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -91,8 +93,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f1117',
-  colorScheme: 'dark',
+  themeColor: '#F8FAFC',
+  colorScheme: 'light',
   width: 'device-width',
   initialScale: 1,
 }
@@ -134,7 +136,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${jakarta.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script
           type="application/ld+json"
@@ -145,7 +151,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
       </head>
-      <body className="min-h-screen bg-background text-text-primary antialiased">
+      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         <PostHogProvider>
           {children}
           <CookieBanner />

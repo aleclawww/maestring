@@ -21,11 +21,11 @@ export default async function AdminLlmPage({
       <header className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold">LLM Usage</h1>
-          <p className="text-xs text-text-muted">{days} días · {totalCalls.toLocaleString()} calls · {formatUsd(totalCost)} total</p>
+          <p className="text-xs text-v2-foreground-subtle">{days} días · {totalCalls.toLocaleString()} calls · {formatUsd(totalCost)} total</p>
         </div>
         <div className="flex gap-1 text-xs">
           {[7, 14, 30, 90].map(n => (
-            <Link key={n} href={`/admin/llm?days=${n}`} className={`px-2 py-1 rounded ${n === days ? 'bg-primary/15 text-primary' : 'text-text-muted hover:bg-surface-2'}`}>
+            <Link key={n} href={`/admin/llm?days=${n}`} className={`px-2 py-1 rounded ${n === days ? 'bg-v2-brand/15 text-v2-brand' : 'text-v2-foreground-subtle hover:bg-v2-surface-subtle'}`}>
               {n}d
             </Link>
           ))}
@@ -34,7 +34,7 @@ export default async function AdminLlmPage({
 
       <Section title="Daily spend">
         {data.by_day.length === 0 ? (
-          <p className="text-xs text-text-muted">Sin datos en el rango.</p>
+          <p className="text-xs text-v2-foreground-subtle">Sin datos en el rango.</p>
         ) : (
           <div className="flex items-end gap-1 h-28">
             {data.by_day.map(d => {
@@ -42,13 +42,13 @@ export default async function AdminLlmPage({
               return (
                 <div key={d.day} className="flex-1 flex flex-col items-center group relative">
                   <div
-                    className="w-full rounded-t bg-primary/70 group-hover:bg-primary transition-colors"
+                    className="w-full rounded-t bg-v2-brand/70 group-hover:bg-primary transition-colors"
                     style={{ height: `${h}%` }}
                   />
-                  <span className="text-[9px] text-text-muted mt-1 rotate-[-25deg] origin-top-left whitespace-nowrap">
+                  <span className="text-[9px] text-v2-foreground-subtle mt-1 rotate-[-25deg] origin-top-left whitespace-nowrap">
                     {d.day.slice(5)}
                   </span>
-                  <span className="absolute bottom-full mb-1 hidden group-hover:block bg-surface-2 border border-border rounded px-2 py-1 text-[11px] whitespace-nowrap z-10">
+                  <span className="absolute bottom-full mb-1 hidden group-hover:block bg-v2-surface-subtle border border-v2-border rounded px-2 py-1 text-[11px] whitespace-nowrap z-10">
                     {formatUsd(Number(d.cost_usd))} · {d.calls.toLocaleString()} calls
                   </span>
                 </div>
@@ -70,7 +70,7 @@ export default async function AdminLlmPage({
                 key: 'error',
                 label: 'Error %',
                 render: r => (
-                  <span className={Number(r.error_rate) > 2 ? 'text-danger' : Number(r.error_rate) > 0 ? 'text-warning' : 'text-success'}>
+                  <span className={Number(r.error_rate) > 2 ? 'text-v2-error' : Number(r.error_rate) > 0 ? 'text-v2-warning' : 'text-v2-success'}>
                     {Number(r.error_rate).toFixed(1)}%
                   </span>
                 ),
@@ -99,7 +99,7 @@ export default async function AdminLlmPage({
               key: 'user',
               label: 'User',
               render: r => (
-                <Link href={`/admin/users/${r.user_id}`} className="hover:text-primary">
+                <Link href={`/admin/users/${r.user_id}`} className="hover:text-v2-brand">
                   {r.email ?? r.user_id.slice(0, 8)}
                 </Link>
               ),
@@ -109,7 +109,7 @@ export default async function AdminLlmPage({
               key: 'cost',
               label: 'Cost',
               render: r => (
-                <span className={Number(r.cost_usd) > 5 ? 'text-danger font-semibold' : Number(r.cost_usd) > 2 ? 'text-warning' : ''}>
+                <span className={Number(r.cost_usd) > 5 ? 'text-v2-error font-semibold' : Number(r.cost_usd) > 2 ? 'text-v2-warning' : ''}>
                   {formatUsd(Number(r.cost_usd))}
                 </span>
               ),

@@ -3,13 +3,32 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
+import {
+  ArrowRight,
+  Award,
+  BookOpen,
+  Check,
+  ChevronDown,
+  Lightbulb,
+  Moon,
+  RefreshCw,
+  Sparkles,
+  Zap,
+} from 'lucide-react'
+import { Card, Button, Badge, Eyebrow } from '@/components/v2'
 import { CONCEPTS } from '@/lib/knowledge-graph/aws-saa'
-import { PHASE_LABEL, type ActivityDescriptor, type Phase } from '@/lib/learning-engine/types'
+import {
+  PHASE_LABEL,
+  type ActivityDescriptor,
+  type Phase,
+} from '@/lib/learning-engine/types'
 
-interface ProgressInfo { label: string; num: number; den: number; pct: number }
+interface ProgressInfo {
+  label: string
+  num: number
+  den: number
+  pct: number
+}
 
 export function SessionRouter() {
   const router = useRouter()
@@ -40,42 +59,96 @@ export function SessionRouter() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  if (loading) return <Centered><span className="text-text-secondary">Loading your next activity…</span></Centered>
-  if (error) return <Centered>
-    <p className="text-danger mb-3">{error}</p>
-    <Button onClick={load}>Retry</Button>
-  </Centered>
-  if (!activity) return <Centered>No activity available.</Centered>
+  if (loading) {
+    return (
+      <Centered>
+        <span className="font-v2-mono text-[12px] uppercase tracking-v2-wide text-v2-foreground-muted">
+          Loading your next activity…
+        </span>
+      </Centered>
+    )
+  }
 
-  // Hard redirect for calibration — it has its own dedicated route.
+  if (error) {
+    return (
+      <Centered>
+        <p className="text-[14px] font-medium text-v2-error">{error}</p>
+        <div className="mt-4">
+          <Button onClick={load}>
+            <RefreshCw className="h-4 w-4" strokeWidth={2.25} />
+            Retry
+          </Button>
+        </div>
+      </Centered>
+    )
+  }
+
+  if (!activity) {
+    return (
+      <Centered>
+        <p className="text-[14px] text-v2-foreground-muted">
+          No activity available.
+        </p>
+      </Centered>
+    )
+  }
+
   if (activity.type === 'calibration') {
     router.replace('/learn/calibration')
-    return <Centered><span className="text-text-secondary">Routing to calibration…</span></Centered>
+    return (
+      <Centered>
+        <span className="font-v2-mono text-[12px] uppercase tracking-v2-wide text-v2-foreground-muted">
+          Routing to calibration…
+        </span>
+      </Centered>
+    )
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <div className="flex items-start justify-between gap-3 mb-4">
+    <div className="mx-auto max-w-3xl">
+      {/* Phase header */}
+      <div className="mb-5 flex items-start justify-between gap-3">
         <PhaseBadge phase={activity.phase} rationale={activity.rationale} />
-        <details className="text-xs text-text-secondary shrink-0 relative">
-          <summary className="cursor-pointer hover:text-text-primary list-none select-none">
-            Switch mode ▾
+        <details className="relative shrink-0">
+          <summary className="inline-flex cursor-pointer list-none select-none items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-v2-foreground-muted transition-colors hover:bg-v2-surface-subtle hover:text-v2-foreground">
+            Switch mode
+            <ChevronDown className="h-3 w-3" strokeWidth={2.25} />
           </summary>
-          <div className="absolute right-0 mt-2 w-56 rounded-lg border border-border bg-surface shadow-lg p-2 z-10 space-y-1">
-            <Link href="/study" className="block px-3 py-2 rounded hover:bg-surface-2">⚡ Quick session (MCQ)</Link>
-            <Link href="/flashcards" className="block px-3 py-2 rounded hover:bg-surface-2">🃏 Flashcards</Link>
-            <Link href="/learn" className="block px-3 py-2 rounded hover:bg-surface-2">📚 Browse syllabus</Link>
-            <Link href="/exam" className="block px-3 py-2 rounded hover:bg-surface-2">📝 Mock exam (65q)</Link>
-            <button onClick={load} className="w-full text-left px-3 py-2 rounded hover:bg-surface-2">🔄 Refresh activity</button>
+          <div className="absolute right-0 z-10 mt-2 w-60 space-y-0.5 overflow-hidden rounded-lg border border-v2-border bg-v2-surface p-1.5 shadow-v2-elevated">
+            <DropdownLink href="/study" Icon={Zap} label="Quick session (MCQ)" />
+            <DropdownLink href="/flashcards" Icon={Lightbulb} label="Flashcards" />
+            <DropdownLink href="/learn" Icon={BookOpen} label="Browse syllabus" />
+            <DropdownLink href="/exam" Icon={Award} label="Mock exam (65q)" />
+            <button
+              onClick={load}
+              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] font-medium text-v2-foreground-muted transition-colors hover:bg-v2-surface-subtle hover:text-v2-foreground"
+            >
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.25} />
+              Refresh activity
+            </button>
           </div>
         </details>
       </div>
+
       {progress && <PhaseProgress phase={activity.phase} progress={progress} />}
-      {activity.type === 'rest_card' && <RestCard reason={activity.reason ?? 'load_budget_exceeded'} onContinue={load} />}
-      {activity.type === 'ambient_card' && <AmbientCard slug={activity.conceptSlug ?? null} onAdvance={load} />}
-      {activity.type === 'anchoring_prompt' && <AnchoringPrompt onAdvance={load} />}
+
+      {activity.type === 'rest_card' && (
+        <RestCard
+          reason={activity.reason ?? 'load_budget_exceeded'}
+          onContinue={load}
+        />
+      )}
+      {activity.type === 'ambient_card' && (
+        <AmbientCard slug={activity.conceptSlug ?? null} onAdvance={load} />
+      )}
+      {activity.type === 'anchoring_prompt' && (
+        <AnchoringPrompt onAdvance={load} />
+      )}
       {activity.type === 'mcq' && <MCQRedirect />}
       {activity.type === 'mcq_timed' && <MCQRedirect timed />}
       {activity.type === 'transfer_scenario' && <TransferRedirect />}
@@ -83,29 +156,69 @@ export function SessionRouter() {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-function PhaseBadge({ phase, rationale }: { phase: ActivityDescriptor['phase']; rationale: string }) {
+function DropdownLink({
+  href,
+  Icon,
+  label,
+}: {
+  href: string
+  Icon: typeof Zap
+  label: string
+}) {
   return (
-    <div className="mb-4 flex items-start gap-3">
-      <Badge variant="info" className="mt-0.5">{PHASE_LABEL[phase]}</Badge>
-      <p className="text-xs text-text-secondary leading-relaxed">{rationale}</p>
+    <Link
+      href={href}
+      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium text-v2-foreground-muted transition-colors hover:bg-v2-surface-subtle hover:text-v2-foreground"
+    >
+      <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
+      {label}
+    </Link>
+  )
+}
+
+function PhaseBadge({
+  phase,
+  rationale,
+}: {
+  phase: ActivityDescriptor['phase']
+  rationale: string
+}) {
+  return (
+    <div className="flex flex-1 items-start gap-3">
+      <Badge tone="brand" size="md" mono>
+        {PHASE_LABEL[phase]}
+      </Badge>
+      <p className="text-[12px] leading-[1.55] text-v2-foreground-muted">
+        {rationale}
+      </p>
     </div>
   )
 }
 
-function PhaseProgress({ phase, progress }: { phase: Phase; progress: ProgressInfo }) {
+function PhaseProgress({
+  phase,
+  progress,
+}: {
+  phase: Phase
+  progress: ProgressInfo
+}) {
   return (
-    <div className="mb-5 rounded-lg border border-border bg-surface/40 px-4 py-3">
-      <div className="flex items-center justify-between text-xs mb-1.5">
-        <span className="font-medium">{progress.label}</span>
-        <span className="tabular-nums text-text-secondary">
+    <div className="mb-6 rounded-xl border border-v2-border bg-v2-surface px-4 py-3">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[13px] font-semibold text-v2-foreground">
+          {progress.label}
+        </span>
+        <span className="font-v2-mono text-[12px] tabular-nums text-v2-foreground-muted">
           {progress.num} / {progress.den} · {progress.pct}%
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-surface overflow-hidden">
-        <div className="h-full bg-primary transition-all" style={{ width: `${progress.pct}%` }} />
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-v2-surface-sunken">
+        <div
+          className="h-full rounded-full bg-v2-gradient-brand transition-all"
+          style={{ width: `${progress.pct}%` }}
+        />
       </div>
-      <p className="text-[10px] text-text-secondary mt-1.5 uppercase tracking-wide">
+      <p className="mt-1.5 font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
         Until next phase ({PHASE_LABEL[phase]})
       </p>
     </div>
@@ -113,54 +226,81 @@ function PhaseProgress({ phase, progress }: { phase: Phase; progress: ProgressIn
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto max-w-md px-4 py-16 text-center">{children}</div>
+  return (
+    <div className="mx-auto max-w-md py-16 text-center">{children}</div>
+  )
 }
 
 // ─── Rest card ──────────────────────────────────────────────────────────────
-function RestCard({ reason, onContinue }: { reason: 'sleep_window' | 'load_budget_exceeded' | 'forgetting_detected'; onContinue: () => void }) {
+function RestCard({
+  reason,
+  onContinue,
+}: {
+  reason: 'sleep_window' | 'load_budget_exceeded' | 'forgetting_detected'
+  onContinue: () => void
+}) {
   const titles = {
     sleep_window: 'Sleep beats cramming',
     load_budget_exceeded: 'You hit your daily load',
     forgetting_detected: 'Time to consolidate',
   }
   const bodies = {
-    sleep_window: 'You configured this hour as your sleep window. Memory consolidates while you sleep — come back tomorrow morning.',
-    load_budget_exceeded: 'Your cognitive load budget is hit. Diminishing returns from here. Take a break — your brain consolidates between sessions.',
-    forgetting_detected: 'Your readiness dipped. The system is shifting back to consolidation to protect what you already learned.',
+    sleep_window:
+      'You configured this hour as your sleep window. Memory consolidates while you sleep — come back tomorrow morning.',
+    load_budget_exceeded:
+      'Your cognitive load budget is hit. Diminishing returns from here. Take a break — your brain consolidates between sessions.',
+    forgetting_detected:
+      'Your readiness dipped. The system is shifting back to consolidation to protect what you already learned.',
   }
-  // Sleep window is the only reason a user might legitimately want to override
-  // — they may have an unusual schedule for one night. Browse and Quick session
-  // are still soft-blocked? No — those don't go through the orchestrator. The
-  // override here just routes them to /study which works regardless of phase.
+
   return (
-    <Card className="border-warning/40">
-      <CardContent className="p-8 text-center space-y-4">
-        <div className="text-5xl">🌙</div>
-        <h2 className="text-xl font-semibold">{titles[reason]}</h2>
-        <p className="text-sm text-text-secondary">{bodies[reason]}</p>
-        <div className="flex gap-3 justify-center pt-2 flex-wrap">
-          <Link href="/learn"><Button variant="ghost">Browse the syllabus</Button></Link>
-          <Button onClick={onContinue}>Check again</Button>
+    <Card padding="lg" className="border-l-[3px] border-l-v2-warning text-center sm:p-10">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-v2-warning-soft text-v2-warning">
+        <Moon className="h-6 w-6" strokeWidth={2} />
+      </div>
+      <h2 className="v2-display mt-5 text-[22px] sm:text-[26px]">
+        {titles[reason]}
+      </h2>
+      <p className="mx-auto mt-3 max-w-[440px] text-[14px] leading-[1.65] text-v2-foreground-muted">
+        {bodies[reason]}
+      </p>
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <Link href="/learn">
+          <Button variant="secondary">Browse the syllabus</Button>
+        </Link>
+        <Button onClick={onContinue}>
+          <RefreshCw className="h-4 w-4" strokeWidth={2.25} />
+          Check again
+        </Button>
+      </div>
+      {reason === 'sleep_window' && (
+        <div className="mt-6 border-t border-v2-border-subtle pt-5">
+          <p className="text-[12px] text-v2-foreground-muted">Awake anyway?</p>
+          <Link href="/study" className="mt-2 inline-block">
+            <Button variant="ghost" size="sm">
+              <Zap className="h-3.5 w-3.5" strokeWidth={2.25} />
+              Quick session (skip the gate)
+            </Button>
+          </Link>
+          <p className="mt-2 text-[10px] text-v2-foreground-subtle">
+            Tip: if your schedule has changed, update your sleep window in
+            Settings.
+          </p>
         </div>
-        {reason === 'sleep_window' && (
-          <div className="pt-3 border-t border-border">
-            <p className="text-xs text-text-secondary mb-2">Awake anyway?</p>
-            <Link href="/study">
-              <Button variant="ghost" className="text-xs">⚡ Quick session (skip the gate)</Button>
-            </Link>
-            <p className="text-[10px] text-text-secondary mt-2">
-              Tip: if your schedule has changed, update your sleep window in Settings.
-            </p>
-          </div>
-        )}
-      </CardContent>
+      )}
     </Card>
   )
 }
 
 // ─── Ambient card ───────────────────────────────────────────────────────────
-function AmbientCard({ slug, onAdvance }: { slug: string | null; onAdvance: () => void }) {
-  const concept = slug ? CONCEPTS.find(c => c.slug === slug) : null
+function AmbientCard({
+  slug,
+  onAdvance,
+}: {
+  slug: string | null
+  onAdvance: () => void
+}) {
+  const concept = slug ? CONCEPTS.find((c) => c.slug === slug) : null
 
   async function done() {
     await fetch('/api/learn/bump', {
@@ -172,53 +312,73 @@ function AmbientCard({ slug, onAdvance }: { slug: string | null; onAdvance: () =
   }
 
   if (!concept) {
-    return <Card><CardContent className="p-6 text-sm text-text-secondary">No ambient concept available.</CardContent></Card>
+    return (
+      <Card padding="lg">
+        <p className="text-[14px] text-v2-foreground-muted">
+          No ambient concept available.
+        </p>
+      </Card>
+    )
   }
 
   return (
-    <Card>
-      <CardContent className="p-6 space-y-5">
-        <div>
-          <p className="text-xs text-text-secondary uppercase tracking-wide">Ambient — just read</p>
-          <h2 className="text-2xl font-bold mt-1">{concept.name}</h2>
-          <p className="text-sm text-text-secondary mt-2">{concept.description}</p>
-        </div>
+    <Card padding="lg" className="space-y-6">
+      <div>
+        <Eyebrow>Ambient · just read</Eyebrow>
+        <h2 className="v2-display mt-3 text-[26px]">{concept.name}</h2>
+        <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
+          {concept.description}
+        </p>
+      </div>
 
-        <div>
-          <p className="text-xs font-semibold uppercase text-primary mb-2">Key facts</p>
-          <ul className="space-y-1.5">
-            {concept.keyFacts.slice(0, 4).map((f, i) => (
-              <li key={i} className="flex gap-2 text-sm">
-                <span className="text-primary shrink-0">·</span>
-                <span>{f}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div>
+        <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-brand">
+          Key facts
+        </p>
+        <ul className="mt-2 space-y-1.5">
+          {concept.keyFacts.slice(0, 4).map((f, i) => (
+            <li
+              key={i}
+              className="flex gap-2.5 text-[14px] leading-[1.55] text-v2-foreground"
+            >
+              <span className="shrink-0 text-v2-brand">·</span>
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-        {concept.examTips[0] && (
-          <div className="rounded-lg bg-surface/50 p-4 text-xs">
-            <span className="text-text-secondary">Exam trigger to remember: </span>
-            <span>{concept.examTips[0]}</span>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center pt-2">
-          <Link href={`/learn/c/${concept.slug}`} className="text-xs text-text-secondary hover:underline">
-            Open full concept →
-          </Link>
-          <Button onClick={done}>I&rsquo;ve read it · Next</Button>
+      {concept.examTips[0] && (
+        <div className="rounded-lg bg-v2-surface-subtle p-4">
+          <p className="font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-foreground-subtle">
+            Exam trigger
+          </p>
+          <p className="mt-1 text-[13px] leading-[1.6] text-v2-foreground">
+            {concept.examTips[0]}
+          </p>
         </div>
-      </CardContent>
+      )}
+
+      <div className="flex items-center justify-between border-t border-v2-border-subtle pt-4">
+        <Link
+          href={`/learn/c/${concept.slug}`}
+          className="text-[12px] font-medium text-v2-foreground-muted transition-colors hover:text-v2-foreground hover:underline"
+        >
+          Open full concept →
+        </Link>
+        <Button onClick={done}>
+          <Check className="h-4 w-4" strokeWidth={2.5} />
+          I've read it · Next
+        </Button>
+      </div>
     </Card>
   )
 }
 
 // ─── Anchoring open-ended prompt ────────────────────────────────────────────
 function AnchoringPrompt({ onAdvance }: { onAdvance: () => void }) {
-  // Pick a concept the user has been exposed to ambiently. Random for simplicity.
   const [concept] = useState(() => {
-    const eligible = CONCEPTS.filter(c => c.keyFacts.length >= 2)
+    const eligible = CONCEPTS.filter((c) => c.keyFacts.length >= 2)
     return eligible[Math.floor(Math.random() * eligible.length)]
   })
   const [response, setResponse] = useState('')
@@ -236,97 +396,121 @@ function AnchoringPrompt({ onAdvance }: { onAdvance: () => void }) {
   if (!concept) return null
 
   return (
-    <Card>
-      <CardContent className="p-6 space-y-5">
-        <div>
-          <p className="text-xs text-text-secondary uppercase tracking-wide">Anchoring — explain in your own words</p>
-          <h2 className="text-xl font-semibold mt-1">
-            Why does <span className="text-primary">{concept.name}</span> exist? What problem does it solve, and what would happen if it didn&rsquo;t exist?
-          </h2>
+    <Card padding="lg" className="space-y-5">
+      <div>
+        <Eyebrow>Anchoring · explain in your own words</Eyebrow>
+        <h2 className="mt-3 text-[20px] font-bold leading-[1.4] text-v2-foreground">
+          Why does <span className="text-v2-brand">{concept.name}</span> exist?
+          What problem does it solve, and what would happen if it didn't exist?
+        </h2>
+      </div>
+
+      <textarea
+        value={response}
+        onChange={(e) => setResponse(e.target.value)}
+        rows={6}
+        placeholder="Write a few sentences. The system doesn't grade this — generation alone forces deeper encoding."
+        className="w-full resize-none rounded-lg border border-v2-border bg-v2-surface p-3 text-[14px] leading-[1.55] text-v2-foreground placeholder:text-v2-foreground-subtle focus:border-v2-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-v2-brand/30"
+        disabled={submitted}
+      />
+
+      {!submitted ? (
+        <div className="flex justify-end">
+          <Button onClick={submit} disabled={response.trim().length < 30}>
+            Submit my answer
+          </Button>
         </div>
-
-        <textarea
-          value={response}
-          onChange={e => setResponse(e.target.value)}
-          rows={6}
-          placeholder="Write a few sentences. The system doesn't grade this — generation alone forces deeper encoding."
-          className="w-full rounded-lg border border-border bg-surface p-3 text-sm"
-          disabled={submitted}
-        />
-
-        {!submitted ? (
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-lg border border-v2-success/30 bg-v2-success-soft p-4">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-v2-success text-white">
+              <Check className="h-3 w-3" strokeWidth={3} />
+            </span>
+            <p className="text-[13px] leading-[1.55] text-v2-foreground">
+              Recorded. Now compare with the canonical answer below.
+            </p>
+          </div>
+          <div>
+            <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-brand">
+              Canonical key facts
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {concept.keyFacts.map((f, i) => (
+                <li
+                  key={i}
+                  className="flex gap-2.5 text-[14px] leading-[1.55] text-v2-foreground"
+                >
+                  <span className="shrink-0 text-v2-brand">·</span>
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           <div className="flex justify-end">
-            <Button onClick={submit} disabled={response.trim().length < 30}>
-              Submit my answer
+            <Button onClick={onAdvance}>
+              Next
+              <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
             </Button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg bg-success/10 border border-success/30 p-4 text-sm">
-              ✓ Recorded. Now compare with the canonical answer below.
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase text-primary mb-2">Canonical key facts</p>
-              <ul className="space-y-1.5">
-                {concept.keyFacts.map((f, i) => (
-                  <li key={i} className="flex gap-2 text-sm">
-                    <span className="text-primary shrink-0">·</span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={onAdvance}>Next</Button>
-            </div>
-          </div>
-        )}
-      </CardContent>
+        </div>
+      )}
     </Card>
   )
 }
 
-// ─── Transfer scenario — exam-style multi-domain mini-block ─────────────────
-// At Transfer phase the orchestrator wants the user to face a small
-// multi-concept block. We compose this by sending them to /exam (the existing
-// 65q mock) but capped to a 5-question quick block via ?count=5.
+// ─── Transfer scenario ──────────────────────────────────────────────────────
 function TransferRedirect() {
   return (
-    <Card>
-      <CardContent className="p-6 space-y-4">
-        <p className="text-sm">
-          Transfer block — 5 mixed exam-style questions spanning multiple
-          domains. No hints, no second tries. This is the closest the platform
-          gets to the real exam.
+    <Card padding="lg" className="space-y-5">
+      <div>
+        <Eyebrow>Transfer block</Eyebrow>
+        <p className="mt-2 text-[14px] leading-[1.65] text-v2-foreground">
+          Five mixed exam-style questions spanning multiple domains. No hints,
+          no second tries. This is the closest the platform gets to the real
+          exam.
         </p>
-        <div className="flex justify-end gap-3">
-          <Link href="/learn/session"><Button variant="ghost">Refresh</Button></Link>
-          <Link href="/exam"><Button>Start a mock exam</Button></Link>
-        </div>
-      </CardContent>
+      </div>
+      <div className="flex justify-end gap-3">
+        <Link href="/learn/session">
+          <Button variant="secondary">
+            <RefreshCw className="h-4 w-4" strokeWidth={2.25} />
+            Refresh
+          </Button>
+        </Link>
+        <Link href="/exam">
+          <Button>
+            <Sparkles className="h-4 w-4" strokeWidth={2.25} />
+            Start a mock exam
+          </Button>
+        </Link>
+      </div>
     </Card>
   )
 }
 
-// ─── MCQ redirect — reuses existing /study flow ─────────────────────────────
+// ─── MCQ redirect ───────────────────────────────────────────────────────────
 function MCQRedirect({ timed }: { timed?: boolean } = {}) {
   return (
-    <Card>
-      <CardContent className="p-6 space-y-4">
-        <p className="text-sm">
-          {timed
-            ? 'Timed drill — you have 8 seconds per question. Answer fast.'
-            : 'Time for active practice. The system has lined up questions targeted at this phase.'}
-        </p>
-        <div className="flex justify-end gap-3">
-          <Link href="/learn/session">
-            <Button variant="ghost">Refresh</Button>
-          </Link>
-          <Link href={timed ? '/study?timed=8' : '/study'}>
-            <Button>{timed ? 'Start timed drill' : 'Start practice'}</Button>
-          </Link>
-        </div>
-      </CardContent>
+    <Card padding="lg" className="space-y-5">
+      <p className="text-[14px] leading-[1.65] text-v2-foreground">
+        {timed
+          ? 'Timed drill — you have 8 seconds per question. Answer fast.'
+          : 'Time for active practice. The system has lined up questions targeted at this phase.'}
+      </p>
+      <div className="flex justify-end gap-3">
+        <Link href="/learn/session">
+          <Button variant="secondary">
+            <RefreshCw className="h-4 w-4" strokeWidth={2.25} />
+            Refresh
+          </Button>
+        </Link>
+        <Link href={timed ? '/study?timed=8' : '/study'}>
+          <Button>
+            <Zap className="h-4 w-4" strokeWidth={2.25} />
+            {timed ? 'Start timed drill' : 'Start practice'}
+          </Button>
+        </Link>
+      </div>
     </Card>
   )
 }

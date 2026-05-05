@@ -64,5 +64,21 @@ export default function FlashcardsPage({ searchParams }: { searchParams: { conce
       ? DOMAINS.find(d => d.slug === searchParams.domain)?.name ?? 'domain'
       : 'all SAA-C03'
 
-  return <FlashcardDeck cards={cards} filterLabel={filterLabel} />
+  return (
+    <div className="space-y-8">
+      <header>
+        <p className="font-v2-mono text-[12px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+          Drill mode
+        </p>
+        <h1 className="v2-display mt-2 text-[28px] sm:text-[32px]">
+          Flashcards · {filterLabel}
+        </h1>
+        <p className="mt-2 max-w-[560px] text-[15px] leading-[1.6] text-v2-foreground-muted">
+          Quick recall practice on the key facts of every concept. Self-grade
+          honestly — the scheduler trusts your taps.
+        </p>
+      </header>
+      <FlashcardDeck cards={cards} filterLabel={filterLabel} />
+    </div>
+  )
 }

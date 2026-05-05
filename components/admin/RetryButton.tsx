@@ -53,7 +53,7 @@ export function RetryButton({ documentId }: { documentId: string }) {
       onClick={handle}
       disabled={isPending}
       title={status === 'err' && errMsg ? errMsg : undefined}
-      className="text-xs px-2 py-1 rounded border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50"
+      className="text-xs px-2 py-1 rounded border border-v2-border hover:border-v2-brand/50 hover:bg-v2-brand/5 transition-colors disabled:opacity-50"
     >
       {isPending ? '…' : status === 'ok' ? '✓ queued' : status === 'err' ? `✗ ${errMsg ?? 'error'}` : 'Retry'}
     </button>

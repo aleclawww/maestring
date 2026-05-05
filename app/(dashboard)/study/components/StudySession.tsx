@@ -10,6 +10,19 @@ import type { Question, EvaluationResult, SessionStats } from '@/types/study'
 import type { StudyMode } from '@/types/database'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
 import { track } from '@/lib/analytics'
+import {
+  Beaker as BeakerIcon,
+  BookOpen as BookOpenIcon,
+  CheckCircle2 as CheckCircleIcon,
+  Clock as ClockIcon,
+  Flame as FlameIcon,
+  Loader2 as Loader2Icon,
+  RotateCcw as RotateCcwIcon,
+  Sparkles as SparklesIcon,
+} from 'lucide-react'
+import { Card } from '@/components/v2'
+import { buttonVariants } from '@/components/v2/Button'
+import { cn } from '@/lib/utils'
 
 type StudyState =
   | { phase: 'setup' }
@@ -426,51 +439,92 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
   // Setup view
   if (state.phase === 'setup') {
     return (
-      <div className="flex min-h-full flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md text-center">
-          <div className="mb-6 text-6xl">📖</div>
-          <h1 className="mb-2 text-2xl font-bold text-text-primary">Study Session</h1>
-          <p className="mb-8 text-text-secondary">
-            {dueCount > 0
-              ? `You have ${dueCount} concepts ready to review.`
-              : 'Nice — all caught up. Let’s explore new concepts.'}
-          </p>
-          {errorMsg && (
-            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 text-center">
-              {errorMsg}
+      <div className="flex min-h-[60vh] flex-col items-center justify-center p-2">
+        <div className="w-full max-w-[480px]">
+          <Card padding="lg" tone="emphasized" className="text-center sm:p-10">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-v2-gradient-brand text-white shadow-v2-button">
+              <BookOpenIcon className="h-6 w-6" strokeWidth={2} />
             </div>
-          )}
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            {[
-              { mode: 'review' as const, label: 'Review', desc: 'Due concepts', icon: '🔄' },
-              { mode: 'discovery' as const, label: 'Discovery', desc: 'New concepts', icon: '🆕' },
-              { mode: 'intensive' as const, label: 'Intensive', desc: 'Hard questions', icon: '🔥' },
-              { mode: 'maintenance' as const, label: 'Maintenance', desc: 'Light reinforcement', icon: '✅' },
-            ].map(({ mode, label, desc, icon }) => (
-              <button
-                key={mode}
-                onClick={() => startSession(mode)}
-                className="flex flex-col items-center rounded-xl border border-border bg-surface p-4 hover:border-primary/50 hover:bg-primary/5 transition-colors text-center"
+            <h2 className="v2-display mt-5 text-[24px] sm:text-[28px]">
+              {dueCount > 0 ? 'Pick a session mode' : 'All caught up'}
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
+              {dueCount > 0
+                ? `You have ${dueCount} concept${dueCount === 1 ? '' : 's'} ready to review.`
+                : "Nice — let's explore new concepts."}
+            </p>
+
+            {errorMsg && (
+              <div
+                role="alert"
+                className="mt-5 rounded-lg border border-v2-error/30 bg-v2-error-soft px-3 py-2 text-[13px] text-v2-error"
               >
-                <span className="text-2xl mb-2">{icon}</span>
-                <p className="text-sm font-semibold text-text-primary">{label}</p>
-                <p className="text-xs text-text-muted">{desc}</p>
-              </button>
-            ))}
-          </div>
-          {/* Exploration mode: safe zone of proximal development — no FSRS penalty */}
-          <button
-            onClick={() => startSession('exploration')}
-            className="w-full flex items-center gap-3 rounded-xl border border-dashed border-warning/40 bg-warning/5 p-4 hover:bg-warning/10 transition-colors text-left mb-4"
-          >
-            <span className="text-2xl">🧪</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-warning">Exploration mode</p>
-              <p className="text-xs text-text-muted">
-                Practice without affecting your Readiness — great for testing new ground.
-              </p>
+                {errorMsg}
+              </div>
+            )}
+
+            <div className="mt-7 grid grid-cols-2 gap-2.5">
+              {[
+                {
+                  mode: 'review' as const,
+                  label: 'Review',
+                  desc: 'Due concepts',
+                  Icon: RotateCcwIcon,
+                },
+                {
+                  mode: 'discovery' as const,
+                  label: 'Discovery',
+                  desc: 'New concepts',
+                  Icon: SparklesIcon,
+                },
+                {
+                  mode: 'intensive' as const,
+                  label: 'Intensive',
+                  desc: 'Hard questions',
+                  Icon: FlameIcon,
+                },
+                {
+                  mode: 'maintenance' as const,
+                  label: 'Maintenance',
+                  desc: 'Light reinforcement',
+                  Icon: CheckCircleIcon,
+                },
+              ].map(({ mode, label, desc, Icon }) => (
+                <button
+                  key={mode}
+                  onClick={() => startSession(mode)}
+                  className="group flex flex-col items-start rounded-xl border border-v2-border bg-v2-surface p-4 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-v2-brand/40 hover:bg-v2-brand-soft/40 hover:shadow-v2-soft"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-v2-brand-soft text-v2-brand">
+                    <Icon className="h-4 w-4" strokeWidth={2.25} />
+                  </div>
+                  <p className="mt-3 text-[14px] font-bold text-v2-foreground">
+                    {label}
+                  </p>
+                  <p className="text-[12px] text-v2-foreground-muted">{desc}</p>
+                </button>
+              ))}
             </div>
-          </button>
+
+            {/* Exploration mode — safe zone, no FSRS penalty */}
+            <button
+              onClick={() => startSession('exploration')}
+              className="mt-3 flex w-full items-start gap-3 rounded-xl border border-dashed border-v2-warning/40 bg-v2-warning-soft/40 p-4 text-left transition-colors hover:bg-v2-warning-soft/70"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-v2-warning-soft text-v2-warning">
+                <BeakerIcon className="h-4 w-4" strokeWidth={2.25} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-bold text-v2-warning">
+                  Exploration mode
+                </p>
+                <p className="text-[12px] leading-[1.5] text-v2-foreground-muted">
+                  Practice without affecting your Readiness — great for testing
+                  new ground.
+                </p>
+              </div>
+            </button>
+          </Card>
         </div>
       </div>
     )
@@ -479,10 +533,10 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
   // Loading view
   if (state.phase === 'loading') {
     return (
-      <div className="flex min-h-full items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-text-secondary">Generating question...</p>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-v2-foreground-muted">
+          <Loader2Icon className="h-6 w-6 animate-spin" strokeWidth={2.25} />
+          <p className="text-[13px]">Generating question…</p>
         </div>
       </div>
     )
@@ -491,27 +545,42 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
   // Quota-exceeded view
   if (state.phase === 'quota_exceeded') {
     return (
-      <div className="flex min-h-full items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-2xl border border-warning/40 bg-warning/5 p-6 text-center space-y-4">
-          <div className="text-3xl">⏳</div>
-          <h2 className="text-xl font-semibold text-text-primary">
+      <div className="flex min-h-[60vh] items-center justify-center p-2">
+        <Card padding="lg" tone="emphasized" className="w-full max-w-[460px] text-center sm:p-10">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-v2-warning-soft text-v2-warning">
+            <ClockIcon className="h-6 w-6" strokeWidth={2} />
+          </div>
+          <h2 className="v2-display mt-5 text-[24px] sm:text-[28px]">
             Daily quota reached
           </h2>
-          <p className="text-sm text-text-secondary">
-            You’ve used <strong>{state.used} / {state.quota}</strong> questions today on the free plan.
-            Come back tomorrow, or unlock unlimited sessions with Pro.
+          <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
+            You've used{' '}
+            <strong className="text-v2-foreground">
+              {state.used} / {state.quota}
+            </strong>{' '}
+            questions today on the free plan. Come back tomorrow, or unlock
+            unlimited sessions with Pro.
           </p>
-          <UpgradeButton plan="monthly" className="btn-primary w-full py-3 rounded-lg">
-            ✨ Go Pro — 7 days free
-          </UpgradeButton>
+          <div className="mt-6">
+            <UpgradeButton
+              plan="monthly"
+              className={cn(
+                buttonVariants({ variant: 'primary', size: 'lg' }),
+                'w-full',
+              )}
+            >
+              <SparklesIcon className="h-4 w-4" strokeWidth={2.25} />
+              Go Pro — 7 days free
+            </UpgradeButton>
+          </div>
           <button
             type="button"
             onClick={() => dispatch({ type: 'RESET' })}
-            className="text-xs text-text-muted hover:text-text-secondary"
+            className="mt-4 text-[12px] font-medium text-v2-foreground-muted hover:text-v2-foreground"
           >
             Back to start
           </button>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -529,9 +598,11 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
 
   const isExploration = modeRef.current === 'exploration'
   const explorationBanner = isExploration ? (
-    <div className="mx-4 sm:mx-6 mt-3 flex items-center gap-2 rounded-lg border border-dashed border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
-      <span>🧪</span>
-      <span>Exploration mode — this session doesn’t advance your Readiness Score.</span>
+    <div className="mx-2 mt-3 flex items-center gap-2 rounded-lg border border-dashed border-v2-warning/40 bg-v2-warning-soft/50 px-3 py-2 text-[12px] font-medium text-v2-warning sm:mx-0">
+      <BeakerIcon className="h-3.5 w-3.5" strokeWidth={2.25} />
+      <span>
+        Exploration mode — this session doesn't advance your Readiness Score.
+      </span>
     </div>
   ) : null
 

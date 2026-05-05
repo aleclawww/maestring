@@ -14,7 +14,7 @@ export default async function AdminOutcomesPage() {
     <div className="p-6 space-y-6 max-w-[1400px]">
       <header>
         <h1 className="text-xl font-bold">Exam outcomes</h1>
-        <p className="text-xs text-text-muted">
+        <p className="text-xs text-v2-foreground-subtle">
           Signal for calibrating P(pass). With ≥500 outcomes we can replace the heuristic sigmoid with a real regression model.
         </p>
       </header>
@@ -27,13 +27,13 @@ export default async function AdminOutcomesPage() {
       </div>
 
       <Section title={`Calibration progress · ${total}/500`}>
-        <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+        <div className="h-2 rounded-full bg-v2-surface-subtle overflow-hidden">
           <div
             className="h-full bg-primary transition-all"
             style={{ width: `${calibrationProgress}%` }}
           />
         </div>
-        <p className="text-xs text-text-muted mt-2">
+        <p className="text-xs text-v2-foreground-subtle mt-2">
           {total < 500
             ? `${500 - total} more outcomes needed to recalibrate P(pass) with the real model.`
             : '✓ Threshold reached — time to train the real model.'}
@@ -42,15 +42,15 @@ export default async function AdminOutcomesPage() {
 
       <Section title="Score distribution (AWS scaled)">
         {data.by_score.length === 0 ? (
-          <p className="text-xs text-text-muted">No scores reported yet.</p>
+          <p className="text-xs text-v2-foreground-subtle">No scores reported yet.</p>
         ) : (
           <div className="space-y-1">
             {data.by_score.map(b => (
               <div key={b.bucket} className="flex items-center gap-2 text-xs">
-                <span className="w-24 font-mono text-text-muted">
+                <span className="w-24 font-mono text-v2-foreground-subtle">
                   {b.bucket}-{b.bucket + 99}
                 </span>
-                <div className="flex-1 h-4 bg-surface-2 rounded overflow-hidden">
+                <div className="flex-1 h-4 bg-v2-surface-subtle rounded overflow-hidden">
                   <div
                     className={b.bucket >= 720 ? 'bg-success h-full' : 'bg-danger h-full'}
                     style={{ width: `${(b.n / Math.max(...data.by_score.map(x => x.n))) * 100}%` }}
@@ -72,7 +72,7 @@ export default async function AdminOutcomesPage() {
               key: 'user',
               label: 'User',
               render: r => (
-                <Link href={`/admin/users/${r.user_id}`} className="hover:text-primary text-xs">
+                <Link href={`/admin/users/${r.user_id}`} className="hover:text-v2-brand text-xs">
                   {r.email}
                 </Link>
               ),
@@ -81,7 +81,7 @@ export default async function AdminOutcomesPage() {
               key: 'outcome',
               label: 'Outcome',
               render: r => (
-                <span className={r.outcome === 'passed' ? 'text-success font-semibold text-xs' : 'text-danger font-semibold text-xs'}>
+                <span className={r.outcome === 'passed' ? 'text-v2-success font-semibold text-xs' : 'text-v2-error font-semibold text-xs'}>
                   {r.outcome}
                 </span>
               ),
@@ -89,14 +89,14 @@ export default async function AdminOutcomesPage() {
             {
               key: 'score',
               label: 'Score',
-              render: r => r.score != null ? <span className="font-mono text-xs">{r.score}</span> : <span className="text-text-muted">—</span>,
+              render: r => r.score != null ? <span className="font-mono text-xs">{r.score}</span> : <span className="text-v2-foreground-subtle">—</span>,
             },
             {
               key: 'readiness',
               label: 'Readiness at exam',
-              render: r => r.last_readiness != null ? <span className="font-mono text-xs">{Math.round(Number(r.last_readiness))}</span> : <span className="text-text-muted">—</span>,
+              render: r => r.last_readiness != null ? <span className="font-mono text-xs">{Math.round(Number(r.last_readiness))}</span> : <span className="text-v2-foreground-subtle">—</span>,
             },
-            { key: 'date', label: 'Date', render: r => <span className="text-[11px] text-text-muted">{formatDate(r.exam_date)}</span> },
+            { key: 'date', label: 'Date', render: r => <span className="text-[11px] text-v2-foreground-subtle">{formatDate(r.exam_date)}</span> },
           ]}
         />
       </Section>

@@ -77,7 +77,7 @@ export default async function AdminCronRunsPage({
     <div className="p-6 space-y-6 max-w-[1400px]">
       <header>
         <h1 className="text-xl font-bold">Cron Runs</h1>
-        <p className="text-xs text-text-muted">
+        <p className="text-xs text-v2-foreground-subtle">
           Ledger of every cron invocation. A silent failure here is a user-visible miss
           (undelivered email, empty pool, stale snapshot).
         </p>
@@ -106,44 +106,44 @@ export default async function AdminCronRunsPage({
               <a
                 key={name}
                 href={`/admin/cron?name=${encodeURIComponent(name)}`}
-                className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs hover:border-primary"
+                className="rounded-lg border border-v2-border bg-v2-surface-subtle px-3 py-1.5 text-xs hover:border-primary"
               >
                 <code className="font-mono">{name}</code>{' '}
-                <span className="text-success">{v.ok}✓</span>
-                {v.failed > 0 && <span className="text-danger ml-1">{v.failed}✗</span>}
+                <span className="text-v2-success">{v.ok}✓</span>
+                {v.failed > 0 && <span className="text-v2-error ml-1">{v.failed}✗</span>}
               </a>
             ))}
         </div>
       </Section>
 
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-text-muted">Filter:</span>
+        <span className="text-v2-foreground-subtle">Filter:</span>
         <a
           href="/admin/cron"
-          className="rounded-md border border-border px-2 py-1 hover:border-primary"
+          className="rounded-md border border-v2-border px-2 py-1 hover:border-primary"
         >
           All
         </a>
         <a
           href="/admin/cron?status=failed"
-          className="rounded-md border border-border px-2 py-1 hover:border-primary"
+          className="rounded-md border border-v2-border px-2 py-1 hover:border-primary"
         >
           Failed
         </a>
         <a
           href="/admin/cron?status=ok"
-          className="rounded-md border border-border px-2 py-1 hover:border-primary"
+          className="rounded-md border border-v2-border px-2 py-1 hover:border-primary"
         >
           OK
         </a>
         <a
           href="/admin/cron?status=skipped"
-          className="rounded-md border border-border px-2 py-1 hover:border-primary"
+          className="rounded-md border border-v2-border px-2 py-1 hover:border-primary"
         >
           Skipped
         </a>
         {(searchParams?.name || searchParams?.status) && (
-          <span className="ml-2 text-text-muted">
+          <span className="ml-2 text-v2-foreground-subtle">
             Active filter: {searchParams?.name ?? ''} {searchParams?.status ?? ''}
           </span>
         )}
@@ -158,14 +158,14 @@ export default async function AdminCronRunsPage({
               key: 'started_at',
               label: 'Started',
               render: r => (
-                <span className="text-[11px] text-text-muted">{formatDateTime(r.started_at)}</span>
+                <span className="text-[11px] text-v2-foreground-subtle">{formatDateTime(r.started_at)}</span>
               ),
             },
             {
               key: 'name',
               label: 'Name',
               render: r => (
-                <code className="text-[11px] bg-surface-2 px-1.5 py-0.5 rounded">{r.name}</code>
+                <code className="text-[11px] bg-v2-surface-subtle px-1.5 py-0.5 rounded">{r.name}</code>
               ),
             },
             {
@@ -174,12 +174,12 @@ export default async function AdminCronRunsPage({
               render: r => {
                 const tone =
                   r.status === 'ok'
-                    ? 'text-success'
+                    ? 'text-v2-success'
                     : r.status === 'failed'
-                    ? 'text-danger'
+                    ? 'text-v2-error'
                     : r.status === 'skipped'
-                    ? 'text-text-muted'
-                    : 'text-warning'
+                    ? 'text-v2-foreground-subtle'
+                    : 'text-v2-warning'
                 return <span className={`text-xs font-semibold ${tone}`}>{r.status}</span>
               },
             },
@@ -187,10 +187,10 @@ export default async function AdminCronRunsPage({
               key: 'duration',
               label: 'Duration',
               render: r => {
-                if (!r.ended_at) return <span className="text-xs text-warning">—</span>
+                if (!r.ended_at) return <span className="text-xs text-v2-warning">—</span>
                 const ms = new Date(r.ended_at).getTime() - new Date(r.started_at).getTime()
                 return (
-                  <span className="text-xs text-text-muted">
+                  <span className="text-xs text-v2-foreground-subtle">
                     {ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`}
                   </span>
                 )
@@ -200,7 +200,7 @@ export default async function AdminCronRunsPage({
               key: 'rows',
               label: 'Rows',
               render: r => (
-                <span className="text-xs text-text-muted">{r.rows_affected ?? '—'}</span>
+                <span className="text-xs text-v2-foreground-subtle">{r.rows_affected ?? '—'}</span>
               ),
             },
             {
@@ -208,15 +208,15 @@ export default async function AdminCronRunsPage({
               label: 'Detail',
               render: r =>
                 r.error ? (
-                  <code className="text-[11px] text-danger truncate max-w-md inline-block">
+                  <code className="text-[11px] text-v2-error truncate max-w-md inline-block">
                     {r.error}
                   </code>
                 ) : r.metadata ? (
-                  <code className="text-[11px] text-text-muted truncate max-w-md inline-block">
+                  <code className="text-[11px] text-v2-foreground-subtle truncate max-w-md inline-block">
                     {JSON.stringify(r.metadata)}
                   </code>
                 ) : (
-                  <span className="text-text-muted">—</span>
+                  <span className="text-v2-foreground-subtle">—</span>
                 ),
             },
           ]}

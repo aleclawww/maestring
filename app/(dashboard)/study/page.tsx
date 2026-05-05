@@ -40,10 +40,22 @@ export default async function StudyPage() {
     .or('reps.eq.0,next_review_date.lte.' + new Date().toISOString())
 
   return (
-    <StudySession
-      userId={user.id}
-      activeSessionId={activeSession?.id}
-      dueCount={dueCount ?? 0}
-    />
+    <div className="space-y-6">
+      <header>
+        <p className="font-v2-mono text-[12px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+          Study session
+        </p>
+        <h1 className="v2-display mt-2 text-[28px] sm:text-[32px]">
+          {dueCount && dueCount > 0
+            ? `${dueCount} concept${dueCount === 1 ? '' : 's'} ready`
+            : 'Pick up where you left off'}
+        </h1>
+      </header>
+      <StudySession
+        userId={user.id}
+        activeSessionId={activeSession?.id}
+        dueCount={dueCount ?? 0}
+      />
+    </div>
   )
 }

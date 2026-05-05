@@ -2,8 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarClock,
+  Code2,
+  GraduationCap,
+  Loader2,
+  Server,
+  Target,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { track } from '@/lib/analytics'
 import { createClient } from '@/lib/supabase/client'
+import { Button, Input } from '@/components/v2'
+import { cn } from '@/lib/utils'
 
 interface Domain {
   id: string
@@ -29,18 +43,48 @@ interface DiagnosticQuestion {
 
 const LEVEL_LABELS = [
   { v: 0, label: 'Zero', desc: "I've never touched it" },
-  { v: 1, label: "I've seen it", desc: "I know it exists, haven't used it" },
-  { v: 2, label: 'Basic', desc: "I've used it in tutorials" },
-  { v: 3, label: 'Intermediate', desc: 'I use it in real projects' },
-  { v: 4, label: 'Advanced', desc: 'I master it, could teach it' },
+  { v: 1, label: "Seen it", desc: 'Know it exists, never used it' },
+  { v: 2, label: 'Basic', desc: "Tutorials only" },
+  { v: 3, label: 'Inter.', desc: 'Real projects' },
+  { v: 4, label: 'Adv.', desc: 'Could teach it' },
 ]
 
-const BACKGROUNDS: Array<{ v: Background; label: string; hint: string }> = [
-  { v: 'developer', label: 'Developer', hint: 'Backend, frontend, full-stack' },
-  { v: 'sysadmin', label: 'SysAdmin / DevOps', hint: 'Infra, networks, operations' },
-  { v: 'business', label: 'Business / Product', hint: 'PM, consultant, business architect' },
-  { v: 'student', label: 'Student', hint: 'No professional experience yet' },
-  { v: 'other', label: 'Other', hint: '' },
+const BACKGROUNDS: Array<{
+  v: Background
+  label: string
+  hint: string
+  Icon: LucideIcon
+}> = [
+  {
+    v: 'developer',
+    label: 'Developer',
+    hint: 'Backend, frontend, full-stack',
+    Icon: Code2,
+  },
+  {
+    v: 'sysadmin',
+    label: 'SysAdmin / DevOps',
+    hint: 'Infra, networks, operations',
+    Icon: Server,
+  },
+  {
+    v: 'business',
+    label: 'Business / Product',
+    hint: 'PM, consultant, business architect',
+    Icon: Target,
+  },
+  {
+    v: 'student',
+    label: 'Student',
+    hint: 'No professional experience yet',
+    Icon: GraduationCap,
+  },
+  {
+    v: 'other',
+    label: 'Other',
+    hint: 'Pick this if none of the above fits',
+    Icon: Users,
+  },
 ]
 
 export function OnboardingForm({ domains }: { domains: Domain[] }) {
@@ -69,20 +113,14 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
   const [background, setBackground] = useState<Background>('developer')
   const [examTargetDate, setExamTargetDate] = useState('')
   const [studyMinutesPerDay, setStudyMinutesPerDay] = useState(30)
-  const [selfLevels, setSelfLevels] = useState<Record<string, number>>(
-    () => Object.fromEntries(domains.map(d => [d.slug, 1]))
+  const [selfLevels, setSelfLevels] = useState<Record<string, number>>(() =>
+    Object.fromEntries(domains.map((d) => [d.slug, 1])),
   )
   const [diagnostic, setDiagnostic] = useState<DiagnosticQuestion[]>([])
   const [diagnosticLoading, setDiagnosticLoading] = useState(false)
-  const [diagnosticAnswers, setDiagnosticAnswers] = useState<Record<string, number>>({})
-  // Previously the fetch catch-handler quietly set diagnostic to `[]` and
-  // `.then(r => r.json())` never checked `r.ok`, so a 500-with-JSON response
-  // collapsed into the same empty path. The UI then silently rendered the
-  // "we'll use your self-assessment" fallback as if the diagnostic had been
-  // genuinely skipped — the user never learned the calibration step failed
-  // and couldn't retry. Track the error so we can (a) log it, (b) show a
-  // tiny notice below the fallback copy so the user knows it was a failure,
-  // not a deliberate skip.
+  const [diagnosticAnswers, setDiagnosticAnswers] = useState<
+    Record<string, number>
+  >({})
   const [diagnosticError, setDiagnosticError] = useState<string | null>(null)
   const diagnosticFetchedRef = useRef(false)
 
@@ -92,18 +130,16 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
     setDiagnosticLoading(true)
     setDiagnosticError(null)
     fetch('/api/onboarding/diagnostic')
-      .then(async r => {
-        if (!r.ok) {
-          // A 500 with a JSON body used to slide into the success path and
-          // silently map to empty — refuse that, route it to the catch.
-          throw new Error(`HTTP ${r.status}`)
-        }
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
-      .then(j => setDiagnostic(j?.data?.questions ?? []))
-      .catch(err => {
+      .then((j) => setDiagnostic(j?.data?.questions ?? []))
+      .catch((err) => {
         console.error('Onboarding diagnostic fetch failed', err)
-        setDiagnosticError(err?.message || 'Could not load diagnostic questions.')
+        setDiagnosticError(
+          err?.message || 'Could not load diagnostic questions.',
+        )
         setDiagnostic([])
       })
       .finally(() => setDiagnosticLoading(false))
@@ -120,8 +156,8 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
     setError(null)
     try {
       const diagnosticResults = diagnostic
-        .filter(q => diagnosticAnswers[q.questionId] !== undefined)
-        .map(q => ({
+        .filter((q) => diagnosticAnswers[q.questionId] !== undefined)
+        .map((q) => ({
           domainSlug: q.domainSlug,
           isCorrect: diagnosticAnswers[q.questionId] === q.correctIndex,
         }))
@@ -149,23 +185,17 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
         },
       })
 
-      // Refresh the Supabase session BEFORE navigating. The calibrate API
-      // sets `user_metadata.onboarding_completed = true` via admin.updateUserById,
-      // but the browser's JWT cookie is stale until the session is refreshed.
-      // Without this, middleware reads the old JWT (where onboarding_completed
-      // is still false) and immediately redirects back to /onboarding — a
-      // one-page redirect loop that resolves only on the next token refresh.
+      // Refresh session before navigating — without this, middleware reads
+      // a stale JWT (onboarding_completed=false) and bounces us right back.
       const supabase = createClient()
       const { error: refreshErr } = await supabase.auth.refreshSession()
       if (refreshErr) {
-        // refreshSession failing means the new JWT won't carry the
-        // onboarding_completed flag and middleware will bounce us straight back.
-        // Retry once after a short delay — if it still fails, surface the error
-        // so the user knows to reload rather than silently looping.
-        await new Promise(r => setTimeout(r, 800))
+        await new Promise((r) => setTimeout(r, 800))
         const { error: retryErr } = await supabase.auth.refreshSession()
         if (retryErr) {
-          throw new Error('Session refresh failed — please reload the page and try again.')
+          throw new Error(
+            'Session refresh failed — please reload the page and try again.',
+          )
         }
       }
 
@@ -179,124 +209,229 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
   return (
     <div>
-      <div className="border-b border-border px-6 py-4">
+      {/* Step bar */}
+      <div className="border-b border-v2-border-subtle px-6 py-5 sm:px-8">
         <div className="flex gap-2">
           {STEPS.map((s, i) => (
-            <div key={s} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`h-1.5 w-full rounded-full ${i <= step ? 'bg-primary' : 'bg-surface-2'}`} />
-              <span className={`text-xs hidden sm:block ${i <= step ? 'text-primary' : 'text-text-muted'}`}>{s}</span>
+            <div key={s} className="flex flex-1 flex-col items-center gap-1.5">
+              <div
+                className={cn(
+                  'h-1 w-full rounded-full transition-colors duration-300',
+                  i < step
+                    ? 'bg-v2-gradient-brand'
+                    : i === step
+                      ? 'bg-v2-brand'
+                      : 'bg-v2-surface-sunken',
+                )}
+              />
+              <span
+                className={cn(
+                  'hidden font-v2-mono text-[10px] uppercase tracking-v2-wide sm:block',
+                  i <= step
+                    ? 'font-semibold text-v2-foreground'
+                    : 'text-v2-foreground-subtle',
+                )}
+              >
+                {s}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      {/* Step content */}
+      <div className="space-y-6 px-6 py-7 sm:px-8 sm:py-8">
         {step === 0 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">What's your background?</h2>
-            <p className="text-sm text-text-secondary mb-5">
-              This tunes the tone of explanations — a developer gets technical context,
-              a business profile gets conceptual analogies.
+            <h2 className="v2-display text-[22px] sm:text-[24px]">
+              What's your background?
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
+              This tunes the tone of explanations — a developer gets technical
+              context, a business profile gets conceptual analogies.
             </p>
-            <div className="space-y-2">
-              {BACKGROUNDS.map(b => (
-                <label
-                  key={b.v}
-                  className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer ${
-                    background === b.v ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="bg"
-                    checked={background === b.v}
-                    onChange={() => setBackground(b.v)}
-                  />
-                  <div>
-                    <p className="font-semibold text-text-primary">{b.label}</p>
-                    {b.hint && <p className="text-xs text-text-muted">{b.hint}</p>}
-                  </div>
-                </label>
-              ))}
+            <div className="mt-6 space-y-2.5">
+              {BACKGROUNDS.map((b) => {
+                const selected = background === b.v
+                return (
+                  <label
+                    key={b.v}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-4 rounded-xl border p-4 transition-all duration-150',
+                      selected
+                        ? 'border-v2-brand bg-v2-brand-soft shadow-v2-soft'
+                        : 'border-v2-border bg-v2-surface hover:border-v2-border-strong',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="bg"
+                      checked={selected}
+                      onChange={() => setBackground(b.v)}
+                      className="sr-only"
+                    />
+                    <div
+                      className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                        selected
+                          ? 'bg-v2-brand text-white shadow-v2-button'
+                          : 'bg-v2-surface-subtle text-v2-foreground-muted',
+                      )}
+                    >
+                      <b.Icon className="h-4 w-4" strokeWidth={2.25} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-bold text-v2-foreground">
+                        {b.label}
+                      </p>
+                      <p className="text-[12px] text-v2-foreground-muted">
+                        {b.hint}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
+                        selected
+                          ? 'border-v2-brand bg-v2-brand'
+                          : 'border-v2-border-strong',
+                      )}
+                    >
+                      {selected && (
+                        <span className="h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </label>
+                )
+              })}
             </div>
           </div>
         )}
 
         {step === 1 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">When is your exam?</h2>
-            <p className="text-sm text-text-secondary mb-5">
+            <h2 className="v2-display text-[22px] sm:text-[24px]">
+              When is your exam?
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
               We calibrate the recommended pace from this.
             </p>
-            <input
-              type="date"
-              value={examTargetDate}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={e => setExamTargetDate(e.target.value)}
-              className="input-field mb-3"
-            />
-            {pace && days !== null && (
-              <div className={`text-sm rounded-lg px-3 py-2 mb-5 ${
-                pace === 'sprint' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'
-              }`}>
-                {days} days → <strong>{pace}</strong> mode
-                {pace === 'sprint'
-                  ? ': daily sessions — focus on high-weight domains.'
-                  : ': 3–4 sessions/week, broad exploration.'}
-              </div>
-            )}
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
-              Minutes per day available:
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[15, 30, 45, 60, 90, 120].map(m => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setStudyMinutesPerDay(m)}
-                  className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-                    studyMinutesPerDay === m
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-text-secondary hover:border-primary/50'
-                  }`}
+
+            <div className="mt-6">
+              <label
+                htmlFor="exam-date"
+                className="block text-[13px] font-semibold text-v2-foreground"
+              >
+                Exam date
+              </label>
+              <Input
+                id="exam-date"
+                type="date"
+                value={examTargetDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setExamTargetDate(e.target.value)}
+                className="mt-1.5"
+              />
+              {pace && days !== null && (
+                <div
+                  className={cn(
+                    'mt-3 flex items-start gap-2.5 rounded-r-lg border-l-[3px] p-3 text-[13px]',
+                    pace === 'sprint'
+                      ? 'border-l-v2-warning bg-v2-warning-soft/60 text-v2-foreground'
+                      : 'border-l-v2-success bg-v2-success-soft/60 text-v2-foreground',
+                  )}
                 >
-                  {m} min
-                </button>
-              ))}
+                  <CalendarClock
+                    className={cn(
+                      'mt-0.5 h-4 w-4 shrink-0',
+                      pace === 'sprint' ? 'text-v2-warning' : 'text-v2-success',
+                    )}
+                    strokeWidth={2.25}
+                  />
+                  <div>
+                    <span className="font-semibold">{days} days</span> →{' '}
+                    <span className="font-bold uppercase">{pace}</span> mode
+                    {pace === 'sprint'
+                      ? ': daily sessions, focus on high-weight domains.'
+                      : ': 3–4 sessions/week, broad exploration.'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-7">
+              <p className="text-[13px] font-semibold text-v2-foreground">
+                Minutes per day available
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {[15, 30, 45, 60, 90, 120].map((m) => {
+                  const sel = studyMinutesPerDay === m
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setStudyMinutesPerDay(m)}
+                      className={cn(
+                        'rounded-lg border px-4 py-2.5 text-[13px] font-semibold transition-colors',
+                        sel
+                          ? 'border-v2-brand bg-v2-brand-soft text-v2-brand'
+                          : 'border-v2-border bg-v2-surface text-v2-foreground-muted hover:border-v2-border-strong hover:text-v2-foreground',
+                      )}
+                    >
+                      {m} min
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
 
         {step === 2 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">Self-rated level by domain</h2>
-            <p className="text-sm text-text-secondary mb-5">
-              Be honest. This seeds your cognitive model — the system will refine it with every
-              answer. Underestimating is better than overestimating.
+            <h2 className="v2-display text-[22px] sm:text-[24px]">
+              Self-rated level by domain
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
+              Be honest. This seeds your cognitive model — every answer refines
+              it. Underestimating is better than overestimating.
             </p>
-            <div className="space-y-4">
-              {domains.map(d => (
-                <div key={d.slug} className="rounded-lg border border-border p-3">
-                  <div className="flex items-baseline justify-between gap-3 mb-2">
-                    <p className="font-semibold text-text-primary text-sm">{d.name}</p>
-                    <span className="text-xs text-text-muted">{d.exam_weight_percent}% of the exam</span>
+
+            <div className="mt-6 space-y-3">
+              {domains.map((d) => (
+                <div
+                  key={d.slug}
+                  className="rounded-xl border border-v2-border bg-v2-surface p-4"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-[14px] font-bold text-v2-foreground">
+                      {d.name}
+                    </p>
+                    <span className="font-v2-mono text-[11px] text-v2-foreground-subtle">
+                      {d.exam_weight_percent}% of exam
+                    </span>
                   </div>
-                  <div className="grid grid-cols-5 gap-1">
-                    {LEVEL_LABELS.map(l => (
-                      <button
-                        key={l.v}
-                        type="button"
-                        onClick={() => setSelfLevels(s => ({ ...s, [d.slug]: l.v }))}
-                        className={`rounded px-1 py-2 text-xs font-medium ${
-                          selfLevels[d.slug] === l.v
-                            ? 'bg-primary text-white'
-                            : 'bg-surface-2 text-text-secondary hover:bg-primary/20'
-                        }`}
-                        title={l.desc}
-                      >
-                        {l.label}
-                      </button>
-                    ))}
+                  <div className="mt-3 grid grid-cols-5 gap-1.5">
+                    {LEVEL_LABELS.map((l) => {
+                      const sel = selfLevels[d.slug] === l.v
+                      return (
+                        <button
+                          key={l.v}
+                          type="button"
+                          onClick={() =>
+                            setSelfLevels((s) => ({ ...s, [d.slug]: l.v }))
+                          }
+                          title={l.desc}
+                          className={cn(
+                            'rounded-md px-1.5 py-2 text-[11px] font-semibold transition-colors',
+                            sel
+                              ? 'bg-v2-gradient-brand text-white shadow-v2-button'
+                              : 'bg-v2-surface-subtle text-v2-foreground-muted hover:bg-v2-brand-soft hover:text-v2-brand',
+                          )}
+                        >
+                          {l.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               ))}
@@ -306,63 +441,91 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
         {step === 3 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">Quick diagnostic</h2>
-            <p className="text-sm text-text-secondary mb-5">
+            <h2 className="v2-display text-[22px] sm:text-[24px]">
+              Quick diagnostic
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
               {diagnostic.length > 0
-                ? `${diagnostic.length} questions (one per domain). It's not graded like an exam — we're just refining your starting point. Getting these wrong is useful.`
+                ? `${diagnostic.length} questions, one per domain. Not graded — we're refining your starting point. Getting these wrong is useful.`
                 : diagnosticLoading
-                ? 'Loading diagnostic…'
-                : 'Your initial plan will use your self-assessment. The system will adjust with your first sessions.'}
+                  ? 'Loading diagnostic…'
+                  : 'Your initial plan will use your self-assessment. The system adjusts with your first sessions.'}
             </p>
-            {/*
-              Surface the fetch failure separately so "fallback to self-assessment"
-              doesn't masquerade as a deliberate skip. Keeps the graceful path
-              (user can still continue) while making the miss observable.
-            */}
-            {diagnosticError && (
-              <p className="text-xs text-danger mb-4" role="alert">
-                Couldn&apos;t load the diagnostic. Continuing with your self-assessment.
-              </p>
+
+            {diagnosticLoading && (
+              <div className="mt-6 flex items-center justify-center py-8 text-v2-foreground-muted">
+                <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2.25} />
+              </div>
             )}
-            {diagnostic.map((q, qi) => {
-              const selected = diagnosticAnswers[q.questionId]
-              return (
-                <div key={q.questionId} className="rounded-xl border border-border p-4 mb-4">
-                  <div className="flex items-baseline justify-between gap-2 mb-2">
-                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+
+            {diagnosticError && (
+              <div
+                role="alert"
+                className="mt-4 rounded-lg border border-v2-error/30 bg-v2-error-soft px-3 py-2 text-[12px] text-v2-error"
+              >
+                Couldn't load the diagnostic. Continuing with your
+                self-assessment.
+              </div>
+            )}
+
+            <div className="mt-6 space-y-4">
+              {diagnostic.map((q, qi) => {
+                const selected = diagnosticAnswers[q.questionId]
+                return (
+                  <div
+                    key={q.questionId}
+                    className="rounded-xl border border-v2-border bg-v2-surface p-5"
+                  >
+                    <span className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-foreground-subtle">
                       {qi + 1}/{diagnostic.length} · {q.conceptName}
                     </span>
+                    <p className="mt-3 text-[14px] font-semibold leading-[1.55] text-v2-foreground">
+                      {q.questionText}
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      {q.options.map((opt, oi) => {
+                        const isSel = selected === oi
+                        return (
+                          <button
+                            key={oi}
+                            type="button"
+                            onClick={() =>
+                              setDiagnosticAnswers((a) => ({
+                                ...a,
+                                [q.questionId]: oi,
+                              }))
+                            }
+                            className={cn(
+                              'flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left text-[13px] transition-colors',
+                              isSel
+                                ? 'border-v2-brand bg-v2-brand-soft text-v2-foreground'
+                                : 'border-v2-border bg-v2-surface text-v2-foreground-muted hover:border-v2-border-strong hover:text-v2-foreground',
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-v2-mono text-[10px] font-bold',
+                                isSel
+                                  ? 'bg-v2-brand text-white'
+                                  : 'border border-v2-border-strong text-v2-foreground-muted',
+                              )}
+                            >
+                              {String.fromCharCode(65 + oi)}
+                            </span>
+                            <span className="leading-[1.5]">{opt}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <p className="text-sm font-medium text-text-primary mb-3 leading-relaxed">
-                    {q.questionText}
-                  </p>
-                  <div className="space-y-2">
-                    {q.options.map((opt, oi) => (
-                      <button
-                        key={oi}
-                        type="button"
-                        onClick={() =>
-                          setDiagnosticAnswers(a => ({ ...a, [q.questionId]: oi }))
-                        }
-                        className={`w-full text-left rounded-lg border px-3 py-2 text-sm ${
-                          selected === oi
-                            ? 'border-primary bg-primary/10 text-text-primary'
-                            : 'border-border text-text-secondary hover:border-primary/50'
-                        }`}
-                      >
-                        <span className="mr-2 font-semibold">
-                          {String.fromCharCode(65 + oi)}.
-                        </span>
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+
             {diagnostic.length > 0 && (
-              <p className="text-xs text-text-muted italic">
-                Answer all of them to continue — or skip if you'd rather start with your self-assessment.
+              <p className="mt-4 text-[12px] italic text-v2-foreground-subtle">
+                Answer them all to continue — or skip to start with your
+                self-assessment.
               </p>
             )}
           </div>
@@ -370,45 +533,99 @@ export function OnboardingForm({ domains }: { domains: Domain[] }) {
 
         {step === 4 && (
           <div>
-            <h2 className="text-lg font-bold text-text-primary mb-1">Psychological contract</h2>
-            <p className="text-sm text-text-secondary mb-5">Before you start, this matters:</p>
-            <div className="rounded-xl border border-border bg-surface-2 p-4 mb-5 space-y-3 text-sm">
-              <p className="text-text-primary">
-                <strong>In Maestring, mistakes aren't problems — they're the learning mechanism.</strong>
+            <h2 className="v2-display text-[22px] sm:text-[24px]">
+              Psychological contract
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.6] text-v2-foreground-muted">
+              Before you start, this matters:
+            </p>
+
+            <div className="mt-6 space-y-3 rounded-xl border border-l-[3px] border-v2-border border-l-v2-brand bg-v2-brand-soft/40 p-5">
+              <p className="text-[14px] font-bold text-v2-foreground">
+                In Maestring, mistakes aren't problems — they're the learning
+                mechanism.
               </p>
-              <p className="text-text-secondary">
-                Every time you miss a question, the system learns more about you and adjusts your plan.
-                You will miss questions. That's exactly what's supposed to happen.
+              <p className="text-[13px] leading-[1.6] text-v2-foreground-muted">
+                Every time you miss a question, the system learns more about
+                you and adjusts your plan. You will miss questions. That's
+                exactly what's supposed to happen.
               </p>
-              <p className="text-text-secondary">
-                Your Readiness Score starts low and rises with spaced repetitions — not with
-                consecutive correct answers. Consistency wins, not speed.
+              <p className="text-[13px] leading-[1.6] text-v2-foreground-muted">
+                Your Readiness Score starts low and rises with spaced
+                repetitions — not with consecutive correct answers. Consistency
+                wins, not speed.
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-surface-2 p-4 text-sm space-y-1">
-              <p>📅 Exam: <strong>{examTargetDate || 'no date'}</strong>{days !== null && ` (${days}d)`}</p>
-              <p>⏱️ Daily study: <strong>{studyMinutesPerDay} min</strong></p>
-              <p>🎯 Background: <strong>{BACKGROUNDS.find(b => b.v === background)?.label}</strong></p>
-              <p>📊 Concepts to seed: <strong>{domains.length * 5}</strong></p>
+
+            <div className="mt-5 rounded-xl border border-v2-border bg-v2-surface-subtle p-5">
+              <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-foreground-subtle">
+                Your plan
+              </p>
+              <ul className="mt-3 space-y-1.5 text-[13px]">
+                <li className="text-v2-foreground">
+                  Exam:{' '}
+                  <span className="font-bold">
+                    {examTargetDate || 'no date'}
+                  </span>
+                  {days !== null && (
+                    <span className="text-v2-foreground-muted"> · {days}d</span>
+                  )}
+                </li>
+                <li className="text-v2-foreground">
+                  Daily study:{' '}
+                  <span className="font-bold">{studyMinutesPerDay} min</span>
+                </li>
+                <li className="text-v2-foreground">
+                  Background:{' '}
+                  <span className="font-bold">
+                    {BACKGROUNDS.find((b) => b.v === background)?.label}
+                  </span>
+                </li>
+                <li className="text-v2-foreground">
+                  Concepts to seed:{' '}
+                  <span className="font-bold">{domains.length * 5}</span>
+                </li>
+              </ul>
             </div>
-            {error && <p className="text-sm text-danger mt-3">{error}</p>}
+
+            {error && (
+              <div
+                role="alert"
+                className="mt-4 rounded-lg border border-v2-error/30 bg-v2-error-soft px-3 py-2 text-[13px] text-v2-error"
+              >
+                {error}
+              </div>
+            )}
           </div>
         )}
 
-        <div className={`flex ${step > 0 ? 'justify-between' : 'justify-end'}`}>
+        {/* Nav row */}
+        <div
+          className={cn(
+            'flex pt-2',
+            step > 0 ? 'justify-between' : 'justify-end',
+          )}
+        >
           {step > 0 && (
-            <button onClick={() => setStep(s => s - 1)} className="btn-outline" disabled={loading}>
-              ← Back
-            </button>
+            <Button
+              variant="secondary"
+              onClick={() => setStep((s) => s - 1)}
+              disabled={loading}
+            >
+              <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
+              Back
+            </Button>
           )}
           {step < STEPS.length - 1 ? (
-            <button onClick={() => setStep(s => s + 1)} className="btn-primary">
-              Continue →
-            </button>
+            <Button onClick={() => setStep((s) => s + 1)}>
+              Continue
+              <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+            </Button>
           ) : (
-            <button onClick={submit} disabled={loading} className="btn-primary">
+            <Button onClick={submit} disabled={loading} loading={loading}>
               {loading ? 'Calibrating…' : 'Start studying'}
-            </button>
+              {!loading && <ArrowRight className="h-4 w-4" strokeWidth={2.5} />}
+            </Button>
           )}
         </div>
       </div>

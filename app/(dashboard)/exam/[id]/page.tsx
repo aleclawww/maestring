@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Clock,
+  Flag,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Card } from '@/components/v2'
 
 interface ExamItem {
   position: number
@@ -172,76 +181,120 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
 
   if (loadError) {
     return (
-      <div className="p-10 text-center">
-        <p className="text-danger mb-4">{loadError}</p>
-        <a href="/exam" className="btn-primary">Back</a>
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <Card padding="lg" className="max-w-[420px] text-center">
+          <AlertCircle
+            className="mx-auto h-8 w-8 text-v2-error"
+            strokeWidth={2}
+          />
+          <p className="mt-3 text-[14px] font-semibold text-v2-error">
+            {loadError}
+          </p>
+          <a
+            href="/exam"
+            className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-v2-foreground px-4 text-[13px] font-semibold text-white transition-colors hover:bg-v2-deep-darker"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
+            Back to exams
+          </a>
+        </Card>
       </div>
     )
   }
 
   if (!session || !current) {
     return (
-      <div className="p-10 text-center text-text-muted">Loading mock exam…</div>
+      <div className="flex min-h-[60vh] items-center justify-center text-v2-foreground-muted">
+        <span className="font-v2-mono text-[12px] uppercase tracking-v2-wide">
+          Loading mock exam…
+        </span>
+      </div>
     )
   }
 
   const mins = Math.floor(secondsLeft / 60)
   const secs = secondsLeft % 60
   const isLowTime = secondsLeft < 600
+  const isCritical = secondsLeft < 120
   const answeredCount = items.filter((it) => it.user_answer_index !== null).length
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="-mx-4 -my-8 flex h-[calc(100vh-3.5rem)] flex-col bg-v2-background sm:-mx-6 sm:-my-10">
       {(submitError || answerError) && (
         <div
-          className="border-b border-danger/30 bg-danger/10 px-6 py-2 text-xs text-danger"
           role="alert"
+          className="border-b border-v2-error/30 bg-v2-error-soft px-6 py-2 text-[12px] font-medium text-v2-error"
         >
           {submitError ?? answerError}
         </div>
       )}
+
+      {/* Top bar */}
       <div
         className={cn(
-          'flex items-center justify-between border-b px-6 py-3 transition-colors',
-          isLowTime ? 'border-danger/30 bg-danger/5' : 'border-border bg-surface'
+          'flex items-center justify-between gap-4 border-b px-6 py-3 transition-colors',
+          isLowTime
+            ? 'border-v2-error/30 bg-v2-error-soft/40'
+            : 'border-v2-border bg-v2-surface',
         )}
       >
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-text-secondary">
+        <div className="flex items-center gap-3">
+          <span className="rounded-md border border-v2-brand/20 bg-v2-brand-soft px-1.5 py-0.5 font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-brand">
+            SAA-C03
+          </span>
+          <span className="text-[13px] font-semibold text-v2-foreground">
             Question {currentIdx + 1} / {items.length}
           </span>
-          <span className="text-xs text-text-muted">{answeredCount} answered</span>
+          <span className="hidden font-v2-mono text-[11px] text-v2-foreground-subtle sm:inline">
+            {answeredCount} answered
+          </span>
         </div>
+
+        {/* Timer */}
         <div
           aria-live="polite"
           aria-label={`Time remaining: ${String(mins).padStart(2, '0')} minutes ${String(secs).padStart(2, '0')} seconds`}
           className={cn(
-            'flex items-center gap-2 font-mono text-lg font-bold',
-            isLowTime ? 'text-danger animate-pulse' : 'text-text-primary'
+            'inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors',
+            isCritical
+              ? 'animate-pulse border-v2-error/40 bg-v2-error-soft text-v2-error'
+              : isLowTime
+                ? 'border-v2-warning/40 bg-v2-warning-soft text-v2-warning'
+                : 'border-v2-border bg-v2-surface text-v2-foreground',
           )}
         >
-          ⏱️ {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+          <Clock className="h-3.5 w-3.5" strokeWidth={2.25} />
+          <span className="font-v2-mono text-[15px] font-bold tabular-nums tracking-v2-tight">
+            {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+          </span>
         </div>
+
+        {/* Submit */}
         {!confirmingSubmit ? (
           <button
             onClick={() => setConfirmingSubmit(true)}
             disabled={submitting}
-            className="btn-danger text-sm"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-v2-foreground px-4 text-[13px] font-semibold text-white transition-colors hover:bg-v2-deep-darker disabled:opacity-50"
           >
             {submitting ? 'Submitting…' : 'Submit'}
           </button>
         ) : (
-          <span className="flex items-center gap-2 text-sm">
-            <span className="text-text-muted">{answeredCount}/{items.length} answered. Submit?</span>
+          <span className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="text-v2-foreground-muted">
+              {answeredCount}/{items.length} answered. Submit?
+            </span>
             <button
-              onClick={() => { setConfirmingSubmit(false); void submitExam() }}
-              className="text-danger font-semibold hover:underline"
+              onClick={() => {
+                setConfirmingSubmit(false)
+                void submitExam()
+              }}
+              className="font-bold text-v2-error hover:underline"
             >
               Yes
             </button>
             <button
               onClick={() => setConfirmingSubmit(false)}
-              className="text-text-muted hover:text-text-primary"
+              className="text-v2-foreground-muted hover:text-v2-foreground"
             >
               Cancel
             </button>
@@ -249,106 +302,127 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
         )}
       </div>
 
+      {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs text-text-muted">
-                {current.question.domain_name ?? 'Domain'}
+        {/* Question area */}
+        <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-8 sm:py-10">
+          <div className="mx-auto max-w-[820px]">
+            {/* Question header */}
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+                Domain · {current.question.domain_name ?? 'Domain'}
               </span>
               <button
                 onClick={toggleFlag}
+                aria-pressed={current.flagged}
                 className={cn(
-                  'text-xs px-2 py-0.5 rounded border transition-colors',
+                  'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium transition-colors',
                   current.flagged
-                    ? 'border-warning/50 bg-warning/10 text-warning'
-                    : 'border-border text-text-muted hover:border-warning/50'
+                    ? 'bg-v2-warning-soft text-v2-warning'
+                    : 'text-v2-foreground-muted hover:bg-v2-surface-subtle hover:text-v2-foreground',
                 )}
               >
-                {current.flagged ? '🚩 Flagged' : '⚑ Flag'}
+                <Flag
+                  className="h-3.5 w-3.5"
+                  strokeWidth={2.25}
+                  fill={current.flagged ? 'currentColor' : 'none'}
+                  fillOpacity={current.flagged ? 0.25 : 0}
+                />
+                {current.flagged ? 'Flagged' : 'Flag'}
               </button>
             </div>
-            <p className="text-base text-text-primary leading-relaxed mb-6 whitespace-pre-wrap">
+
+            {/* Question text */}
+            <p className="mt-5 whitespace-pre-wrap text-[17px] font-semibold leading-[1.55] text-v2-foreground sm:text-[18px]">
               {current.question.question_text}
             </p>
-            <div className="space-y-3">
-              {current.question.options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => selectAnswer(i)}
-                  aria-pressed={current.user_answer_index === i}
-                  className={cn(
-                    'w-full text-left rounded-xl border px-4 py-3 text-sm transition-all',
-                    current.user_answer_index === i
-                      ? 'border-primary bg-primary/10 text-text-primary'
-                      : 'border-border text-text-secondary hover:border-primary/50 hover:bg-primary/5'
-                  )}
-                >
-                  <span className="flex items-start gap-3">
+
+            {/* Options */}
+            <div className="mt-7 space-y-3">
+              {current.question.options.map((opt, i) => {
+                const isSel = current.user_answer_index === i
+                return (
+                  <button
+                    key={i}
+                    onClick={() => selectAnswer(i)}
+                    aria-pressed={isSel}
+                    className={cn(
+                      'flex w-full items-start gap-4 rounded-xl border px-5 py-4 text-left transition-all duration-150',
+                      isSel
+                        ? 'border-v2-brand bg-v2-brand-soft shadow-v2-soft'
+                        : 'border-v2-border bg-v2-surface hover:border-v2-border-strong hover:bg-v2-surface-subtle/50',
+                    )}
+                  >
                     <span
                       className={cn(
-                        'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border text-xs font-bold',
-                        current.user_answer_index === i
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-border'
+                        'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-v2-mono text-[12px] font-bold transition-colors',
+                        isSel
+                          ? 'bg-v2-brand text-white shadow-v2-button'
+                          : 'border border-v2-border-strong bg-v2-surface text-v2-foreground-muted',
                       )}
                     >
                       {String.fromCharCode(65 + i)}
                     </span>
-                    {opt}
-                  </span>
-                </button>
-              ))}
+                    <span className="text-[15px] leading-[1.55] text-v2-foreground">
+                      {opt}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-            <div className="flex gap-3 mt-6">
+
+            {/* Prev / Next */}
+            <div className="mt-8 flex gap-3">
               <button
                 disabled={currentIdx === 0}
                 onClick={() => setCurrentIdx((i) => i - 1)}
                 aria-label="Previous question"
-                className="btn-outline flex-1 disabled:opacity-40"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-v2-border bg-v2-surface text-[14px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:cursor-not-allowed disabled:opacity-40"
               >
-                ← Previous
+                <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
+                Previous
               </button>
               <button
                 disabled={currentIdx === items.length - 1}
                 onClick={() => setCurrentIdx((i) => i + 1)}
                 aria-label="Next question"
-                className="btn-primary flex-1 disabled:opacity-40"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-v2-gradient-brand text-[14px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 hover:shadow-v2-elevated disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Next →
+                Next
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="hidden lg:flex w-56 flex-col border-l border-border bg-surface overflow-y-auto p-4">
-          <p className="text-xs font-semibold text-text-muted mb-3 uppercase tracking-wide">
-            Navigation
+        {/* Question navigator */}
+        <aside className="hidden w-[260px] shrink-0 overflow-y-auto border-l border-v2-border bg-v2-surface p-5 lg:block">
+          <p className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-foreground-subtle">
+            Navigator
           </p>
-          <div className="grid grid-cols-5 gap-1.5">
+
+          <div className="mt-3 grid grid-cols-5 gap-1.5">
             {items.map((it, i) => {
-              const state = i === currentIdx
-                ? 'current'
-                : it.flagged
-                ? 'flagged'
-                : it.user_answer_index !== null
-                ? 'answered'
-                : 'unanswered'
+              const isCurr = i === currentIdx
+              const isAnswered = it.user_answer_index !== null
+              const isFlag = it.flagged
               return (
                 <button
                   key={it.position}
                   onClick={() => setCurrentIdx(i)}
-                  aria-label={`Question ${i + 1} — ${state}`}
-                  aria-current={i === currentIdx ? 'true' : undefined}
+                  aria-label={`Question ${i + 1}`}
+                  aria-current={isCurr ? 'true' : undefined}
                   className={cn(
-                    'h-8 w-8 rounded-md text-xs font-semibold transition-colors',
-                    i === currentIdx
-                      ? 'bg-primary text-white'
-                      : it.flagged
-                      ? 'bg-warning/20 text-warning border border-warning/30'
-                      : it.user_answer_index !== null
-                      ? 'bg-success/20 text-success'
-                      : 'bg-surface-2 text-text-muted hover:bg-surface-2/80'
+                    'flex h-9 items-center justify-center rounded-md border font-v2-mono text-[11px] font-bold transition-colors',
+                    isCurr
+                      ? 'border-v2-foreground bg-v2-foreground text-white'
+                      : isAnswered && isFlag
+                        ? 'border-v2-warning/40 bg-v2-warning-soft text-v2-warning'
+                        : isAnswered
+                          ? 'border-v2-brand/30 bg-v2-brand-soft text-v2-brand'
+                          : isFlag
+                            ? 'border-v2-warning/40 text-v2-warning'
+                            : 'border-v2-border bg-v2-surface text-v2-foreground-muted hover:border-v2-border-strong hover:text-v2-foreground',
                   )}
                 >
                   {i + 1}
@@ -356,19 +430,43 @@ export default function ExamRunnerPage({ params }: { params: { id: string } }) {
               )
             })}
           </div>
-          <div className="mt-4 space-y-2 text-xs text-text-muted">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-success/20" /> Answered
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-warning/20" /> Flagged
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded bg-surface-2" /> Unanswered
-            </div>
+
+          {/* Legend */}
+          <div className="mt-5 space-y-2 rounded-lg border border-v2-border-subtle bg-v2-surface-subtle/60 p-3">
+            <LegendRow
+              dot="bg-v2-brand-soft border border-v2-brand/30"
+              label="Answered"
+            />
+            <LegendRow
+              dot="bg-v2-warning-soft border border-v2-warning/30"
+              label="Flagged"
+            />
+            <LegendRow dot="bg-v2-foreground" label="Current" />
+            <LegendRow
+              dot="bg-v2-surface border border-v2-border"
+              label="Unanswered"
+            />
           </div>
-        </div>
+
+          <button
+            onClick={() => setConfirmingSubmit(true)}
+            disabled={submitting}
+            className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-v2-foreground text-[13px] font-semibold text-white transition-colors hover:bg-v2-deep-darker disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" strokeWidth={2.5} />
+            Submit exam
+          </button>
+        </aside>
       </div>
+    </div>
+  )
+}
+
+function LegendRow({ dot, label }: { dot: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={cn('h-3 w-3 shrink-0 rounded-sm', dot)} />
+      <span className="text-[12px] text-v2-foreground-muted">{label}</span>
     </div>
   )
 }

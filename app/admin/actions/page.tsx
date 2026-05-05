@@ -11,7 +11,7 @@ export default async function AdminActionsLogPage() {
     <div className="p-6 space-y-6 max-w-[1400px]">
       <header>
         <h1 className="text-xl font-bold">Audit Log</h1>
-        <p className="text-xs text-text-muted">
+        <p className="text-xs text-v2-foreground-subtle">
           Every destructive action (grant_pro, retry_doc, etc.) is recorded here. Read-only.
         </p>
       </header>
@@ -21,26 +21,26 @@ export default async function AdminActionsLogPage() {
           rows={rows}
           empty="No actions recorded yet."
           columns={[
-            { key: 'when', label: 'When', render: r => <span className="text-[11px] text-text-muted">{formatDateTime(r.created_at)}</span> },
+            { key: 'when', label: 'When', render: r => <span className="text-[11px] text-v2-foreground-subtle">{formatDateTime(r.created_at)}</span> },
             { key: 'admin', label: 'Admin', render: r => <span className="text-xs">{r.admin_email ?? 'unknown'}</span> },
-            { key: 'action', label: 'Action', render: r => <code className="text-[11px] bg-surface-2 px-1.5 py-0.5 rounded">{r.action}</code> },
+            { key: 'action', label: 'Action', render: r => <code className="text-[11px] bg-v2-surface-subtle px-1.5 py-0.5 rounded">{r.action}</code> },
             {
               key: 'target',
               label: 'Target',
               render: r => r.target_user_id ? (
-                <Link href={`/admin/users/${r.target_user_id}`} className="text-xs text-primary hover:underline">
+                <Link href={`/admin/users/${r.target_user_id}`} className="text-xs text-v2-brand hover:underline">
                   {r.target_user_id.slice(0, 8)}…
                 </Link>
-              ) : <span className="text-text-muted">—</span>,
+              ) : <span className="text-v2-foreground-subtle">—</span>,
             },
             {
               key: 'details',
               label: 'Details',
               render: r => r.details ? (
-                <code className="text-[11px] text-text-muted truncate max-w-md inline-block">
+                <code className="text-[11px] text-v2-foreground-subtle truncate max-w-md inline-block">
                   {JSON.stringify(r.details)}
                 </code>
-              ) : <span className="text-text-muted">—</span>,
+              ) : <span className="text-v2-foreground-subtle">—</span>,
             },
           ]}
         />

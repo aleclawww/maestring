@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function ProgressLoading() {
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-screen bg-slate-50 p-6 space-y-6">
       {/* Page header */}
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
@@ -10,14 +10,14 @@ export default function ProgressLoading() {
       </div>
 
       {/* Readiness score hero */}
-      <div className="rounded-xl border border-border bg-surface p-8 flex flex-col items-center gap-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-8 flex flex-col items-center gap-4">
         <Skeleton className="h-32 w-32" rounded="full" />
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-4 w-56" />
       </div>
 
       {/* Blueprint accuracy breakdown */}
-      <div className="rounded-xl border border-border bg-surface p-6 space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
         <Skeleton className="h-6 w-52" />
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -35,7 +35,7 @@ export default function ProgressLoading() {
       {/* Stats grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-border bg-surface p-5 space-y-2">
+          <div key={i} className="rounded-xl border border-slate-200 bg-white p-5 space-y-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-8 w-16" />
             <Skeleton className="h-3 w-32" />
@@ -44,7 +44,7 @@ export default function ProgressLoading() {
       </div>
 
       {/* Weekly activity */}
-      <div className="rounded-xl border border-border bg-surface p-6 space-y-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
         <Skeleton className="h-6 w-36" />
         <div className="flex gap-2 items-end h-24">
           {Array.from({ length: 7 }).map((_, i) => (

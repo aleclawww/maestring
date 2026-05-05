@@ -27,7 +27,7 @@ export default async function AdminUsersPage({
       <header className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold">Users</h1>
-          <p className="text-xs text-text-muted">Buscar por email o nombre. Filtrar por plan.</p>
+          <p className="text-xs text-v2-foreground-subtle">Buscar por email o nombre. Filtrar por plan.</p>
         </div>
       </header>
 
@@ -36,18 +36,18 @@ export default async function AdminUsersPage({
           name="q"
           defaultValue={search ?? ''}
           placeholder="email o nombre…"
-          className="flex-1 max-w-sm bg-surface border border-border rounded-lg px-3 py-1.5 text-sm"
+          className="flex-1 max-w-sm bg-v2-surface border border-v2-border rounded-lg px-3 py-1.5 text-sm"
         />
         <select
           name="plan"
           defaultValue={plan ?? ''}
-          className="bg-surface border border-border rounded-lg px-2 py-1.5 text-sm"
+          className="bg-v2-surface border border-v2-border rounded-lg px-2 py-1.5 text-sm"
         >
           {PLANS.map(p => (
             <option key={p} value={p}>{p || 'all plans'}</option>
           ))}
         </select>
-        <button type="submit" className="btn-primary text-sm px-3 py-1.5">Filtrar</button>
+        <button type="submit" className="inline-flex h-9 items-center justify-center rounded-lg bg-v2-gradient-brand px-4 text-[13px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 disabled:opacity-50">Filtrar</button>
       </form>
 
       <Section title={`Results · ${rows.length}${rows.length === PAGE_SIZE ? '+' : ''}`}>
@@ -59,9 +59,9 @@ export default async function AdminUsersPage({
               key: 'email',
               label: 'User',
               render: r => (
-                <Link href={`/admin/users/${r.id}`} className="hover:text-primary">
+                <Link href={`/admin/users/${r.id}`} className="hover:text-v2-brand">
                   <div className="font-medium">{r.email}</div>
-                  <div className="text-[11px] text-text-muted">{r.full_name ?? '—'}</div>
+                  <div className="text-[11px] text-v2-foreground-subtle">{r.full_name ?? '—'}</div>
                 </Link>
               ),
             },
@@ -69,14 +69,14 @@ export default async function AdminUsersPage({
             {
               key: 'phase',
               label: 'Phase',
-              render: r => <span className="text-[11px] text-text-muted">{r.journey_phase}</span>,
+              render: r => <span className="text-[11px] text-v2-foreground-subtle">{r.journey_phase}</span>,
             },
             {
               key: 'readiness',
               label: 'Ready',
               render: r => (r.last_readiness_score != null ? (
                 <span className="font-mono text-xs">{Number(r.last_readiness_score).toFixed(0)}</span>
-              ) : <span className="text-text-muted">—</span>),
+              ) : <span className="text-v2-foreground-subtle">—</span>),
             },
             {
               key: 'streak',
@@ -90,7 +90,7 @@ export default async function AdminUsersPage({
                 <div className="text-[11px]">
                   <div>{formatDate(r.exam_target_date)}</div>
                   {r.exam_outcome && r.exam_outcome !== 'unknown' && (
-                    <div className={r.exam_outcome === 'passed' ? 'text-success' : 'text-danger'}>
+                    <div className={r.exam_outcome === 'passed' ? 'text-v2-success' : 'text-v2-error'}>
                       {r.exam_outcome}
                     </div>
                   )}
@@ -101,7 +101,7 @@ export default async function AdminUsersPage({
               key: 'spend',
               label: 'LLM 30d',
               render: r => (
-                <span className={Number(r.llm_spend_30d) > 3 ? 'text-warning font-mono text-xs' : 'font-mono text-xs'}>
+                <span className={Number(r.llm_spend_30d) > 3 ? 'text-v2-warning font-mono text-xs' : 'font-mono text-xs'}>
                   {formatUsd(Number(r.llm_spend_30d))}
                 </span>
               ),
@@ -109,12 +109,12 @@ export default async function AdminUsersPage({
             {
               key: 'last',
               label: 'Last session',
-              render: r => <span className="text-[11px] text-text-muted">{formatDateTime(r.last_session_at)}</span>,
+              render: r => <span className="text-[11px] text-v2-foreground-subtle">{formatDateTime(r.last_session_at)}</span>,
             },
             {
               key: 'created',
               label: 'Joined',
-              render: r => <span className="text-[11px] text-text-muted">{formatDate(r.created_at)}</span>,
+              render: r => <span className="text-[11px] text-v2-foreground-subtle">{formatDate(r.created_at)}</span>,
             },
           ]}
         />
@@ -124,14 +124,14 @@ export default async function AdminUsersPage({
         {page > 0 && (
           <Link
             href={`/admin/users?${new URLSearchParams({ ...(search ? { q: search } : {}), ...(plan ? { plan } : {}), page: String(page - 1) })}`}
-            className="text-primary hover:underline"
+            className="text-v2-brand hover:underline"
           >← Prev</Link>
         )}
-        <span className="text-text-muted">Page {page + 1}</span>
+        <span className="text-v2-foreground-subtle">Page {page + 1}</span>
         {rows.length === PAGE_SIZE && (
           <Link
             href={`/admin/users?${new URLSearchParams({ ...(search ? { q: search } : {}), ...(plan ? { plan } : {}), page: String(page + 1) })}`}
-            className="text-primary hover:underline"
+            className="text-v2-brand hover:underline"
           >Next →</Link>
         )}
       </nav>

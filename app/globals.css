@@ -29,14 +29,17 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--text-primary);
-  font-family: var(--font-inter);
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  /* v2 design — slate-50 base, Plus Jakarta Sans. Legacy dark vars
+     remain on :root for any unmigrated component that still references
+     them, but the page itself uses v2 colors. */
+  background-color: #F8FAFC;
+  color: #0F172A;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
   min-height: 100vh;
 }
 
@@ -47,16 +50,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #E2E8F0;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: #CBD5E1;
 }
 
 /* ---- Custom Selection ---- */
@@ -89,11 +92,12 @@ body {
   }
 
   .skeleton {
+    /* v2 light skeleton — slate-100 → slate-200 shimmer */
     background: linear-gradient(
       90deg,
-      var(--surface) 25%,
-      var(--surface-2) 50%,
-      var(--surface) 75%
+      #F1F5F9 25%,
+      #E2E8F0 50%,
+      #F1F5F9 75%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;

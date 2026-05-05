@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function StudyLoading() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 gap-6">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 gap-6">
       {/* Session header */}
       <div className="w-full max-w-2xl flex items-center justify-between">
         <Skeleton className="h-4 w-32" />
@@ -15,7 +15,7 @@ export default function StudyLoading() {
       </div>
 
       {/* Question card */}
-      <div className="w-full max-w-2xl rounded-xl border border-border bg-surface p-6 space-y-5">
+      <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-6 space-y-5">
         {/* Domain badge + timer */}
         <div className="flex items-center justify-between">
           <Skeleton className="h-6 w-36" rounded="full" />
@@ -32,7 +32,7 @@ export default function StudyLoading() {
         {/* Answer options */}
         <div className="space-y-3 pt-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-lg border border-border p-4">
+            <div key={i} className="flex items-start gap-3 rounded-lg border border-slate-200 p-4">
               <Skeleton className="h-5 w-5 mt-0.5 shrink-0" rounded="full" />
               <div className="flex-1 space-y-1">
                 <Skeleton className="h-4 w-full" />

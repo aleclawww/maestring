@@ -1,7 +1,6 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { Card, Badge, Eyebrow } from '@/components/v2'
 import { cn } from '@/lib/utils'
 
 export interface BlueprintTaskRow {
@@ -20,102 +19,140 @@ interface Props {
   tasks: BlueprintTaskRow[]
 }
 
-const DOMAIN_COLORS: Record<number, string> = {
-  1: '#6366f1',  // indigo — Secure
-  2: '#22c55e',  // green  — Resilient
-  3: '#f59e0b',  // amber  — Performant
-  4: '#ec4899',  // pink   — Cost-Optimized
+const DOMAIN_COLOR_CLASS: Record<number, string> = {
+  1: 'bg-v2-brand',
+  2: 'bg-v2-success',
+  3: 'bg-v2-warning',
+  4: 'bg-v2-accent',
 }
 
 function accuracyBadge(pct: number | null, attempts: number) {
   if (attempts === 0 || pct === null)
-    return <Badge variant="outline" className="text-xs">Not started</Badge>
+    return (
+      <Badge tone="neutral" size="sm">
+        Not started
+      </Badge>
+    )
   if (pct >= 80)
-    return <Badge variant="success" className="text-xs">{pct}%</Badge>
+    return (
+      <Badge tone="success" size="sm">
+        {pct}%
+      </Badge>
+    )
   if (pct >= 60)
-    return <Badge variant="warning" className="text-xs">{pct}%</Badge>
-  return <Badge variant="danger" className="text-xs">{pct}%</Badge>
+    return (
+      <Badge tone="warning" size="sm">
+        {pct}%
+      </Badge>
+    )
+  return (
+    <Badge tone="error" size="sm">
+      {pct}%
+    </Badge>
+  )
 }
 
 export function BlueprintAccuracyCard({ tasks }: Props) {
-  // Group by domain — derive from actual task data so this stays correct if
-  // domains are added or renumbered.
-  const domains = [...new Set(tasks.map(t => t.domain_number))].sort((a, b) => a - b)
-  const byDomain = domains.map(d => ({
+  const domains = [...new Set(tasks.map((t) => t.domain_number))].sort(
+    (a, b) => a - b,
+  )
+  const byDomain = domains.map((d) => ({
     number: d,
-    name: tasks.find(t => t.domain_number === d)?.domain_name ?? `Domain ${d}`,
-    weight: tasks.find(t => t.domain_number === d)?.domain_weight_pct ?? 0,
-    tasks: tasks.filter(t => t.domain_number === d),
-    color: DOMAIN_COLORS[d] ?? '#6366f1',
+    name: tasks.find((t) => t.domain_number === d)?.domain_name ?? `Domain ${d}`,
+    weight:
+      tasks.find((t) => t.domain_number === d)?.domain_weight_pct ?? 0,
+    tasks: tasks.filter((t) => t.domain_number === d),
+    colorClass: DOMAIN_COLOR_CLASS[d] ?? 'bg-v2-brand',
   }))
 
   const totalAttempts = tasks.reduce((a, t) => a + t.attempts, 0)
-  const tasksStarted = tasks.filter(t => t.attempts > 0).length
+  const tasksStarted = tasks.filter((t) => t.attempts > 0).length
   const overallAccuracy =
     totalAttempts > 0
-      ? Math.round(tasks.reduce((a, t) => a + t.correct, 0) / totalAttempts * 100)
+      ? Math.round(
+          (tasks.reduce((a, t) => a + t.correct, 0) / totalAttempts) * 100,
+        )
       : null
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle>Exam Blueprint Coverage</CardTitle>
-            <p className="text-xs text-text-muted mt-0.5">
-              SAA-C03 · {tasksStarted}/{tasks.length} tasks attempted
-              {overallAccuracy !== null && ` · ${overallAccuracy}% overall accuracy`}
-            </p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-xs text-text-muted">Questions answered</p>
-            <p className="text-lg font-bold text-text-primary">{totalAttempts}</p>
-          </div>
+    <Card padding="lg">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Eyebrow>Exam blueprint coverage</Eyebrow>
+          <p className="mt-1.5 text-[12px] text-v2-foreground-muted">
+            SAA-C03 · {tasksStarted}/{tasks.length} tasks attempted
+            {overallAccuracy !== null && ` · ${overallAccuracy}% overall`}
+          </p>
         </div>
-      </CardHeader>
+        <div className="shrink-0 text-right">
+          <p className="font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+            Questions
+          </p>
+          <p className="text-[18px] font-bold tabular-nums text-v2-foreground">
+            {totalAttempts}
+          </p>
+        </div>
+      </div>
 
-      <CardContent className="space-y-5">
-        {byDomain.map(({ number, name, weight, tasks: domainTasks, color }) => {
-          const domainAttempts = domainTasks.reduce((a, t) => a + t.attempts, 0)
-          const domainCorrect  = domainTasks.reduce((a, t) => a + t.correct, 0)
-          const domainAccuracy = domainAttempts > 0
-            ? Math.round(domainCorrect / domainAttempts * 100)
-            : null
+      <div className="mt-6 space-y-6">
+        {byDomain.map(({ number, name, weight, tasks: domainTasks, colorClass }) => {
+          const domainAttempts = domainTasks.reduce(
+            (a, t) => a + t.attempts,
+            0,
+          )
+          const domainCorrect = domainTasks.reduce((a, t) => a + t.correct, 0)
+          const domainAccuracy =
+            domainAttempts > 0
+              ? Math.round((domainCorrect / domainAttempts) * 100)
+              : null
 
           return (
             <div key={number}>
               {/* Domain header */}
-              <div className="flex items-center justify-between mb-2">
+              <div className="mb-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                  <span className="text-sm font-semibold text-text-primary">
+                  <div className={`h-2.5 w-2.5 rounded-full ${colorClass}`} />
+                  <span className="text-[13px] font-bold text-v2-foreground">
                     D{number} — {name.replace('Design ', '')}
                   </span>
-                  <span className="text-xs text-text-muted">({weight}%)</span>
+                  <span className="font-v2-mono text-[11px] text-v2-foreground-subtle">
+                    ({weight}%)
+                  </span>
                 </div>
                 {domainAccuracy !== null && (
-                  <span className="text-xs font-medium text-text-muted">
+                  <span className="font-v2-mono text-[11px] font-medium text-v2-foreground-muted">
                     {domainAttempts} attempts · {domainAccuracy}%
                   </span>
                 )}
               </div>
 
               {/* Tasks */}
-              <div className="space-y-1.5 ml-4">
-                {domainTasks.map(task => {
-                  const barWidth = task.attempts > 0 && task.accuracy_pct !== null
-                    ? task.accuracy_pct
-                    : 0
+              <div className="ml-4 space-y-2">
+                {domainTasks.map((task) => {
+                  const barWidth =
+                    task.attempts > 0 && task.accuracy_pct !== null
+                      ? task.accuracy_pct
+                      : 0
+                  const barTone =
+                    task.accuracy_pct === null || task.attempts === 0
+                      ? ''
+                      : task.accuracy_pct >= 80
+                        ? 'bg-v2-success'
+                        : task.accuracy_pct >= 60
+                          ? 'bg-v2-warning'
+                          : 'bg-v2-error'
                   return (
-                    <div key={task.task_id} className="group">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-mono text-text-muted w-6 shrink-0">
+                    <div key={task.task_id}>
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="w-7 shrink-0 font-v2-mono text-[11px] font-semibold text-v2-foreground-muted">
                           {task.task_id}
                         </span>
                         <span
                           className={cn(
-                            'text-xs flex-1 truncate',
-                            task.attempts > 0 ? 'text-text-primary' : 'text-text-muted',
+                            'flex-1 truncate text-[12px]',
+                            task.attempts > 0
+                              ? 'text-v2-foreground'
+                              : 'text-v2-foreground-muted',
                           )}
                           title={task.task_label}
                         >
@@ -125,32 +162,22 @@ export function BlueprintAccuracyCard({ tasks }: Props) {
                           {accuracyBadge(task.accuracy_pct, task.attempts)}
                         </div>
                       </div>
-
-                      {/* Progress bar */}
-                      <div className="ml-8 h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                      <div className="ml-9 h-1.5 overflow-hidden rounded-full bg-v2-surface-sunken">
                         <div
-                          className="h-full rounded-full transition-all duration-500"
+                          className={cn(
+                            'h-full rounded-full transition-all duration-500',
+                            barTone,
+                          )}
                           style={{
-                            width: task.attempts === 0 ? '0%' : `${barWidth}%`,
-                            backgroundColor:
-                              task.accuracy_pct === null || task.attempts === 0
-                                ? 'transparent'
-                                : task.accuracy_pct >= 80
-                                  ? '#22c55e'
-                                  : task.accuracy_pct >= 60
-                                    ? '#f59e0b'
-                                    : '#ef4444',
+                            width:
+                              task.attempts === 0 ? '0%' : `${barWidth}%`,
                           }}
                         />
                       </div>
-
-                      {/* Attempts count on hover — shown via title on parent */}
                       {task.attempts > 0 && (
-                        <p className="ml-8 text-xs text-text-muted mt-0.5">
-                          {task.correct}/{task.attempts} correct
-                          <span className="text-text-subtle ml-1">
-                            · {task.pool_available} in pool
-                          </span>
+                        <p className="ml-9 mt-0.5 font-v2-mono text-[10px] text-v2-foreground-subtle">
+                          {task.correct}/{task.attempts} correct ·{' '}
+                          {task.pool_available} in pool
                         </p>
                       )}
                     </div>
@@ -162,20 +189,20 @@ export function BlueprintAccuracyCard({ tasks }: Props) {
         })}
 
         {/* Legend */}
-        <div className="flex items-center gap-4 pt-1 text-xs text-text-muted border-t border-border">
-          <span>Accuracy:</span>
+        <div className="flex flex-wrap items-center gap-4 border-t border-v2-border-subtle pt-4 font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+          <span>Accuracy</span>
           {[
-            { label: '≥80% strong', color: '#22c55e' },
-            { label: '60-79% ok',   color: '#f59e0b' },
-            { label: '<60% weak',   color: '#ef4444' },
-          ].map(l => (
-            <div key={l.label} className="flex items-center gap-1">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: l.color }} />
-              <span>{l.label}</span>
+            { label: '≥80% strong', cls: 'bg-v2-success' },
+            { label: '60-79% ok', cls: 'bg-v2-warning' },
+            { label: '<60% weak', cls: 'bg-v2-error' },
+          ].map((l) => (
+            <div key={l.label} className="flex items-center gap-1.5">
+              <div className={`h-2 w-2 rounded-full ${l.cls}`} />
+              <span className="normal-case tracking-normal">{l.label}</span>
             </div>
           ))}
         </div>
-      </CardContent>
+      </div>
     </Card>
   )
 }

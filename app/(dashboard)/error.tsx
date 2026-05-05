@@ -1,14 +1,13 @@
 'use client'
 
 import { useEffect } from 'react'
+import { AlertTriangle, RotateCcw } from 'lucide-react'
 import * as Sentry from '@sentry/nextjs'
+import { Card, Button } from '@/components/v2'
 
 // Segment-level error boundary for the entire dashboard shell.
-// Without this, any unhandled exception in the dashboard layout (which fetches
-// profile + subscription on every request) takes down the full page with the
-// root app/error.tsx — a white full-screen error with no navigation.
-// This boundary renders inside the dashboard layout chrome so the sidebar,
-// header, and navigation remain functional even when a specific page throws.
+// Renders inside the dashboard layout chrome so the sidebar, header, and
+// navigation remain functional even when a specific page throws.
 export default function DashboardError({
   error,
   reset,
@@ -21,30 +20,32 @@ export default function DashboardError({
   }, [error])
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
-      <div className="text-4xl mb-4">⚠️</div>
-      <h2 className="text-lg font-semibold text-text-primary mb-2">
-        Something went wrong
-      </h2>
-      <p className="text-sm text-text-secondary mb-6 max-w-sm">
-        This page hit an unexpected error. Your study progress is safe.
-      </p>
-      <div className="flex gap-3">
-        <button
-          onClick={reset}
-          className="btn-primary text-sm px-4 py-2"
-        >
-          Try again
-        </button>
-        <a href="/dashboard" className="btn-outline text-sm px-4 py-2">
-          Go to Dashboard
-        </a>
-      </div>
-      {error.digest && (
-        <p className="mt-4 text-xs text-text-muted font-mono">
-          Error ID: {error.digest}
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
+      <Card padding="lg" className="max-w-[480px] text-center sm:p-10">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-v2-warning-soft text-v2-warning">
+          <AlertTriangle className="h-5 w-5" strokeWidth={2} />
+        </div>
+        <h2 className="v2-display mt-4 text-[22px] sm:text-[26px]">
+          Something went wrong
+        </h2>
+        <p className="mx-auto mt-2 max-w-[400px] text-[14px] leading-[1.6] text-v2-foreground-muted">
+          This page hit an unexpected error. Your study progress is safe.
         </p>
-      )}
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Button onClick={reset}>
+            <RotateCcw className="h-4 w-4" strokeWidth={2.25} />
+            Try again
+          </Button>
+          <a href="/dashboard">
+            <Button variant="secondary">Go to Dashboard</Button>
+          </a>
+        </div>
+        {error.digest && (
+          <p className="mt-5 font-v2-mono text-[11px] text-v2-foreground-subtle">
+            Error ID: {error.digest}
+          </p>
+        )}
+      </Card>
     </div>
   )
 }
