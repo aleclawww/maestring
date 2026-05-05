@@ -53,7 +53,7 @@ const nextConfig = {
               // PostHog, Stripe, and Supabase REST + Realtime WebSocket endpoints.
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://app.posthog.com https://o*.ingest.sentry.io",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
-              "worker-src blob:",
+              "worker-src 'self' blob:",
             ].join('; '),
           },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
