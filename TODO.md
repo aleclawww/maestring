@@ -2,6 +2,32 @@
 
 Items surfaced during the 5-improvement sprint that we deliberately did NOT touch. Pick up in a later iteration.
 
+## 🚨 DEUDA CRÍTICA — RECONCILIAR MIGRACIONES
+
+Producción tiene 38 tablas pero solo 29 tienen `CREATE TABLE` en `supabase/migrations/`. Las 9 huérfanas son:
+
+- ab_assignments
+- ab_experiments
+- ambient_cards
+- aws_service_name_map
+- concept_confusion_pairs
+- concept_exposures
+- coverage_matrix
+- elaboration_prompts
+- learning_phase_transitions
+
+Estas tablas existen en prod (con datos, posiblemente con RLS policies) pero su DDL no está versionado. Riesgo: cualquier rebuild de staging desde cero las pierde.
+
+**Plan de reconciliación (próxima sesión dedicada):**
+
+1. `pg_dump` de schema de prod (`--schema-only --no-owner`).
+2. Identificar DDL de las 9 tablas + sus indexes + RLS policies.
+3. Crear migración `060_reconcile_orphaned_schemas.sql` con `CREATE TABLE IF NOT EXISTS` para cada una.
+4. Verificar con `supabase db diff` que el diff entre prod y repo es vacío.
+5. Investigar origen: ¿rama no mergeada (`claude/nifty-hugle-8b8fb4` "Gemelo Digital learning engine" parece relevante)? ¿Scripts ad-hoc?
+
+**Hasta que esto se resuelva: NO tocar schema de prod manualmente.** Cualquier nueva tabla DEBE ser vía migración versionada.
+
 ## Sidebar — hardcoded values
 - `components/v2/dashboard/Sidebar.tsx:158` — "Exam in 18 days" is a literal string, not derived from `profile.exam_target_date`.
 - `components/v2/dashboard/Sidebar.tsx:150` — progress bar width "68%" is a literal style, not derived from readiness or progress.

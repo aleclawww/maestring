@@ -77,12 +77,9 @@ CREATE INDEX IF NOT EXISTS idx_profiles_referral_code
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer
   ON referrals(referrer_id, created_at DESC);
 
--- 11. user_question_pool — pool picker queries by (user_id, concept_id)
---     pick_pool_question RPC filters the pool by user + concept to find
---     questions the user hasn't seen yet.
-CREATE INDEX IF NOT EXISTS idx_uqp_user_concept
-  ON user_question_pool(user_id, concept_id)
-  WHERE seen_at IS NULL;
+-- Removed: CREATE INDEX on user_question_pool (table never existed).
+-- Original intent was a denormalized pool optimization that was never
+-- implemented. See TODO.md.
 
 -- Analysis: table stats are not updated by CONCURRENTLY — run ANALYZE after
 -- this migration in production to let the planner pick up the new indexes.
