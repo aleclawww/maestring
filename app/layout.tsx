@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import './theme-v2.css'
+import { Toaster } from 'sonner'
 import { PostHogProvider } from '@/components/shared/PostHogProvider'
 import { CookieBanner } from '@/components/shared/CookieBanner'
 import { ServiceWorkerRegistration } from '@/components/shared/ServiceWorkerRegistration'
@@ -156,6 +157,12 @@ export default function RootLayout({
           {children}
           <CookieBanner />
           <ServiceWorkerRegistration />
+          <Toaster
+            position="bottom-right"
+            theme="light"
+            closeButton
+            richColors
+          />
         </PostHogProvider>
       </body>
     </html>
