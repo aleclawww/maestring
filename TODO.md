@@ -75,3 +75,61 @@ Pre-requisito para reanudar: Supabase Pro activo + backup manual reciente verifi
   - Trigger on `study_sessions` insert/update + on `profiles.exam_target_date` update that recomputes & writes `journey_phase`.
   - Or: nightly cron that calls a `recompute_journey_phase_batch()` SQL function.
   - Or: drop the column and always derive (simpler, fewer drift bugs — but loses `where journey_phase = 'pre_exam'` queries for batch ops like targeted emails).
+
+## PR 2.A surfaced — to address later
+
+### Build prerender fails without Supabase env vars
+
+In any environment without `.env.local`, `next build` succeeds at compile/lint
+but collapses during static prerender on 15 routes that touch Supabase. Build
+only "passes" in CI/Vercel where env vars exist. Affected routes (from build
+output during PR 2.A):
+
+- `/(dashboard)/documents/page` → `/documents`
+- `/(dashboard)/exam/page` → `/exam`
+- `/(dashboard)/flashcards/page` → `/flashcards`
+- `/(dashboard)/learn/[domainSlug]/page` → cost-optimized-architecture, performant-architecture, resilient-architecture, secure-architecture
+- `/(dashboard)/learn/calibration/page`
+- `/(dashboard)/learn/exam-guide/page`
+- `/(dashboard)/learn/page`
+- `/(dashboard)/learn/session/page`
+- `/api/documents/route`
+- `/api/learn/next-activity/route`
+- `/api/learn/state/route`
+- `/api/notifications/route`
+
+Fix candidates: add `export const dynamic = 'force-dynamic'` to those routes,
+or make Supabase guards (`lib/supabase/middleware.ts`, admin client) early-
+return a stub during build instead of throwing.
+
+Practical impact: blocks any fresh-clone setup including future agents
+working in clean worktrees, as observed in PR 2.A.
+
+### Orphaned `ToastMessage` interface
+
+[types/index.ts:35-41](types/index.ts) declares a `ToastMessage` interface
+with zero consumers (predates the sonner-based toast system added in PR 2.A).
+Either delete or have the new sonner wrapper consume it. Cleanup candidate
+when PR 2.B introduces the first real toast caller.
+
+### No tests for `getEntitlement` / `overCap`
+
+[lib/subscription/check.ts](lib/subscription/check.ts) drives the entire
+paywall (4 entitlement kinds with sub-branches per `reason`) and has zero
+unit coverage. Surfaced during PR 2 discovery; deliberately not addressed
+in PR 2.A (scope was infra + tracking).
+
+Add `tests/unit/subscription/check.test.ts` covering at minimum:
+
+- `trialing` (Stripe sub `status='trialing'`)
+- `active` (Stripe sub `status='active'`)
+- `exploring` under cap on all dimensions
+- `exploring` with overCap on `questions` only (`questions=20/20`, others under)
+- `exploring` with overCap on `ambient` only (`ambient=10/10`, others under)
+- `exploring` with overCap on `anchoring` only (`anchoring=1/1`, others under)
+- `gated` reason `past_due`
+- `gated` reason `canceled` + overCap
+- `gated` reason `preview_exhausted`
+
+The three single-dimension overCap cases are the ones PR 2.B will rely on
+(threshold-driven toasts per dimension), so coverage there is load-bearing.
