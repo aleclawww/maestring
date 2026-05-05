@@ -1,6 +1,10 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { FREE_PREVIEW } from '@/lib/subscription/check'
+import { track } from '@/lib/analytics'
 
 export function PreviewBanner({
   usage,
@@ -17,12 +21,32 @@ export function PreviewBanner({
       (a, b) => b[1] - a[1],
     )[0] ?? (['questions', 0] as [keyof typeof ratios, number])
   const dominantKey = dominant[0]
+  const dominantRatio = dominant[1]
   const dominantUsed = usage[dominantKey]
   const dominantMax = FREE_PREVIEW[dominantKey]
   const dominantPct = Math.min(
     100,
     Math.round((dominantUsed / dominantMax) * 100),
   )
+
+  // Banner re-mounts on layout navigation (server component re-renders the
+  // (dashboard) layout per request), so impression fires once per mount.
+  // If `usage` ever updates in-place without remount, this guard suppresses
+  // subsequent dimension changes — revisit then.
+  const impressionFired = useRef(false)
+  useEffect(() => {
+    if (impressionFired.current) return
+    impressionFired.current = true
+    track({
+      name: 'preview_banner_impression',
+      properties: {
+        dimension: dominantKey,
+        ratio: dominantRatio,
+        used: dominantUsed,
+        max: dominantMax,
+      },
+    })
+  }, [])
 
   const toneBg =
     dominantPct >= 80
@@ -62,6 +86,17 @@ export function PreviewBanner({
         </div>
         <Link
           href="/trial-required"
+          onClick={() =>
+            track({
+              name: 'preview_banner_click',
+              properties: {
+                dimension: dominantKey,
+                ratio: dominantRatio,
+                used: dominantUsed,
+                max: dominantMax,
+              },
+            })
+          }
           className="inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-v2-gradient-brand px-3 text-[12px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5"
         >
           Start trial
