@@ -39,9 +39,25 @@ Hallazgos confirmados durante investigación:
 Pre-requisito para reanudar: Supabase Pro activo + backup manual reciente verificado restorable.
 
 ## Sidebar — hardcoded values
-- `components/v2/dashboard/Sidebar.tsx:158` — "Exam in 18 days" is a literal string, not derived from `profile.exam_target_date`.
-- `components/v2/dashboard/Sidebar.tsx:150` — progress bar width "68%" is a literal style, not derived from readiness or progress.
-- Fix: pass real values from layout via Shell props, or fetch in Sidebar (server component).
+
+**Resolved (2026-05-06):** the literal `68%` progress bar in
+`components/v2/dashboard/Sidebar.tsx` was removed entirely. Product
+decision: do not connect it to any metric — would have been decoration
+disguised as information.
+
+**Pending:** connect "Exam in X days" to `profiles.exam_target_date`.
+Field exists in DB (`supabase/migrations/002_base_schema.sql:15`) but
+is not selected by the dashboard layout, not passed through `Shell`,
+and not received by `Sidebar`. Plumbing required:
+
+1. Add `exam_target_date` to the profile select in
+   `app/(dashboard)/layout.tsx`.
+2. Add `examTargetDate` prop to `components/v2/dashboard/Shell.tsx`
+   and forward to `Sidebar`.
+3. In `Sidebar`, compute `differenceInDays(exam_target_date, now)`
+   and render conditionally (skip if user has no target date set).
+
+Not a 1-2-line change — left as separate work.
 
 ## `hasCalibration` semantic confusion
 - Two endpoints write `profiles.cognitive_fingerprint` with different semantics:

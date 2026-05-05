@@ -142,21 +142,6 @@ export function Sidebar({
           <p className="mt-2 text-[12px] font-semibold text-v2-foreground">
             Solutions Architect
           </p>
-
-          <div className="mt-3 flex items-center gap-2">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-v2-surface-sunken">
-              <div
-                className="h-full rounded-full bg-v2-gradient-brand"
-                style={{ width: '68%' }}
-              />
-            </div>
-            <span className="font-v2-mono text-[10px] font-semibold text-v2-foreground-muted">
-              68%
-            </span>
-          </div>
-          <p className="mt-2 font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
-            Exam in 18 days
-          </p>
         </Link>
       </div>
 
