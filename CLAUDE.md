@@ -108,6 +108,7 @@ Cron endpoints under `app/api/cron/*` are guarded by the `CRON_SECRET` header an
 - `hasCompletedSession` se deriva de `(recentSessions?.length ?? 0) > 0` — la query existente ya filtra `is_completed=true`. Sin queries nuevas. Caveat: `recentSessions.limit(3)` significa que `length` no es un conteo real, solo un proxy de "alguna existe".
 - Feature flag: `FF_ADAPTIVE_DASHBOARD` (server-only, [lib/featureFlags.ts](lib/featureFlags.ts)). Default OFF. Supports per-user allowlist via `FF_ADAPTIVE_DASHBOARD_USERS` (comma-separated user IDs) for gradual rollout / dogfooding before global enable.
 - Métrica esperada: reducción de bounce rate del primer día. Telemetría de CTAs queda fuera de scope (Mejora 6).
+- Nota lingüística: durante el desarrollo se planearon las strings en español, pero el merge final dejó todas las strings nuevas en **inglés** para consistencia con el resto del dashboard. Si lees el historial de la branch (`claude/hopeful-hertz-a98813`) verás un commit "translate Mejora 1 adaptive copy to English for consistency" que materializó esa decisión.
 
 ## Notes for future Claude sessions
 

@@ -207,8 +207,8 @@ export default async function DashboardPage() {
 
   const subhead = adaptiveColdStart
     ? daysToExam !== null && daysToExam > 0
-      ? `${daysToExam} day${daysToExam === 1 ? '' : 's'} until your exam. Empecemos.`
-      : 'Marca tu fecha de examen cuando la tengas. Empecemos.'
+      ? `${daysToExam} day${daysToExam === 1 ? '' : 's'} until your exam. Let's start.`
+      : "Set your exam date when you're ready. Let's start."
     : daysToExam !== null && daysToExam > 0
       ? `${daysToExam} day${daysToExam === 1 ? '' : 's'} until your exam${
           dueCount > 0 ? ` · ${dueCount} concepts due today` : ''
@@ -262,14 +262,14 @@ export default async function DashboardPage() {
 
             <h2 className="v2-display mt-5 text-[28px] sm:text-[32px]">
               {adaptiveColdStart
-                ? 'Empieza con tus primeros conceptos'
+                ? 'Start with your first concepts'
                 : dueCount > 0
                   ? 'Ready to study?'
                   : 'Stay sharp.'}
             </h2>
             <p className="mt-2 max-w-[440px] text-[15px] leading-[1.6] text-v2-foreground-muted">
               {adaptiveColdStart
-                ? 'Vamos paso a paso. Tu Readiness se calibrará tras tu primera sesión completa.'
+                ? 'One step at a time. Your Readiness will calibrate after your first full session.'
                 : dueCount > 0
                   ? `FSRS scheduled ${dueCount} concept${
                       dueCount === 1 ? '' : 's'
@@ -285,7 +285,7 @@ export default async function DashboardPage() {
                 )}
               >
                 {adaptiveColdStart
-                  ? 'Comenzar primera sesión'
+                  ? 'Start your first session'
                   : dueCount > 0
                     ? `Start review · ${dueCount}`
                     : 'Open Learn'}
