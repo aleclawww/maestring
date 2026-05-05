@@ -47,9 +47,10 @@ export function Hero() {
             </h1>
 
             <p className="mt-6 max-w-[540px] text-[17px] leading-[1.6] text-v2-foreground-muted sm:text-[18px]">
-              Adaptive AI questions, exam-grade simulators, and the FSRS
-              scheduling that powers serious self-study. Cover SAA, DVA, SAP
-              and SOA with the same workflow.
+              Adaptive AI questions, exam-grade simulators, and FSRS
+              spaced repetition built end-to-end for the AWS Solutions
+              Architect Associate (SAA-C03). The rest of the AWS catalog
+              ships next.
             </p>
 
             <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">

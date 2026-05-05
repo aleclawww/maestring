@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 }
 
 const LIFETIME_FEATURES = [
-  'Lifetime access to one certification',
+  'Lifetime access to SAA-C03',
   'Full syllabus · 142 concepts',
   '2,000+ exam-pattern questions',
   'FSRS-4.5 spaced repetition scheduler',
@@ -36,14 +36,14 @@ const LIFETIME_FEATURES = [
 ]
 
 const PRO_FEATURES = [
-  'All current and future certifications',
+  'Full SAA-C03 access today',
+  'Every future certification at no extra cost',
   '2,000+ exam-pattern questions per cert',
   'FSRS-4.5 spaced repetition scheduler',
   '9-phase Coach (Calibration → Mastery)',
   '65-question mock exam simulator',
   'Cognitive fingerprint calibration',
   'Knowledge map + flashcards',
-  'Email digests + priority support',
 ]
 
 const TEAMS_FEATURES = [
@@ -77,8 +77,9 @@ export default function PricingPage() {
                 <span className="v2-text-gradient">or unlock every cert.</span>
               </h1>
               <p className="mt-5 text-[17px] leading-[1.7] text-v2-foreground-muted sm:text-[18px]">
-                $119 once for lifetime access to a single cert, or $29 per
-                month for every cert with a 7-day free trial. No tricks.
+                $119 once for lifetime SAA-C03, or $29/month for SAA today
+                and every future AWS cert as we ship them. 7-day free trial,
+                cancel anytime.
               </p>
             </div>
           </div>
@@ -104,10 +105,10 @@ export default function PricingPage() {
                 </div>
 
                 <h2 className="mt-5 text-[18px] font-bold text-v2-foreground">
-                  Lifetime access
+                  Lifetime SAA-C03
                 </h2>
                 <p className="mt-1.5 text-[13px] leading-[1.55] text-v2-foreground-muted">
-                  Pay once. Keep access to one cert forever. No renewals.
+                  Pay once. Keep access forever. No renewals.
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
@@ -175,7 +176,8 @@ export default function PricingPage() {
                   Maestring Pro
                 </h2>
                 <p className="mt-1.5 text-[13px] leading-[1.55] text-v2-foreground-muted">
-                  Every cert, every lab. Try free for 7 days, cancel anytime.
+                  SAA-C03 today, every future cert as we ship them. 7-day free
+                  trial.
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
