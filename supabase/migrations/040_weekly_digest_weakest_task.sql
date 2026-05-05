@@ -6,6 +6,10 @@
 -- Derived from question_attempts joined on questions.blueprint_task_id
 -- over the trailing 7 days (min 3 attempts, same threshold as weakest domain).
 
+-- Return type changes vs. the prior definition (added two columns), so we
+-- must drop first — `create or replace` cannot alter the OUT parameter row.
+drop function if exists get_users_for_weekly_digest();
+
 create or replace function get_users_for_weekly_digest()
 returns table (
   user_id uuid,
