@@ -109,6 +109,7 @@ Cron endpoints under `app/api/cron/*` are guarded by the `CRON_SECRET` header an
 - Feature flag: `FF_ADAPTIVE_DASHBOARD` (server-only, [lib/featureFlags.ts](lib/featureFlags.ts)). Default OFF. Supports per-user allowlist via `FF_ADAPTIVE_DASHBOARD_USERS` (comma-separated user IDs) for gradual rollout / dogfooding before global enable.
 - Métrica esperada: reducción de bounce rate del primer día. Telemetría de CTAs queda fuera de scope (Mejora 6).
 - Nota lingüística: durante el desarrollo se planearon las strings en español, pero el merge final dejó todas las strings nuevas en **inglés** para consistencia con el resto del dashboard. Si lees el historial de la branch (`claude/hopeful-hertz-a98813`) verás un commit "translate Mejora 1 adaptive copy to English for consistency" que materializó esa decisión.
+- **Status: Shipped to production globally on 2026-05-05.** Validated manually with test user (cases a, b) and primary account (case d). pgTAP CI failure investigated and confirmed orthogonal — orphaned index removed in separate commit (`0b1d4f2`), deeper migrations debt documented in [TODO.md](TODO.md) as critical (9 tables in prod with no `CREATE TABLE` in repo).
 
 ## Notes for future Claude sessions
 
