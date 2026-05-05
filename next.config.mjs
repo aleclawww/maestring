@@ -42,7 +42,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://app.posthog.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://*.posthog.com https://*.i.posthog.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               // img-src: enumerate known external image hosts rather than allowing all https:.
@@ -51,7 +51,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https://*.supabase.co https://avatars.githubusercontent.com https://lh3.googleusercontent.com",
               // connect-src: includes Sentry ingest (org-specific subdomain pattern),
               // PostHog, Stripe, and Supabase REST + Realtime WebSocket endpoints.
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://app.posthog.com https://o*.ingest.sentry.io",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.posthog.com https://*.i.posthog.com https://o*.ingest.sentry.io",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "worker-src 'self' blob:",
             ].join('; '),
