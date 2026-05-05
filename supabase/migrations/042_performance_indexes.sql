@@ -20,11 +20,11 @@
 -- can't run inside a transaction — each statement is intentional and idempotent
 -- (CREATE INDEX IF NOT EXISTS).
 
--- 1. user_concept_states — primary FSRS queue building query
---    Selector fetches all states for (user_id, certification_id) on every
---    session start. Without this, Postgres does a seq-scan of the entire table.
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ucs_user_cert
-  ON user_concept_states(user_id, certification_id);
+-- 1. user_concept_states — certification_id lives on concepts, not on
+--    user_concept_states itself. The selector joins through concepts to
+--    filter by cert, so the (user_id, next_review_date) partial index below
+--    is what actually matters for queue building. (Earlier draft of this
+--    migration referenced a non-existent column — removed.)
 
 -- 2. user_concept_states — next_review_date ordering for due-items filter
 --    The FSRS selector sorts by next_review_date to find overdue items.
