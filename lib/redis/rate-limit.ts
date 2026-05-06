@@ -35,6 +35,7 @@ let llmLimiter: Ratelimit | null = null;
 let generalLimiter: Ratelimit | null = null;
 let uploadLimiter: Ratelimit | null = null;
 let authLimiter: Ratelimit | null = null;
+let reportLimiter: Ratelimit | null = null;
 
 function getLlmLimiter(): Ratelimit | null {
   const r = getRedis();
@@ -88,6 +89,21 @@ function getAuthLimiter(): Ratelimit | null {
   return authLimiter;
 }
 
+// Phase 1 — question report submissions (5/h per user). Cap rationale in
+// CLAUDE.md "Riesgos a vigilar > Reportes spam". Fail-open like the rest.
+function getReportLimiter(): Ratelimit | null {
+  const r = getRedis();
+  if (!r) return null;
+  if (!reportLimiter) {
+    reportLimiter = new Ratelimit({
+      redis: r,
+      limiter: Ratelimit.slidingWindow(5, "1 h"),
+      prefix: "rl:report",
+    });
+  }
+  return reportLimiter;
+}
+
 async function checkLimit(
   limiter: Ratelimit | null,
   identifier: string,
@@ -123,6 +139,10 @@ export async function checkUploadRateLimit(userId: string): Promise<RateLimitRes
 
 export async function checkAuthRateLimit(ip: string): Promise<RateLimitResult> {
   return checkLimit(getAuthLimiter(), ip, "rate-limit:auth");
+}
+
+export async function checkReportRateLimit(userId: string): Promise<RateLimitResult> {
+  return checkLimit(getReportLimiter(), userId, "rate-limit:report");
 }
 
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {

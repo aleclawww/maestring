@@ -1,5 +1,6 @@
 import { PostHog } from "posthog-node";
 import { logger } from "@/lib/logger";
+import type { StudyMode } from "@/types/database";
 
 // Server-side counterpart to lib/analytics.ts. Use this from route handlers,
 // webhooks, and cron jobs — anywhere there is no browser posthog-js. The
@@ -24,7 +25,30 @@ function getClient(): PostHog | null {
 type ServerEvent =
   | { name: "subscription_created"; properties?: { plan?: string } }
   | { name: "subscription_cancelled"; properties?: { plan?: string; reason?: string } }
-  | { name: "subscription_payment_failed"; properties?: { plan?: string } };
+  | { name: "subscription_payment_failed"; properties?: { plan?: string } }
+  // Phase 1 — question quality telemetry. Emitted from /api/study/generate
+  // when FF_QUESTION_QUALITY_V2 is on. `source` discriminates pool hits from
+  // static-generator fallbacks; `fallback_reason` distinguishes "pool was
+  // empty for this user/concept" from "pool RPC errored and we fell through".
+  | {
+      name: "question_served";
+      properties: {
+        source: "pool" | "static";
+        fallback_reason?: "pool_empty_for_user" | "pool_rpc_error";
+        question_id: string;
+        concept_id: string;
+        mode: StudyMode;
+        queue_remaining: number;
+      };
+    }
+  | {
+      name: "question_serve_failed";
+      properties: {
+        reason: "concept_not_in_graph";
+        concept_id: string;
+        concept_slug: string;
+      };
+    };
 
 /**
  * Emit an analytics event from server code. Fail-open: if PostHog is

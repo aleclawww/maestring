@@ -21,16 +21,29 @@ type PendingRow = {
 
 type RejectedRow = Omit<PendingRow, 'source'> & { reject_reason: string | null }
 
-type Tab = 'pending' | 'generate' | 'rejected'
+type ReportRow = {
+  id: string
+  created_at: string
+  question_id: string
+  category: 'wrong_answer' | 'multiple_correct' | 'unclear' | 'outdated' | 'other'
+  comment: string | null
+  user_selected_option: number | null
+  status: 'pending' | 'reviewed' | 'dismissed' | 'fixed'
+  questions: { question_text: string; options: string[]; correct_index: number } | null
+}
+
+type Tab = 'pending' | 'generate' | 'rejected' | 'reports'
 
 export function QuestionsAdminClient({
   concepts,
   pending,
   rejected,
+  reports,
 }: {
   concepts: Concept[]
   pending: PendingRow[]
   rejected: RejectedRow[]
+  reports: ReportRow[]
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('pending')
@@ -68,6 +81,27 @@ export function QuestionsAdminClient({
     }
   }
 
+  async function reviewReport(id: string, status: 'reviewed' | 'dismissed' | 'fixed') {
+    setErr(null)
+    try {
+      const res = await fetch(`/api/admin/reports/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+      if (!res.ok) {
+        console.error('QuestionsAdmin reviewReport failed', { status: res.status, body: j, id })
+        setErr(j.message ?? j.error ?? `Failed (HTTP ${res.status})`)
+        return
+      }
+      startTransition(() => router.refresh())
+    } catch (err) {
+      console.error('QuestionsAdmin reviewReport network error', { err, id })
+      setErr('Network error. Check your connection and try again.')
+    }
+  }
+
   async function remove(id: string) {
     if (!confirm('Delete permanently?')) return
     setErr(null)
@@ -89,7 +123,7 @@ export function QuestionsAdminClient({
   return (
     <div>
       <div className="flex gap-2 mb-4">
-        {(['pending', 'generate', 'rejected'] as const).map((t) => (
+        {(['pending', 'reports', 'generate', 'rejected'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -99,6 +133,7 @@ export function QuestionsAdminClient({
             )}
           >
             {t === 'pending' && `Pending (${pending.length})`}
+            {t === 'reports' && `Reports (${reports.length})`}
             {t === 'generate' && 'Batch generate'}
             {t === 'rejected' && `Rejected (${rejected.length})`}
           </button>
@@ -130,6 +165,86 @@ export function QuestionsAdminClient({
               busy={busy}
             />
           ))}
+        </div>
+      )}
+
+      {tab === 'reports' && (
+        <div className="space-y-3">
+          {reports.length === 0 && (
+            <div className="rounded-xl border border-v2-border bg-v2-surface p-10 text-center text-v2-foreground-subtle">
+              No pending reports.
+            </div>
+          )}
+          {reports.map((r) => {
+            const stem = r.questions?.question_text ?? '(question deleted)'
+            const stemSnippet = stem.length > 200 ? stem.slice(0, 200) + '…' : stem
+            const userPickedText =
+              typeof r.user_selected_option === 'number' && r.questions?.options
+                ? `${String.fromCharCode(65 + r.user_selected_option)}. ${r.questions.options[r.user_selected_option] ?? ''}`
+                : null
+            const correctText =
+              r.questions
+                ? `${String.fromCharCode(65 + r.questions.correct_index)}. ${r.questions.options[r.questions.correct_index] ?? ''}`
+                : null
+            return (
+              <div key={r.id} className="rounded-xl border border-v2-border bg-v2-surface p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-v2-foreground-subtle">
+                    {new Date(r.created_at).toLocaleString()} ·{' '}
+                    <span className="font-mono">{r.category}</span>
+                  </p>
+                  <span className="text-xs px-2 py-0.5 rounded bg-v2-warning/20 text-v2-warning">
+                    pending
+                  </span>
+                </div>
+                <p className="text-sm mb-2 leading-relaxed">{stemSnippet}</p>
+                {r.comment && (
+                  <p className="text-xs text-v2-foreground-muted mb-2 italic whitespace-pre-wrap">
+                    “{r.comment}”
+                  </p>
+                )}
+                {(userPickedText || correctText) && (
+                  <div className="text-xs text-v2-foreground-subtle mb-3 space-y-0.5">
+                    {userPickedText && <p>User picked: {userPickedText}</p>}
+                    {correctText && <p>Marked correct: {correctText}</p>}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => reviewReport(r.id, 'reviewed')}
+                    disabled={busy}
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
+                  >
+                    Mark reviewed
+                  </button>
+                  <button
+                    onClick={() => reviewReport(r.id, 'fixed')}
+                    disabled={busy}
+                    className="inline-flex h-8 items-center justify-center rounded-lg bg-v2-gradient-brand px-3 text-[12px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                  >
+                    Mark fixed
+                  </button>
+                  <button
+                    onClick={() => reviewReport(r.id, 'dismissed')}
+                    disabled={busy}
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-v2-border bg-v2-surface px-3 text-[12px] font-semibold text-v2-foreground transition-colors hover:bg-v2-surface-subtle disabled:opacity-50"
+                  >
+                    Dismiss
+                  </button>
+                  <a
+                    href={`#question-${r.question_id}`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setTab('pending')
+                    }}
+                    className="ml-auto self-center text-[11px] font-medium text-v2-foreground-muted hover:text-v2-foreground"
+                  >
+                    Open in pending →
+                  </a>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

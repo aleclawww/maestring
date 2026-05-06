@@ -51,6 +51,27 @@ export default async function QuestionsAdminPage() {
     )
   }
 
+  // Phase 1 — pending user reports against pool questions. Joined with the
+  // question stem so the admin can triage in one glance. Cap at 100 to keep
+  // the page light; partial index `question_reports_status_created_idx`
+  // (migration 050) makes the filter cheap.
+  // TODO: remove cast after types regen pre-merge — table exists in 050.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: reports, error: reportsErr } = await (supabase as any)
+    .from('question_reports')
+    .select(
+      'id, created_at, question_id, category, comment, user_selected_option, status, questions:question_id ( question_text, options, correct_index )'
+    )
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (reportsErr) {
+    logger.warn(
+      { err: reportsErr },
+      'admin/questions: failed to read pending reports — user-reported issues will appear empty'
+    )
+  }
+
   // Pool counts per concept (approved only) for the sidebar.
   // Uses an aggregate GROUP BY query to avoid fetching every row to the server
   // for an in-memory count — the previous approach scanned the whole table and
@@ -91,6 +112,7 @@ export default async function QuestionsAdminPage() {
         concepts={conceptList}
         pending={(pending ?? []) as never}
         rejected={(rejected ?? []) as never}
+        reports={(reports ?? []) as never}
       />
     </div>
   )

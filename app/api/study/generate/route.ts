@@ -8,6 +8,8 @@ import { CONCEPTS } from "@/lib/knowledge-graph/aws-saa";
 import { buildStudyQueue, getRecentMistakes } from "@/lib/question-engine/selector";
 import { getEntitlement } from "@/lib/subscription/check";
 import { logger } from "@/lib/logger";
+import { trackServer } from "@/lib/analytics-server";
+import { FLAGS } from "@/lib/featureFlags";
 import { z } from "zod";
 
 const RequestSchema = z.object({
@@ -153,6 +155,11 @@ export async function POST(req: NextRequest) {
       "pick_pool_question failed — falling through to LLM generation"
     );
   }
+  // Captured for Phase 1 telemetry: lets question_served distinguish a
+  // legitimate empty pool for this user/concept from a broken RPC call.
+  const poolFallbackReason: "pool_rpc_error" | "pool_empty_for_user" = poolRes.error
+    ? "pool_rpc_error"
+    : "pool_empty_for_user";
   const pooled = Array.isArray(poolRes.data) ? poolRes.data[0] : null;
   if (pooled) {
     // bump_question_shown tracks which user has already seen a pool question
@@ -169,6 +176,18 @@ export async function POST(req: NextRequest) {
         { err: bumpErr, userId: user.id, questionId: pooled.id, conceptId: next.conceptId },
         "bump_question_shown failed — pool hygiene degraded, question may re-serve"
       );
+    }
+    if (FLAGS.QUESTION_QUALITY_V2()) {
+      await trackServer(user.id, {
+        name: "question_served",
+        properties: {
+          source: "pool",
+          question_id: pooled.id,
+          concept_id: next.conceptId,
+          mode: sessionMode,
+          queue_remaining: queue.length - 1,
+        },
+      });
     }
     return NextResponse.json({
       data: {
@@ -321,6 +340,19 @@ export async function POST(req: NextRequest) {
       isCanonical: false,
     };
 
+    if (FLAGS.QUESTION_QUALITY_V2()) {
+      await trackServer(user.id, {
+        name: "question_served",
+        properties: {
+          source: "static",
+          fallback_reason: poolFallbackReason,
+          question_id: savedQuestionId!,  // safe: assigned at line 304 (23505 lookup) or 313 (insert success); other branches early-return 500 at lines 302/310
+          concept_id: next.conceptId,
+          mode: sessionMode,
+          queue_remaining: queue.length - 1,
+        },
+      });
+    }
     return NextResponse.json({
       data: responseData,
       metadata: {
@@ -341,6 +373,16 @@ export async function POST(req: NextRequest) {
     { userId: user.id, conceptSlug: next.conceptSlug, conceptId: next.conceptId },
     "generate: concept missing from knowledge graph — add it to lib/knowledge-graph/aws-saa.ts"
   );
+  if (FLAGS.QUESTION_QUALITY_V2()) {
+    await trackServer(user.id, {
+      name: "question_serve_failed",
+      properties: {
+        reason: "concept_not_in_graph",
+        concept_id: next.conceptId,
+        concept_slug: next.conceptSlug,
+      },
+    });
+  }
   return NextResponse.json(
     { error: "concept_not_in_graph", conceptSlug: next.conceptSlug },
     { status: 500 }

@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Clock, Lightbulb, Loader2, Sparkles } from 'lucide-react'
+import { Clock, Flag, Lightbulb, Loader2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { Card, Badge } from '@/components/v2'
 import type { Question } from '@/types/study'
+import { ReportQuestionModal } from './ReportQuestionModal'
 
 interface QuestionCardProps {
   question: Question
@@ -57,6 +58,7 @@ export function QuestionCard({
   }
   // Ref-based double-submit lock — see legacy comments for the race details.
   const submittingRef = useRef(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const hasHint = Boolean(question.hint)
   const locked = submitting
@@ -153,6 +155,16 @@ export function QuestionCard({
               Hint
             </button>
           )}
+          <button
+            onClick={() => setReportOpen(true)}
+            disabled={locked}
+            aria-label="Report this question"
+            title="Report this question"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-v2-foreground-muted transition-colors hover:bg-v2-error-soft hover:text-v2-error disabled:opacity-40"
+          >
+            <Flag className="h-3 w-3" strokeWidth={2.25} />
+            Report
+          </button>
         </div>
       </div>
 
@@ -379,6 +391,13 @@ export function QuestionCard({
           )}
         </button>
       </div>
+      <ReportQuestionModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        questionId={question.id}
+        conceptId={question.conceptId}
+        userSelectedOption={selected}
+      />
     </Card>
   )
 }

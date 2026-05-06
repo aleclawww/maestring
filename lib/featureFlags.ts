@@ -40,4 +40,22 @@ export const FLAGS = {
     if (!userId) return false
     return parseAllowlist(process.env.FF_ADAPTIVE_DASHBOARD_USERS).has(userId)
   },
+  /**
+   * Phase 1 — question quality v2. When ON, the study selector serves from
+   * the curated pool first (with a static-generator fallback only when the
+   * pool is exhausted for the user's concept), the question card exposes a
+   * "Report" action wired to `question_reports`, and the admin review flow
+   * is enabled. Off-path Sonnet validation lives in a CLI script and is
+   * gated by this flag too.
+   *
+   * Resolution order:
+   *   1. `FF_QUESTION_QUALITY_V2=true` → ON for everyone (global rollout).
+   *   2. Otherwise → OFF.
+   *
+   * Default OFF in production. No per-user allowlist for now — add one
+   * mirroring `ADAPTIVE_DASHBOARD` if gradual rollout becomes necessary.
+   */
+  QUESTION_QUALITY_V2: (): boolean => {
+    return process.env.FF_QUESTION_QUALITY_V2 === 'true'
+  },
 } as const
