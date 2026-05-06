@@ -43,7 +43,7 @@ export default async function StudyPage({
   // support tickets about "I lost my session" get a trail.
   const { data: activeSession, error: activeSessionErr } = await supabase
     .from('study_sessions')
-    .select('id')
+    .select('id, mode')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .order('started_at', { ascending: false })
@@ -78,6 +78,7 @@ export default async function StudyPage({
       <StudySession
         userId={user.id}
         activeSessionId={activeSession?.id}
+        activeSessionMode={(activeSession?.mode ?? undefined) as StudyMode | undefined}
         dueCount={dueCount ?? 0}
         initialMode={initialMode}
       />

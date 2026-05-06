@@ -10,6 +10,7 @@ import type { Question, EvaluationResult, SessionStats } from '@/types/study'
 import type { StudyMode } from '@/types/database'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
 import { track } from '@/lib/analytics'
+import { toast } from '@/lib/toast'
 import {
   Beaker as BeakerIcon,
   BookOpen as BookOpenIcon,
@@ -84,6 +85,14 @@ const SESSION_LENGTH = 10
 interface StudySessionProps {
   userId: string
   activeSessionId?: string
+  /**
+   * Mode of the existing active session (if any). Used only by the auto-start
+   * path to inform the user via toast that switching modes via the Home CTA
+   * abandoned a different in-progress session. The session itself is already
+   * cleanly abandoned by /api/study/session (see route.ts:51-65) — this prop
+   * exists purely for messaging.
+   */
+  activeSessionMode?: StudyMode
   dueCount: number
   /**
    * If set, the component auto-starts a session in this mode on first mount
@@ -98,7 +107,15 @@ interface StudySessionProps {
   initialMode?: StudyMode
 }
 
-export function StudySession({ userId: _userId, activeSessionId, dueCount, initialMode }: StudySessionProps) {
+const MODE_LABEL: Record<StudyMode, string> = {
+  review: 'Review',
+  discovery: 'Discovery',
+  intensive: 'Intensive',
+  maintenance: 'Maintenance',
+  exploration: 'Exploration',
+}
+
+export function StudySession({ userId: _userId, activeSessionId, activeSessionMode, dueCount, initialMode }: StudySessionProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   // ?timed=1 (or ?timed=12 to set custom seconds) enables the Automation drill
@@ -285,11 +302,22 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount, initi
     if (!initialMode) return
     if (autoStartFiredRef.current) return
     autoStartFiredRef.current = true
+    // Capture the prior-active mode at fire time. Once startSession resolves,
+    // /api/study/session has already abandoned that prior session in DB —
+    // activeSessionMode will still hold its old value because it's a prop from
+    // SSR, but conceptually we're informing the user about what *was* there.
+    const priorMode = activeSessionMode
     void (async () => {
       const ok = await startSession(initialMode)
-      if (ok) router.replace('/study', { scroll: false })
+      if (!ok) return
+      router.replace('/study', { scroll: false })
+      if (priorMode && priorMode !== initialMode) {
+        toast.info(
+          `Switched to ${MODE_LABEL[initialMode]}. Your ${MODE_LABEL[priorMode]} session was saved.`,
+        )
+      }
     })()
-  }, [initialMode, startSession, router])
+  }, [initialMode, activeSessionMode, startSession, router])
 
   const submitAnswer = useCallback(async (selectedIndex: number, firstAttemptCorrect: boolean, confidence?: number) => {
     if (state.phase !== 'question') return
