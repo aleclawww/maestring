@@ -279,7 +279,13 @@ export default async function DashboardPage() {
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/study"
+                href={
+                  adaptiveColdStart
+                    ? '/study?mode=discovery'
+                    : dueCount > 0
+                      ? '/study?mode=review'
+                      : '/learn'
+                }
                 className={cn(
                   'inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-v2-gradient-brand px-5 text-[14px] font-semibold text-white shadow-v2-button transition-all hover:-translate-y-0.5 hover:shadow-v2-elevated',
                 )}
