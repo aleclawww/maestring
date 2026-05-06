@@ -16,7 +16,6 @@ import {
   BookOpen as BookOpenIcon,
   CheckCircle2 as CheckCircleIcon,
   Clock as ClockIcon,
-  Flame as FlameIcon,
   Loader2 as Loader2Icon,
   RotateCcw as RotateCcwIcon,
   Sparkles as SparklesIcon,
@@ -530,7 +529,7 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
               </div>
             )}
 
-            <div className="mt-7 grid grid-cols-2 gap-2.5">
+            <div className="mt-7 grid grid-cols-3 gap-2">
               {[
                 {
                   mode: 'review' as const,
@@ -543,12 +542,6 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
                   label: 'Discovery',
                   desc: 'New concepts',
                   Icon: SparklesIcon,
-                },
-                {
-                  mode: 'intensive' as const,
-                  label: 'Intensive',
-                  desc: 'Hard questions',
-                  Icon: FlameIcon,
                 },
                 {
                   mode: 'maintenance' as const,
