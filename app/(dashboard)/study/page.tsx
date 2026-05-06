@@ -3,13 +3,37 @@ import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 import { StudySession } from './components/StudySession'
 import type { Metadata } from 'next'
+import type { StudyMode } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Study Session' }
 
-export default async function StudyPage() {
+// Mirrors the enum in /api/study/session and /api/study/generate. Kept inline
+// here because it's the only consumer and importing a Zod schema into a server
+// component just to validate a query string is overkill.
+const VALID_MODES: ReadonlyArray<StudyMode> = [
+  'discovery',
+  'review',
+  'intensive',
+  'maintenance',
+  'exploration',
+]
+
+function parseModeParam(raw: string | string[] | undefined): StudyMode | undefined {
+  if (typeof raw !== 'string') return undefined
+  return (VALID_MODES as ReadonlyArray<string>).includes(raw)
+    ? (raw as StudyMode)
+    : undefined
+}
+
+export default async function StudyPage({
+  searchParams,
+}: {
+  searchParams: { mode?: string | string[] }
+}) {
   const user = await requireAuthenticatedUser()
   const supabase = createClient()
+  const initialMode = parseModeParam(searchParams?.mode)
 
   // Check for active session. Silent failure here rendered StudySession with
   // `activeSessionId={undefined}` — the client then POSTed /api/study/session
@@ -55,6 +79,7 @@ export default async function StudyPage() {
         userId={user.id}
         activeSessionId={activeSession?.id}
         dueCount={dueCount ?? 0}
+        initialMode={initialMode}
       />
     </div>
   )
