@@ -1,7 +1,7 @@
 'use client'
 
 import { useReducer, useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { QuestionCard } from './QuestionCard'
 import { SessionProgress } from './SessionProgress'
 import { SessionSummary } from './SessionSummary'
@@ -10,6 +10,7 @@ import type { Question, EvaluationResult, SessionStats } from '@/types/study'
 import type { StudyMode } from '@/types/database'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
 import { track } from '@/lib/analytics'
+import { toast } from '@/lib/toast'
 import {
   Beaker as BeakerIcon,
   BookOpen as BookOpenIcon,
@@ -84,10 +85,38 @@ const SESSION_LENGTH = 10
 interface StudySessionProps {
   userId: string
   activeSessionId?: string
+  /**
+   * Mode of the existing active session (if any). Used only by the auto-start
+   * path to inform the user via toast that switching modes via the Home CTA
+   * abandoned a different in-progress session. The session itself is already
+   * cleanly abandoned by /api/study/session (see route.ts:51-65) — this prop
+   * exists purely for messaging.
+   */
+  activeSessionMode?: StudyMode
   dueCount: number
+  /**
+   * If set, the component auto-starts a session in this mode on first mount
+   * instead of showing the setup selector. Used by entry points that should
+   * land the user on a question directly (e.g. the Home dashboard CTA).
+   *
+   * The auto-start fires exactly once per mount via a useRef guard
+   * (StrictMode-safe). Re-running the effect with the same prop value does
+   * not re-trigger; navigating away and back creates a new mount which is
+   * a fresh auto-start opportunity.
+   */
+  initialMode?: StudyMode
 }
 
-export function StudySession({ userId: _userId, activeSessionId, dueCount }: StudySessionProps) {
+const MODE_LABEL: Record<StudyMode, string> = {
+  review: 'Review',
+  discovery: 'Discovery',
+  intensive: 'Intensive',
+  maintenance: 'Maintenance',
+  exploration: 'Exploration',
+}
+
+export function StudySession({ userId: _userId, activeSessionId, activeSessionMode, dueCount, initialMode }: StudySessionProps) {
+  const router = useRouter()
   const searchParams = useSearchParams()
   // ?timed=1 (or ?timed=12 to set custom seconds) enables the Automation drill
   // countdown — used by the Coach when phase = automation.
@@ -121,7 +150,12 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
     return () => window.removeEventListener('beforeunload', handleUnload)
   }, [state.phase])
 
-  const startSession = useCallback(async (mode: StudyMode = 'review') => {
+  // Returns true once the user is on a question (or quota-exceeded screen);
+  // false if anything in the create-session → load-question chain errored and
+  // the UI was reset back to setup. Auto-start callers use the return value
+  // to decide whether to clean the URL — keeping ?mode= when the start failed
+  // means a refresh will retry, which is the desired recovery path.
+  const startSession = useCallback(async (mode: StudyMode = 'review'): Promise<boolean> => {
     setErrorMsg(null)
     dispatch({ type: 'LOADING' })
     modeRef.current = mode
@@ -150,13 +184,13 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
           mode,
         })
         resetWithError("Couldn't start your session — please try again.")
-        return
+        return false
       }
       const { data: session } = await sessionRes.json()
       if (!session?.id) {
         console.error('StudySession startSession returned malformed body', { mode })
         resetWithError("Session setup returned an unexpected response — please try again.")
-        return
+        return false
       }
       sessionIdRef.current = session.id
       answersRef.current = []
@@ -164,10 +198,11 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
       track({ name: 'study_session_started', properties: { mode, session_id: session.id } })
 
       // Load first question
-      await loadNextQuestion(mode, 1)
+      return await loadNextQuestion(mode, 1)
     } catch (err) {
       console.error('Failed to start session', err)
       resetWithError("Network error — please check your connection and try again.")
+      return false
     }
     // loadNextQuestion is defined after startSession in component scope; listing it
     // in deps here would cause a TDZ ReferenceError. It is stable (its own dep is
@@ -175,7 +210,10 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetWithError])
 
-  const loadNextQuestion = useCallback(async (mode: StudyMode = 'review', questionNumber: number) => {
+  // Returns true when a question was loaded (or a non-error terminal screen
+  // was reached, e.g. quota-exceeded — that's still "auto-start did its job").
+  // Returns false when the request errored and the UI was reset back to setup.
+  const loadNextQuestion = useCallback(async (mode: StudyMode = 'review', questionNumber: number): Promise<boolean> => {
     dispatch({ type: 'LOADING' })
 
     // Use prefetched question if available
@@ -183,7 +221,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
       const q = prefetchedRef.current
       prefetchedRef.current = null
       dispatch({ type: 'QUESTION_LOADED', question: q, questionNumber, total: SESSION_LENGTH })
-      return
+      return true
     }
 
     try {
@@ -198,7 +236,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
         const quota = body.quota ?? 0
         track({ name: 'quota_hit', properties: { used, quota, plan: body.plan ?? 'free' } })
         dispatch({ type: 'QUOTA_EXCEEDED', used, quota })
-        return
+        return true
       }
       // Previously only the 402 quota branch was handled; every other non-2xx
       // (429 rate limit, 500 LLM/generator failure, 502/504 platform blips)
@@ -216,14 +254,14 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
         // rather than a generic "data was invalid" error.
         if (res.status === 409) {
           resetWithError(j.message ?? "No questions available for this mode. Try Review instead.")
-          return
+          return false
         }
         // 503 means a required API key is not configured (e.g. ANTHROPIC_API_KEY).
         // Surface the server's message directly — it tells the developer exactly
         // what env var to set, which is far more useful than "couldn't load question".
         if (res.status === 503) {
           resetWithError(j.message ?? "Question generation is not configured. Check your environment variables.")
-          return
+          return false
         }
         console.error('StudySession loadNextQuestion failed', {
           status: res.status,
@@ -233,7 +271,7 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
           sessionId: sessionIdRef.current,
         })
         resetWithError("Couldn't load the next question — your session was reset. Please start a new one.")
-        return
+        return false
       }
       const { data: question } = await res.json()
       if (!question?.id || !Array.isArray(question.options)) {
@@ -243,14 +281,43 @@ export function StudySession({ userId: _userId, activeSessionId, dueCount }: Stu
           sessionId: sessionIdRef.current,
         })
         resetWithError("Question data was invalid — your session was reset. Please start a new one.")
-        return
+        return false
       }
       dispatch({ type: 'QUESTION_LOADED', question, questionNumber, total: SESSION_LENGTH })
+      return true
     } catch (err) {
       console.error('Failed to load question', err)
       resetWithError("Network error loading question — please check your connection and try again.")
+      return false
     }
   }, [resetWithError])
+
+  // Auto-start on mount when an entry point passes ?mode= in the URL (e.g. the
+  // Home dashboard CTA). Once-per-mount guard prevents StrictMode dev double-fire
+  // and any re-render with the same prop. URL is cleaned on success so a refresh
+  // doesn't re-auto-start with stale state; on failure we leave the param in
+  // place so the user's refresh acts as a retry.
+  const autoStartFiredRef = useRef(false)
+  useEffect(() => {
+    if (!initialMode) return
+    if (autoStartFiredRef.current) return
+    autoStartFiredRef.current = true
+    // Capture the prior-active mode at fire time. Once startSession resolves,
+    // /api/study/session has already abandoned that prior session in DB —
+    // activeSessionMode will still hold its old value because it's a prop from
+    // SSR, but conceptually we're informing the user about what *was* there.
+    const priorMode = activeSessionMode
+    void (async () => {
+      const ok = await startSession(initialMode)
+      if (!ok) return
+      router.replace('/study', { scroll: false })
+      if (priorMode && priorMode !== initialMode) {
+        toast.info(
+          `Switched to ${MODE_LABEL[initialMode]}. Your ${MODE_LABEL[priorMode]} session was saved.`,
+        )
+      }
+    })()
+  }, [initialMode, activeSessionMode, startSession, router])
 
   const submitAnswer = useCallback(async (selectedIndex: number, firstAttemptCorrect: boolean, confidence?: number) => {
     if (state.phase !== 'question') return
