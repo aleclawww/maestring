@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { captureApiException } from '@/lib/sentry/capture'
+import type { Json } from '@/types/database'
 
 type CronOutcome = {
   status: 'ok' | 'skipped'
@@ -70,7 +71,12 @@ export async function runCron<T extends CronOutcome>(
           ended_at: new Date().toISOString(),
           status: result.status,
           rows_affected: result.rowsAffected ?? null,
-          metadata: result.metadata ?? null,
+          // Cast: cron callers return Record<string, unknown> for ergonomics,
+          // but the DB column is jsonb (typed as Json by the Supabase
+          // generated types). Json's recursive type doesn't accept the
+          // looser `unknown` value type, even though every concrete value
+          // we pass at runtime IS Json. Safe at the boundary.
+          metadata: (result.metadata ?? null) as Json | null,
         })
         .eq('id', runId)
       if (ledgerErr) {

@@ -16,9 +16,8 @@ async function resetDev() {
     "study_sessions",
     "user_concept_states",
     "referrals",
-    "question_feedback",
+    "question_reports",
     "questions",
-    "user_achievements",
   ] as const;
 
   for (const table of tables) {

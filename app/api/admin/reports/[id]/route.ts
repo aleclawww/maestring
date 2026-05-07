@@ -31,10 +31,8 @@ export async function PATCH(
 
   const supabase = createAdminClient()
 
-  // TODO: remove cast after types regen pre-merge — `question_reports`
-  // table exists in migration 050 but `types/database.ts` is hand-written.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('question_reports' as any) as any)
+  const { error } = await supabase
+    .from('question_reports')
     .update({
       status: parsed.status,
       reviewed_at: new Date().toISOString(),

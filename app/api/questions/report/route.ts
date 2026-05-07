@@ -6,6 +6,7 @@ import { requireAuthenticatedUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkReportRateLimit, rateLimitHeaders } from '@/lib/redis/rate-limit'
 import { logger } from '@/lib/logger'
+import type { Insert } from '@/types/database'
 
 const REPORT_CATEGORIES = [
   'wrong_answer',
@@ -71,24 +72,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'question_not_found' }, { status: 404 })
   }
 
-  const insertPayload: Record<string, unknown> = {
+  const insertPayload: Insert<'question_reports'> = {
     question_id: questionId,
     user_id: user.id,
     category,
   }
   if (typeof comment === 'string' && comment.trim().length > 0) {
-    insertPayload['comment'] = comment.trim()
+    insertPayload.comment = comment.trim()
   }
   if (typeof userSelectedOption === 'number') {
-    insertPayload['user_selected_option'] = userSelectedOption
+    insertPayload.user_selected_option = userSelectedOption
   }
 
-  // TODO: remove cast after types regen pre-merge — `question_reports` table
-  // exists in migration 050 but `types/database.ts` is hand-written and only
-  // gets the new shape after `npx supabase gen types typescript --local`.
   const { data: inserted, error: insErr } = await supabase
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .from('question_reports' as any)
+    .from('question_reports')
     .insert(insertPayload)
     .select('id')
     .single()

@@ -215,6 +215,7 @@ export async function buildStudyQueue(
         difficulty: s.concepts?.difficulty ?? 0.5,
         priority: 100 - (s.concepts?.difficulty ?? 0.5) * 50,
         reason: 'new' as const,
+        firstEncounter: s.state === 0 && s.reps === 0,
       }))
 
     const trulyNew = shuffle(newConcepts)
@@ -226,6 +227,7 @@ export async function buildStudyQueue(
         difficulty: c.difficulty,
         priority: 100 - c.difficulty * 50,
         reason: 'new' as const,
+        firstEncounter: true,
       }))
 
     return [...trulyNew, ...unstudied].slice(0, limit)
@@ -245,6 +247,7 @@ export async function buildStudyQueue(
         difficulty: s.concepts?.difficulty ?? 0.5,
         priority: getStudyPriority(s),
         reason: 'scheduled' as const,
+        firstEncounter: s.state === 0 && s.reps === 0,
       }))
     }
 
@@ -262,6 +265,7 @@ export async function buildStudyQueue(
         difficulty: s.concepts?.difficulty ?? 0.5,
         priority: getStudyPriority(s),
         reason: 'scheduled' as const,
+        firstEncounter: s.state === 0 && s.reps === 0,
       }))
     }
 
@@ -277,6 +281,7 @@ export async function buildStudyQueue(
         difficulty: es.concepts?.difficulty ?? 0.5,
         priority: getStudyPriority(s),
         reason: 'scheduled' as const,
+        firstEncounter: es.state === 0 && es.reps === 0,
       }
     })
   }
@@ -295,6 +300,7 @@ export async function buildStudyQueue(
         difficulty: s.concepts?.difficulty ?? 0.5,
         priority: getStudyPriority(s) * boost,
         reason: (s.reps === 0 ? 'new' : s.lapses > 2 ? 'difficult' : 'scheduled') as StudyQueueItem['reason'],
+        firstEncounter: s.state === 0 && s.reps === 0,
       }
     })
     .sort((a, b) => b.priority - a.priority)
@@ -310,6 +316,7 @@ export async function buildStudyQueue(
         difficulty: c.difficulty,
         priority: 50 * boost,
         reason: 'new' as const,
+        firstEncounter: true,
       }
     })
 

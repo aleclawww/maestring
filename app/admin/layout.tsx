@@ -18,6 +18,7 @@ const NAV = [
   { href: '/admin/outcomes', label: 'Outcomes', icon: '🎯' },
   { href: '/admin/testimonials', label: 'Testimonials', icon: '💬' },
   { href: '/admin/questions', label: 'Question Pool', icon: '❓' },
+  { href: '/admin/briefs', label: 'Concept Briefs', icon: '📘' },
   { href: '/admin/cron', label: 'Cron Runs', icon: '⏰' },
   { href: '/admin/actions', label: 'Audit Log', icon: '🗒️' },
 ]

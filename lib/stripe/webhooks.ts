@@ -208,8 +208,13 @@ export async function handleTrialWillEnd(subscription: Stripe.Subscription) {
     timeZone: 'UTC',
   })
 
+  // split[0] is `string | undefined` under noUncheckedIndexedAccess, even
+  // though splitting a non-empty string always yields ≥1 element. Coalesce
+  // for type safety; the runtime fallback to 'there' is unreachable when
+  // full_name is set, but keeps the email greeting graceful for edge cases
+  // (full_name === '' bypasses the outer ternary's `?` truthy check).
   const firstName = profile?.full_name
-    ? profile.full_name.split(' ')[0]
+    ? profile.full_name.split(' ')[0] ?? 'there'
     : 'there'
 
   const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://maestring.com'

@@ -217,6 +217,7 @@ export async function POST(req: NextRequest) {
         priority: next.priority,
         queueRemaining: queue.length - 1,
         source: "pool",
+        firstEncounter: next.firstEncounter,
         blueprintTaskId: pooled.blueprint_task_id ?? null,
         patternTag: pooled.pattern_tag ?? null,
       },
@@ -361,6 +362,7 @@ export async function POST(req: NextRequest) {
         priority: next.priority,
         queueRemaining: queue.length - 1,
         source: "static",
+        firstEncounter: next.firstEncounter,
       },
     });
   }

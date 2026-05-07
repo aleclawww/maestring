@@ -15,6 +15,8 @@ export type AnalyticsEvent =
   | { name: "question_answered"; properties: { is_correct: boolean; mode: string; time_taken_ms: number; concept_id?: string; first_attempt_correct?: boolean; used_hint?: boolean } }
   | { name: "hint_revealed"; properties: { concept_id?: string; question_id?: string; proactive?: boolean } }
   | { name: "deep_explanation_opened"; properties: { concept_id?: string; question_id?: string } }
+  | { name: "concept_brief_viewed"; properties: { concept_id: string } }
+  | { name: "concept_brief_dismissed"; properties: { concept_id: string; brief_loaded: boolean } }
   | { name: "question_reported"; properties: { question_id: string; concept_id?: string; category: "wrong_answer" | "multiple_correct" | "unclear" | "outdated" | "other" } }
   // Readiness & milestones
   | { name: "readiness_milestone_hit"; properties: { score: number; band: "50" | "70" | "85" } }

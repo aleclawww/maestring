@@ -55,9 +55,7 @@ export default async function QuestionsAdminPage() {
   // question stem so the admin can triage in one glance. Cap at 100 to keep
   // the page light; partial index `question_reports_status_created_idx`
   // (migration 050) makes the filter cheap.
-  // TODO: remove cast after types regen pre-merge — table exists in 050.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: reports, error: reportsErr } = await (supabase as any)
+  const { data: reports, error: reportsErr } = await supabase
     .from('question_reports')
     .select(
       'id, created_at, question_id, category, comment, user_selected_option, status, questions:question_id ( question_text, options, correct_index )'

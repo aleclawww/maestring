@@ -3,6 +3,7 @@
 import { useReducer, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { QuestionCard } from './QuestionCard'
+import { ConceptBriefPanel } from './ConceptBriefPanel'
 import { SessionProgress } from './SessionProgress'
 import { SessionSummary } from './SessionSummary'
 import { AnswerFeedback } from './AnswerFeedback'
@@ -27,6 +28,7 @@ import { cn } from '@/lib/utils'
 type StudyState =
   | { phase: 'setup' }
   | { phase: 'loading' }
+  | { phase: 'brief'; question: Question; conceptId: string; questionNumber: number; total: number }
   | { phase: 'question'; question: Question; questionNumber: number; total: number; startedAt: number }
   | { phase: 'feedback'; question: Question; selectedIndex: number; evaluation: EvaluationResult; questionNumber: number; total: number; timeTaken: number }
   | { phase: 'summary'; stats: SessionStats; sessionId: string }
@@ -34,6 +36,8 @@ type StudyState =
 
 type StudyAction =
   | { type: 'START'; mode: StudyMode }
+  | { type: 'BRIEF_LOADED'; question: Question; conceptId: string; questionNumber: number; total: number }
+  | { type: 'BRIEF_DISMISSED' }
   | { type: 'QUESTION_LOADED'; question: Question; questionNumber: number; total: number }
   | { type: 'ANSWER_SELECTED'; selectedIndex: number; evaluation: EvaluationResult; timeTaken: number }
   | { type: 'CONTINUE' }
@@ -47,6 +51,26 @@ function reducer(state: StudyState, action: StudyAction): StudyState {
     case 'START':
     case 'LOADING':
       return { phase: 'loading' }
+    case 'BRIEF_LOADED':
+      return {
+        phase: 'brief',
+        question: action.question,
+        conceptId: action.conceptId,
+        questionNumber: action.questionNumber,
+        total: action.total,
+      }
+    case 'BRIEF_DISMISSED':
+      // Transition brief → question. The question is already loaded; we just
+      // start the timer now (Date.now()) because the user begins reading the
+      // question NOW, not when the brief first appeared.
+      if (state.phase !== 'brief') return state
+      return {
+        phase: 'question',
+        question: state.question,
+        questionNumber: state.questionNumber,
+        total: state.total,
+        startedAt: Date.now(),
+      }
     case 'QUESTION_LOADED':
       return {
         phase: 'question',
@@ -126,7 +150,11 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
   const sessionIdRef = useRef<string | null>(activeSessionId ?? null)
   const answersRef = useRef<Array<{ conceptId: string; isCorrect: boolean; timeTaken: number }>>([])
   const totalXpRef = useRef<number>(0)
-  const prefetchedRef = useRef<Question | null>(null)
+  const prefetchedRef = useRef<{ question: Question; firstEncounter: boolean } | null>(null)
+  // Concepts whose brief has already been shown in THIS session — prevents
+  // re-showing if FSRS happens to schedule the same concept twice in a row
+  // before /api/study/evaluate has bumped its state out of `0=New`.
+  const seenBriefConceptsRef = useRef<Set<string>>(new Set())
   const modeRef = useRef<StudyMode>('review')
   const sessionStartedAtRef = useRef<number | null>(null)
 
@@ -140,7 +168,7 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
 
   // Guard against accidental page close during active study
   useEffect(() => {
-    if (state.phase !== 'question' && state.phase !== 'feedback') return
+    if (state.phase !== 'question' && state.phase !== 'feedback' && state.phase !== 'brief') return
     const handleUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault()
       e.returnValue = ''
@@ -209,6 +237,34 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetWithError])
 
+  // Decide whether to show the pre-learning brief for first-encounter concepts
+  // or jump straight to the question. Same logic for prefetched and on-demand
+  // paths so behaviour is consistent.
+  const maybeShowBriefOrQuestion = useCallback(
+    (question: Question, firstEncounter: boolean, questionNumber: number) => {
+      const cid = question.conceptId
+      if (firstEncounter && !seenBriefConceptsRef.current.has(cid)) {
+        seenBriefConceptsRef.current.add(cid)
+        track({ name: 'concept_brief_viewed', properties: { concept_id: cid } })
+        dispatch({
+          type: 'BRIEF_LOADED',
+          question,
+          conceptId: cid,
+          questionNumber,
+          total: SESSION_LENGTH,
+        })
+        return
+      }
+      dispatch({
+        type: 'QUESTION_LOADED',
+        question,
+        questionNumber,
+        total: SESSION_LENGTH,
+      })
+    },
+    [],
+  )
+
   // Returns true when a question was loaded (or a non-error terminal screen
   // was reached, e.g. quota-exceeded — that's still "auto-start did its job").
   // Returns false when the request errored and the UI was reset back to setup.
@@ -217,9 +273,9 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
 
     // Use prefetched question if available
     if (prefetchedRef.current && questionNumber > 1) {
-      const q = prefetchedRef.current
+      const { question: q, firstEncounter } = prefetchedRef.current
       prefetchedRef.current = null
-      dispatch({ type: 'QUESTION_LOADED', question: q, questionNumber, total: SESSION_LENGTH })
+      maybeShowBriefOrQuestion(q, firstEncounter, questionNumber)
       return true
     }
 
@@ -272,7 +328,9 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
         resetWithError("Couldn't load the next question — your session was reset. Please start a new one.")
         return false
       }
-      const { data: question } = await res.json()
+      const json = (await res.json()) as { data: Question; metadata?: { firstEncounter?: boolean } }
+      const question = json.data
+      const firstEncounter = Boolean(json.metadata?.firstEncounter)
       if (!question?.id || !Array.isArray(question.options)) {
         console.error('StudySession loadNextQuestion returned malformed body', {
           mode,
@@ -282,14 +340,14 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
         resetWithError("Question data was invalid — your session was reset. Please start a new one.")
         return false
       }
-      dispatch({ type: 'QUESTION_LOADED', question, questionNumber, total: SESSION_LENGTH })
+      maybeShowBriefOrQuestion(question, firstEncounter, questionNumber)
       return true
     } catch (err) {
       console.error('Failed to load question', err)
       resetWithError("Network error loading question — please check your connection and try again.")
       return false
     }
-  }, [resetWithError])
+  }, [resetWithError, maybeShowBriefOrQuestion])
 
   // Auto-start on mount when an entry point passes ?mode= in the URL (e.g. the
   // Home dashboard CTA). Once-per-mount guard prevents StrictMode dev double-fire
@@ -346,7 +404,14 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
           if (!r.ok) throw new Error(`HTTP ${r.status}`)
           return r.json()
         })
-        .then(j => { prefetchedRef.current = j?.data ?? null })
+        .then(j => {
+          const data = j?.data
+          if (!data) { prefetchedRef.current = null; return }
+          prefetchedRef.current = {
+            question: data,
+            firstEncounter: Boolean(j?.metadata?.firstEncounter),
+          }
+        })
         .catch(err => {
           console.warn('StudySession prefetch failed (next question will load on demand)', err)
         })
@@ -665,6 +730,31 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
       </span>
     </div>
   ) : null
+
+  // Brief view — pre-learning intersticial for first-encounter concepts.
+  if (state.phase === 'brief') {
+    const briefConceptId = state.conceptId
+    return (
+      <div className="flex h-full flex-col">
+        <SessionProgress current={state.questionNumber} total={state.total} />
+        {explorationBanner}
+        <div className="flex flex-1 items-center justify-center p-4 sm:p-6">
+          <div className="w-full max-w-2xl">
+            <ConceptBriefPanel
+              conceptId={briefConceptId}
+              onDismiss={(briefLoaded) => {
+                track({
+                  name: 'concept_brief_dismissed',
+                  properties: { concept_id: briefConceptId, brief_loaded: briefLoaded },
+                })
+                dispatch({ type: 'BRIEF_DISMISSED' })
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Question view
   if (state.phase === 'question') {

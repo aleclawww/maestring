@@ -7,33 +7,76 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      ab_assignments: {
+        Row: {
+          assigned_at: string
+          experiment_id: string
+          user_id: string
+          variant: string
+        }
+        Insert: {
+          assigned_at?: string
+          experiment_id: string
+          user_id: string
+          variant: string
+        }
+        Update: {
+          assigned_at?: string
+          experiment_id?: string
+          user_id?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_assignments_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ab_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_experiments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          traffic_pct: number
+          variants: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id: string
+          status?: string
+          traffic_pct?: number
+          variants?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          traffic_pct?: number
+          variants?: Json
+        }
+        Relationships: []
+      }
       admin_actions: {
         Row: {
           action: string
@@ -58,6 +101,68 @@ export type Database = {
           details?: Json | null
           id?: string
           target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      ambient_cards: {
+        Row: {
+          analogy: string | null
+          aws_services: string[]
+          body: string
+          concept_id: string
+          created_at: string
+          id: string
+          modality: string
+          status: string
+          title: string
+          visual_desc: string | null
+        }
+        Insert: {
+          analogy?: string | null
+          aws_services?: string[]
+          body: string
+          concept_id: string
+          created_at?: string
+          id?: string
+          modality: string
+          status?: string
+          title: string
+          visual_desc?: string | null
+        }
+        Update: {
+          analogy?: string | null
+          aws_services?: string[]
+          body?: string
+          concept_id?: string
+          created_at?: string
+          id?: string
+          modality?: string
+          status?: string
+          title?: string
+          visual_desc?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ambient_cards_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aws_service_name_map: {
+        Row: {
+          alias: string
+          canonical: string
+        }
+        Insert: {
+          alias: string
+          canonical: string
+        }
+        Update: {
+          alias?: string
+          canonical?: string
         }
         Relationships: []
       }
@@ -90,6 +195,139 @@ export type Database = {
           },
           {
             foreignKeyName: "chunk_concept_links_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concept_briefs: {
+        Row: {
+          body_md: string
+          concept_id: string
+          created_at: string
+          diagram_url: string | null
+          gotchas: Json | null
+          related_concept_ids: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body_md: string
+          concept_id: string
+          created_at?: string
+          diagram_url?: string | null
+          gotchas?: Json | null
+          related_concept_ids?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body_md?: string
+          concept_id?: string
+          created_at?: string
+          diagram_url?: string | null
+          gotchas?: Json | null
+          related_concept_ids?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_briefs_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: true
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concept_confusion_pairs: {
+        Row: {
+          certification_id: string
+          concept_a_id: string
+          concept_b_id: string
+          created_at: string
+          id: string
+          observation_count: number
+          source: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          certification_id: string
+          concept_a_id: string
+          concept_b_id: string
+          created_at?: string
+          id?: string
+          observation_count?: number
+          source: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          certification_id?: string
+          concept_a_id?: string
+          concept_b_id?: string
+          created_at?: string
+          id?: string
+          observation_count?: number
+          source?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_confusion_pairs_concept_a_id_fkey"
+            columns: ["concept_a_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concept_confusion_pairs_concept_b_id_fkey"
+            columns: ["concept_b_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concept_exposures: {
+        Row: {
+          concept_id: string
+          context: Json
+          created_at: string
+          dwell_ms: number
+          exposure_index: number
+          id: string
+          modality: string
+          user_id: string
+        }
+        Insert: {
+          concept_id: string
+          context?: Json
+          created_at?: string
+          dwell_ms?: number
+          exposure_index?: number
+          id?: string
+          modality: string
+          user_id: string
+        }
+        Update: {
+          concept_id?: string
+          context?: Json
+          created_at?: string
+          dwell_ms?: number
+          exposure_index?: number
+          id?: string
+          modality?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_exposures_concept_id_fkey"
             columns: ["concept_id"]
             isOneToOne: false
             referencedRelation: "concepts"
@@ -204,6 +442,39 @@ export type Database = {
           },
         ]
       }
+      coverage_matrix: {
+        Row: {
+          ambient_card_exists: boolean
+          approved_at: string | null
+          aws_service: string
+          category: string
+          elaboration_count: number
+          notes: string | null
+          task_statements: string[]
+          tier: number
+        }
+        Insert: {
+          ambient_card_exists?: boolean
+          approved_at?: string | null
+          aws_service: string
+          category: string
+          elaboration_count?: number
+          notes?: string | null
+          task_statements?: string[]
+          tier: number
+        }
+        Update: {
+          ambient_card_exists?: boolean
+          approved_at?: string | null
+          aws_service?: string
+          category?: string
+          elaboration_count?: number
+          notes?: string | null
+          task_statements?: string[]
+          tier?: number
+        }
+        Relationships: []
+      }
       cron_runs: {
         Row: {
           ended_at: string | null
@@ -283,6 +554,50 @@ export type Database = {
             columns: ["domain_id"]
             isOneToOne: false
             referencedRelation: "knowledge_domains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elaboration_prompts: {
+        Row: {
+          concept_id: string
+          created_at: string
+          distractor_concept: string | null
+          id: string
+          key_themes: string[]
+          prompt_key: string
+          prompt_text: string
+          reference_answer: string
+          status: string
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          distractor_concept?: string | null
+          id?: string
+          key_themes?: string[]
+          prompt_key: string
+          prompt_text: string
+          reference_answer: string
+          status?: string
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          distractor_concept?: string | null
+          id?: string
+          key_themes?: string[]
+          prompt_key?: string
+          prompt_text?: string
+          reference_answer?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elaboration_prompts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
             referencedColumns: ["id"]
           },
         ]
@@ -422,6 +737,36 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_phase_transitions: {
+        Row: {
+          created_at: string
+          from_phase: Database["public"]["Enums"]["learning_phase"] | null
+          id: string
+          reason: string
+          signals: Json
+          to_phase: Database["public"]["Enums"]["learning_phase"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_phase?: Database["public"]["Enums"]["learning_phase"] | null
+          id?: string
+          reason: string
+          signals?: Json
+          to_phase: Database["public"]["Enums"]["learning_phase"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_phase?: Database["public"]["Enums"]["learning_phase"] | null
+          id?: string
+          reason?: string
+          signals?: Json
+          to_phase?: Database["public"]["Enums"]["learning_phase"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       llm_usage: {
         Row: {
           cached_input_tokens: number
@@ -491,6 +836,51 @@ export type Database = {
         }
         Relationships: []
       }
+      metacognitive_calibration: {
+        Row: {
+          concept_id: string | null
+          confidence: number
+          id: number
+          question_attempt_id: string | null
+          recorded_at: string
+          user_id: string
+          was_correct: boolean
+        }
+        Insert: {
+          concept_id?: string | null
+          confidence: number
+          id?: number
+          question_attempt_id?: string | null
+          recorded_at?: string
+          user_id: string
+          was_correct: boolean
+        }
+        Update: {
+          concept_id?: string | null
+          confidence?: number
+          id?: number
+          question_attempt_id?: string | null
+          recorded_at?: string
+          user_id?: string
+          was_correct?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metacognitive_calibration_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metacognitive_calibration_question_attempt_id_fkey"
+            columns: ["question_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "question_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -556,9 +946,13 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          calibrated_at: string | null
+          chronotype: string | null
           cognitive_fingerprint: Json
+          cognitive_load_budget: number | null
           created_at: string
           current_streak: number
+          email_nudges_enabled: boolean
           exam_date: string | null
           exam_outcome: string | null
           exam_scaled_score: number | null
@@ -570,11 +964,17 @@ export type Database = {
           last_readiness_at: string | null
           last_readiness_score: number | null
           last_study_date: string | null
+          learning_phase: Database["public"]["Enums"]["learning_phase"]
+          learning_phase_started_at: string
           longest_streak: number
           notification_preferences: Json
           onboarding_completed: boolean
+          prior_knowledge_vector: string | null
+          processing_speed_ms: number | null
           referral_code: string
           referred_by: string | null
+          sleep_window_end: number | null
+          sleep_window_start: number | null
           streak_freezes_available: number
           streak_freezes_last_grant: string | null
           study_minutes_per_day: number
@@ -582,12 +982,17 @@ export type Database = {
           total_xp: number
           updated_at: string
           welcome_email_sent_at: string | null
+          working_memory_span: number | null
         }
         Insert: {
           avatar_url?: string | null
+          calibrated_at?: string | null
+          chronotype?: string | null
           cognitive_fingerprint?: Json
+          cognitive_load_budget?: number | null
           created_at?: string
           current_streak?: number
+          email_nudges_enabled?: boolean
           exam_date?: string | null
           exam_outcome?: string | null
           exam_scaled_score?: number | null
@@ -599,11 +1004,17 @@ export type Database = {
           last_readiness_at?: string | null
           last_readiness_score?: number | null
           last_study_date?: string | null
+          learning_phase?: Database["public"]["Enums"]["learning_phase"]
+          learning_phase_started_at?: string
           longest_streak?: number
           notification_preferences?: Json
           onboarding_completed?: boolean
+          prior_knowledge_vector?: string | null
+          processing_speed_ms?: number | null
           referral_code?: string
           referred_by?: string | null
+          sleep_window_end?: number | null
+          sleep_window_start?: number | null
           streak_freezes_available?: number
           streak_freezes_last_grant?: string | null
           study_minutes_per_day?: number
@@ -611,12 +1022,17 @@ export type Database = {
           total_xp?: number
           updated_at?: string
           welcome_email_sent_at?: string | null
+          working_memory_span?: number | null
         }
         Update: {
           avatar_url?: string | null
+          calibrated_at?: string | null
+          chronotype?: string | null
           cognitive_fingerprint?: Json
+          cognitive_load_budget?: number | null
           created_at?: string
           current_streak?: number
+          email_nudges_enabled?: boolean
           exam_date?: string | null
           exam_outcome?: string | null
           exam_scaled_score?: number | null
@@ -628,11 +1044,17 @@ export type Database = {
           last_readiness_at?: string | null
           last_readiness_score?: number | null
           last_study_date?: string | null
+          learning_phase?: Database["public"]["Enums"]["learning_phase"]
+          learning_phase_started_at?: string
           longest_streak?: number
           notification_preferences?: Json
           onboarding_completed?: boolean
+          prior_knowledge_vector?: string | null
+          processing_speed_ms?: number | null
           referral_code?: string
           referred_by?: string | null
+          sleep_window_end?: number | null
+          sleep_window_start?: number | null
           streak_freezes_available?: number
           streak_freezes_last_grant?: string | null
           study_minutes_per_day?: number
@@ -640,6 +1062,7 @@ export type Database = {
           total_xp?: number
           updated_at?: string
           welcome_email_sent_at?: string | null
+          working_memory_span?: number | null
         }
         Relationships: [
           {
@@ -654,9 +1077,11 @@ export type Database = {
       question_attempts: {
         Row: {
           concept_id: string
+          confidence: number | null
           created_at: string
           evaluation_result: Json | null
           id: string
+          is_confusion_target: boolean
           is_correct: boolean
           question_id: string
           session_id: string
@@ -666,9 +1091,11 @@ export type Database = {
         }
         Insert: {
           concept_id: string
+          confidence?: number | null
           created_at?: string
           evaluation_result?: Json | null
           id?: string
+          is_confusion_target?: boolean
           is_correct: boolean
           question_id: string
           session_id: string
@@ -678,9 +1105,11 @@ export type Database = {
         }
         Update: {
           concept_id?: string
+          confidence?: number | null
           created_at?: string
           evaluation_result?: Json | null
           id?: string
+          is_confusion_target?: boolean
           is_correct?: boolean
           question_id?: string
           session_id?: string
@@ -712,34 +1141,46 @@ export type Database = {
           },
         ]
       }
-      question_feedback: {
+      question_reports: {
         Row: {
+          category: string
           comment: string | null
           created_at: string
-          feedback_type: string
           id: string
           question_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
           user_id: string
+          user_selected_option: number | null
         }
         Insert: {
+          category: string
           comment?: string | null
           created_at?: string
-          feedback_type: string
           id?: string
           question_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
           user_id: string
+          user_selected_option?: number | null
         }
         Update: {
+          category?: string
           comment?: string | null
           created_at?: string
-          feedback_type?: string
           id?: string
           question_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
           user_id?: string
+          user_selected_option?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "question_feedback_question_id_fkey"
+            foreignKeyName: "question_reports_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
@@ -749,6 +1190,7 @@ export type Database = {
       }
       questions: {
         Row: {
+          aws_services: string[]
           blueprint_task_id: string | null
           concept_id: string
           correct_index: number
@@ -761,9 +1203,11 @@ export type Database = {
           id: string
           is_active: boolean
           is_canonical: boolean
+          is_fluency_eligible: boolean
           key_insight: string | null
           options: Json
           pattern_tag: string | null
+          phase_mask: string[]
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
           reject_reason: string | null
@@ -775,9 +1219,13 @@ export type Database = {
           tags: string[]
           times_correct: number
           times_shown: number
+          validated_at: string | null
+          validation_notes: string | null
+          validator_model: string | null
           variation_seed: string | null
         }
         Insert: {
+          aws_services?: string[]
           blueprint_task_id?: string | null
           concept_id: string
           correct_index: number
@@ -790,9 +1238,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_canonical?: boolean
+          is_fluency_eligible?: boolean
           key_insight?: string | null
           options: Json
           pattern_tag?: string | null
+          phase_mask?: string[]
           question_text: string
           question_type?: Database["public"]["Enums"]["question_type"]
           reject_reason?: string | null
@@ -804,9 +1254,13 @@ export type Database = {
           tags?: string[]
           times_correct?: number
           times_shown?: number
+          validated_at?: string | null
+          validation_notes?: string | null
+          validator_model?: string | null
           variation_seed?: string | null
         }
         Update: {
+          aws_services?: string[]
           blueprint_task_id?: string | null
           concept_id?: string
           correct_index?: number
@@ -819,9 +1273,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_canonical?: boolean
+          is_fluency_eligible?: boolean
           key_insight?: string | null
           options?: Json
           pattern_tag?: string | null
+          phase_mask?: string[]
           question_text?: string
           question_type?: Database["public"]["Enums"]["question_type"]
           reject_reason?: string | null
@@ -833,6 +1289,9 @@ export type Database = {
           tags?: string[]
           times_correct?: number
           times_shown?: number
+          validated_at?: string | null
+          validation_notes?: string | null
+          validator_model?: string | null
           variation_seed?: string | null
         }
         Relationships: [
@@ -1031,6 +1490,10 @@ export type Database = {
           current_period_end: string | null
           current_period_start: string | null
           id: string
+          ls_customer_id: string | null
+          ls_order_id: string | null
+          ls_subscription_id: string | null
+          ls_variant_id: string | null
           organization_id: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
           status: Database["public"]["Enums"]["subscription_status"]
@@ -1047,6 +1510,10 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          ls_customer_id?: string | null
+          ls_order_id?: string | null
+          ls_subscription_id?: string | null
+          ls_variant_id?: string | null
           organization_id?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           status?: Database["public"]["Enums"]["subscription_status"]
@@ -1063,6 +1530,10 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          ls_customer_id?: string | null
+          ls_order_id?: string | null
+          ls_subscription_id?: string | null
+          ls_variant_id?: string | null
           organization_id?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
           status?: Database["public"]["Enums"]["subscription_status"]
@@ -1204,7 +1675,6 @@ export type Database = {
           chunk_count: number
           created_at: string
           error_message: string | null
-          file_path: string
           file_size: number
           filename: string
           id: string
@@ -1212,6 +1682,8 @@ export type Database = {
           mime_type: string
           org_id: string | null
           processing_status: Database["public"]["Enums"]["processing_status"]
+          storage_path: string
+          title: string | null
           updated_at: string
           user_id: string
         }
@@ -1219,7 +1691,6 @@ export type Database = {
           chunk_count?: number
           created_at?: string
           error_message?: string | null
-          file_path: string
           file_size?: number
           filename: string
           id?: string
@@ -1227,6 +1698,8 @@ export type Database = {
           mime_type?: string
           org_id?: string | null
           processing_status?: Database["public"]["Enums"]["processing_status"]
+          storage_path: string
+          title?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1234,7 +1707,6 @@ export type Database = {
           chunk_count?: number
           created_at?: string
           error_message?: string | null
-          file_path?: string
           file_size?: number
           filename?: string
           id?: string
@@ -1242,6 +1714,8 @@ export type Database = {
           mime_type?: string
           org_id?: string | null
           processing_status?: Database["public"]["Enums"]["processing_status"]
+          storage_path?: string
+          title?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1255,6 +1729,63 @@ export type Database = {
           },
         ]
       }
+      user_learning_state: {
+        Row: {
+          ambient_exposures: number
+          anchoring_responses: number
+          automation_attempts: number
+          automation_under8s: number
+          interleave_attempts: number
+          interleave_correct: number
+          phase: Database["public"]["Enums"]["learning_phase"]
+          phase_entered_at: string
+          readiness_baseline: number | null
+          readiness_baseline_at: string | null
+          retrieval_attempts: number
+          retrieval_correct: number
+          transfer_attempts: number
+          transfer_correct: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ambient_exposures?: number
+          anchoring_responses?: number
+          automation_attempts?: number
+          automation_under8s?: number
+          interleave_attempts?: number
+          interleave_correct?: number
+          phase?: Database["public"]["Enums"]["learning_phase"]
+          phase_entered_at?: string
+          readiness_baseline?: number | null
+          readiness_baseline_at?: string | null
+          retrieval_attempts?: number
+          retrieval_correct?: number
+          transfer_attempts?: number
+          transfer_correct?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ambient_exposures?: number
+          anchoring_responses?: number
+          automation_attempts?: number
+          automation_under8s?: number
+          interleave_attempts?: number
+          interleave_correct?: number
+          phase?: Database["public"]["Enums"]["learning_phase"]
+          phase_entered_at?: string
+          readiness_baseline?: number | null
+          readiness_baseline_at?: string | null
+          retrieval_attempts?: number
+          retrieval_correct?: number
+          transfer_attempts?: number
+          transfer_correct?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       blueprint_coverage: {
@@ -1263,6 +1794,19 @@ export type Database = {
           blueprint_task_id: string | null
           canonical_count: number | null
           concept_diversity: number | null
+        }
+        Relationships: []
+      }
+      coverage_status: {
+        Row: {
+          ambient_card_exists: boolean | null
+          aws_service: string | null
+          category: string | null
+          coverage_status: string | null
+          elaboration_count: number | null
+          question_count: number | null
+          task_statements: string[] | null
+          tier: number | null
         }
         Relationships: []
       }
@@ -1413,6 +1957,33 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      ensure_user_learning_state: {
+        Args: { p_user_id: string }
+        Returns: {
+          ambient_exposures: number
+          anchoring_responses: number
+          automation_attempts: number
+          automation_under8s: number
+          interleave_attempts: number
+          interleave_correct: number
+          phase: Database["public"]["Enums"]["learning_phase"]
+          phase_entered_at: string
+          readiness_baseline: number | null
+          readiness_baseline_at: string | null
+          retrieval_attempts: number
+          retrieval_correct: number
+          transfer_attempts: number
+          transfer_correct: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_learning_state"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_blueprint_task_accuracy: {
         Args: { p_certification_id?: string; p_user_id: string }
         Returns: {
@@ -1493,6 +2064,21 @@ export type Database = {
           xp_earned: number
         }[]
       }
+      get_top_confusions: {
+        Args: { p_concept_id: string; p_limit?: number }
+        Returns: {
+          concept_id: string
+          weight: number
+        }[]
+      }
+      get_user_exposure_counts: {
+        Args: { p_min_dwell_ms?: number; p_user_id: string }
+        Returns: {
+          concept_id: string
+          exposure_count: number
+          last_modality: string
+        }[]
+      }
       get_user_stats: {
         Args: { p_user_id: string }
         Returns: {
@@ -1529,6 +2115,8 @@ export type Database = {
           weakest_domain_accuracy: number
           weakest_domain_name: string
           weakest_domain_slug: string
+          weakest_task_id: string
+          weakest_task_label: string
         }[]
       }
       get_users_needing_nudge: {
@@ -1542,6 +2130,38 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_variant: {
+        Args: { p_experiment_id: string; p_user_id: string }
+        Returns: string
+      }
+      increment_profile_xp: {
+        Args: { p_user_id: string; p_xp: number }
+        Returns: undefined
+      }
+      increment_session_counters:
+        | {
+            Args: { p_is_correct: boolean; p_session_id: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_is_correct: boolean
+              p_session_id: string
+              p_session_owner?: string
+            }
+            Returns: undefined
+          }
+      increment_uls_counter: {
+        Args: { p_column: string; p_user_id: string }
+        Returns: undefined
+      }
+      is_valid_phase_transition: {
+        Args: {
+          p_from: Database["public"]["Enums"]["learning_phase"]
+          p_to: Database["public"]["Enums"]["learning_phase"]
+        }
+        Returns: boolean
+      }
       llm_cost_today: { Args: { p_user_id?: string }; Returns: number }
       llm_top_spenders_24h: {
         Args: { p_limit?: number }
@@ -1553,6 +2173,7 @@ export type Database = {
       }
       nanoid: { Args: { size?: number }; Returns: string }
       needs_outcome_capture: { Args: { p_user_id: string }; Returns: boolean }
+      normalize_aws_service: { Args: { alias: string }; Returns: string }
       pick_pool_question: {
         Args: {
           p_concept_id: string
@@ -1577,6 +2198,14 @@ export type Database = {
           scenario_context: Json
         }[]
       }
+      record_confusion: {
+        Args: {
+          p_certification_id: string
+          p_concept_x_id: string
+          p_concept_y_id: string
+        }
+        Returns: undefined
+      }
       record_exam_answer: {
         Args: {
           p_answer_index: number
@@ -1586,6 +2215,16 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      record_exposure: {
+        Args: {
+          p_concept_id: string
+          p_context?: Json
+          p_dwell_ms: number
+          p_modality: string
+          p_user_id: string
+        }
+        Returns: number
       }
       search_content_chunks: {
         Args: {
@@ -1626,6 +2265,19 @@ export type Database = {
         Args: { p_session_id: string; p_user_id: string }
         Returns: Json
       }
+      transition_learning_phase: {
+        Args: {
+          p_reason: string
+          p_signals?: Json
+          p_to_phase: Database["public"]["Enums"]["learning_phase"]
+          p_user_id: string
+        }
+        Returns: Database["public"]["Enums"]["learning_phase"]
+      }
+      update_cognitive_fingerprint: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       exam_session_status: "in_progress" | "submitted" | "abandoned"
@@ -1635,6 +2287,16 @@ export type Database = {
         | "pre_exam"
         | "post_cert"
         | "maintenance"
+      learning_phase:
+        | "calibration"
+        | "ambient"
+        | "anchoring"
+        | "retrieval_easy"
+        | "interleaving"
+        | "consolidation"
+        | "automation"
+        | "transfer"
+        | "mastery"
       processing_status: "pending" | "processing" | "completed" | "failed"
       question_review_status:
         | "pending"
@@ -1781,9 +2443,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       exam_session_status: ["in_progress", "submitted", "abandoned"],
@@ -1793,6 +2452,17 @@ export const Constants = {
         "pre_exam",
         "post_cert",
         "maintenance",
+      ],
+      learning_phase: [
+        "calibration",
+        "ambient",
+        "anchoring",
+        "retrieval_easy",
+        "interleaving",
+        "consolidation",
+        "automation",
+        "transfer",
+        "mastery",
       ],
       processing_status: ["pending", "processing", "completed", "failed"],
       question_review_status: [
@@ -1821,4 +2491,3 @@ export const Constants = {
     },
   },
 } as const
-

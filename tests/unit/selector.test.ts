@@ -70,6 +70,7 @@ function item(
     difficulty: 0.5,
     priority: 50,
     reason: 'scheduled',
+    firstEncounter: false,
     ...overrides,
     domainId,
   }

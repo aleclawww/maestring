@@ -110,6 +110,11 @@ export interface StudyQueueItem {
   questionId?: string
   priority: number
   reason: 'overdue' | 'new' | 'difficult' | 'scheduled'
+  /**
+   * True when the user has never had FSRS process an answer for this concept
+   * (state===0 && reps===0, or no row yet). Drives the pre-learning brief panel.
+   */
+  firstEncounter: boolean
 }
 
 export interface GenerateQuestionRequest {
