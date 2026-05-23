@@ -27,6 +27,15 @@ function isSafeRedirectUrl(url: string): boolean {
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  // Magic-link / OTP flow. `admin.generateLink({type:'magiclink'})` returns a
+  // hashed token that, in our send-otp route, we now embed in a link back to
+  // THIS callback as ?token_hash=...&type=magiclink. The previous flow that
+  // sent users through Supabase's own /auth/v1/verify redirected back with
+  // an implicit-flow URL fragment (#access_token=...) that server-side
+  // route handlers cannot see — landing here with no `?code` and no `?error`,
+  // failing with "oauth_missing_code". (Diagnosed in prod 2026-05-23.)
+  const tokenHash = searchParams.get('token_hash')
+  const otpType = searchParams.get('type')
   const next = searchParams.get('next') ?? '/dashboard'
   // Google/Supabase redirect back with these when the provider itself rejects
   // (e.g. user denied consent, redirect URI mismatch, OAuth app disabled).
@@ -53,17 +62,32 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (code) {
+  if (code || (tokenHash && otpType)) {
     const supabase = createClient()
 
-    // Previously: no try/catch. exchangeCodeForSession can REJECT (not just
-    // return `{error}`) on network failure or when Supabase returns a non-JSON
-    // body — classic silent-swallow that produced a useless generic error.
-    let exchangeResult: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>
+    // Previously: no try/catch. exchangeCodeForSession / verifyOtp can REJECT
+    // (not just return `{error}`) on network failure or when Supabase returns
+    // a non-JSON body — classic silent-swallow that produced a useless
+    // generic error.
+    //
+    // Two code paths land here:
+    //   - `?code=` : OAuth (Google) and Supabase PKCE flows. Use
+    //     exchangeCodeForSession which trades the code for a session.
+    //   - `?token_hash=...&type=...` : magic-link / OTP flow. Use verifyOtp
+    //     which verifies the hashed token directly and establishes the
+    //     session in one round trip without an implicit-flow hash redirect.
+    let exchangeResult: { data: { user: { id: string; email?: string | null } | null }; error: { message?: string } | null }
     try {
-      exchangeResult = await supabase.auth.exchangeCodeForSession(code)
+      if (code) {
+        exchangeResult = await supabase.auth.exchangeCodeForSession(code)
+      } else {
+        // tokenHash && otpType guaranteed by the outer `if`
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = await supabase.auth.verifyOtp({ token_hash: tokenHash!, type: otpType as any })
+        exchangeResult = { data: { user: r.data.user ?? null }, error: r.error }
+      }
     } catch (err) {
-      logger.error({ err }, 'exchangeCodeForSession threw — likely Supabase network error or non-JSON body')
+      logger.error({ err, mode: code ? 'code' : 'token_hash' }, 'auth verify threw — likely Supabase network error or non-JSON body')
       captureApiException(err, { route: '/auth/callback' })
       return NextResponse.redirect(`${origin}/login?error=oauth_exchange_threw`)
     }

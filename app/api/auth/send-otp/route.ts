@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    if (error || !data?.properties?.action_link) {
+    if (error || !data?.properties?.hashed_token) {
       logger.warn(
         { err: error?.message, intent: parsed.intent },
         'generateLink failed — cannot send magic link email',
@@ -95,7 +95,30 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    actionLink = data.properties.action_link
+    // Build a link that bypasses Supabase's /auth/v1/verify endpoint and
+    // instead hits OUR /auth/callback with the hashed token directly. The
+    // previous code (`data.properties.action_link`) routed through
+    // Supabase's verify, which for OTP/magic-link flows redirects back with
+    // an implicit-flow URL fragment (#access_token=...) that the server-side
+    // callback route cannot read — sign-in always failed with
+    // "oauth_missing_code". Sending the user straight to our callback with
+    // `?token_hash=...&type=magiclink&next=...` lets verifyOtp run server-side
+    // and establish the session in one round trip.
+    // Spec: https://supabase.com/docs/guides/auth/server-side/email-based-auth-with-pkce-flow-for-ssr
+    const appUrl = (process.env['NEXT_PUBLIC_APP_URL'] ?? '').replace(/\/$/, '')
+    // Extract the desired `next` path from the redirectTo URL the client passed
+    // (e.g. https://maestring.com/auth/callback?next=/onboarding -> /onboarding).
+    let nextPath = '/dashboard'
+    try {
+      const redirectUrl = new URL(parsed.redirectTo)
+      nextPath = redirectUrl.searchParams.get('next') ?? '/dashboard'
+    } catch {
+      // redirectTo failed URL parse — should be impossible after Zod validation,
+      // but fall back to safe default.
+    }
+    actionLink =
+      `${appUrl}/auth/callback?token_hash=${encodeURIComponent(data.properties.hashed_token)}` +
+      `&type=magiclink&next=${encodeURIComponent(nextPath)}`
   } catch (err) {
     captureApiException(err, { route: '/api/auth/send-otp' })
     logger.error({ err }, 'send-otp unexpected error in generateLink')
