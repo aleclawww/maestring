@@ -31,7 +31,7 @@ export function MagicLinkEmail({ firstName, magicLinkUrl, intent, email }: Magic
       <Preview>
         {isSignup
           ? 'Confirm your Maestring account — click to get started'
-          : 'Your Maestring sign-in link — valid for 20 minutes'}
+          : 'Your Maestring sign-in link — valid for 1 hour'}
       </Preview>
       <Body style={main}>
         <Container style={container}>
@@ -57,7 +57,7 @@ export function MagicLinkEmail({ firstName, magicLinkUrl, intent, email }: Magic
           <Section style={callout}>
             <Text style={calloutText}>
               🔒 This link is for <strong>{email}</strong> only. It expires in{' '}
-              <strong>20 minutes</strong> and can only be used once.
+              <strong>1 hour</strong> and can only be used once.
             </Text>
           </Section>
 
