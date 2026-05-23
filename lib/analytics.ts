@@ -25,7 +25,15 @@ export type AnalyticsEvent =
   // study_session_completed in the same period.
   | { name: "elaboration_offered"; properties: { concept_id: string; question_id: string; session_id?: string } }
   | { name: "elaboration_started"; properties: { concept_id: string; question_id: string } }
-  | { name: "elaboration_submitted"; properties: { concept_id: string; question_id: string; session_id?: string; text_length: number } }
+  // elaboration_revealed fires when the user clicks "Reveal model →" after
+  // writing — they've finished articulating and are about to see the model.
+  // Critical funnel waypoint: started→revealed measures friction in the
+  // textarea (people who opened it but couldn't write anything meaningful)
+  // separately from revealed→submitted (people who saw the model but
+  // didn't close the loop with self-assessment). The two have opposite
+  // remedies — placeholder copy vs checklist redesign.
+  | { name: "elaboration_revealed"; properties: { concept_id: string; question_id: string; text_length: number } }
+  | { name: "elaboration_submitted"; properties: { concept_id: string; question_id: string; session_id?: string; text_length: number; points_covered_count: number; points_total: number } }
   | { name: "elaboration_self_assessed"; properties: { concept_id: string; points_covered_count: number; points_total: number } }
   // Readiness & milestones
   | { name: "readiness_milestone_hit"; properties: { score: number; band: "50" | "70" | "85" } }
