@@ -819,6 +819,7 @@ export function StudySession({ userId: _userId, activeSessionId, activeSessionMo
               evaluation={state.evaluation}
               onContinue={continueSession}
               isLast={state.questionNumber >= state.total}
+              sessionId={sessionIdRef.current ?? undefined}
             />
           </div>
         </div>

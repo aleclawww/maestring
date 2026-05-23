@@ -15,6 +15,7 @@
     "seed": "tsx scripts/seed-aws-saa.ts",
     "seed:pool": "tsx scripts/seed-question-pool.ts",
     "seed:load": "tsx scripts/load-question-pool.ts",
+    "seed:elaborations": "tsx scripts/seed-elaborations.ts",
     "reset-dev": "tsx scripts/reset-dev.ts",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

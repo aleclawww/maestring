@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { Card } from '@/components/v2'
 import type { Question, EvaluationResult } from '@/types/study'
+import { ElaborationPanel } from './ElaborationPanel'
 
 const TASK_LABELS: Record<string, string> = {
   '1.1': 'Secure access to AWS resources',
@@ -98,6 +99,14 @@ interface AnswerFeedbackProps {
   evaluation: EvaluationResult
   onContinue: () => void
   isLast?: boolean
+  /**
+   * The active study_sessions.id, threaded through so the post-correct
+   * ElaborationPanel can persist its row joined to the session for the
+   * "% of sessions with ≥1 elaboration" product metric. Optional so the
+   * component still mounts (and the panel silently no-ops) if a parent
+   * forgets to pass it — degrades gracefully.
+   */
+  sessionId?: string
 }
 
 // Safe experimentation environment: negative feedback is NOT alarming red.
@@ -109,6 +118,7 @@ export function AnswerFeedback({
   evaluation,
   onContinue,
   isLast,
+  sessionId,
 }: AnswerFeedbackProps) {
   const isOptimal = evaluation.isCorrect
   const [elaborationRevealed, setElaborationRevealed] = useState(false)
@@ -326,6 +336,23 @@ export function AnswerFeedback({
             <p className="text-[12px] italic text-v2-foreground-muted">
               {evaluation.studyTip}
             </p>
+          )}
+
+          {/*
+            Post-correct elaboration: the twin of the pre-explanation Bjork
+            panel above (which only fires on incorrect answers). Renders
+            inline at the bottom of the explanation block — the user reads
+            the model reasoning first, THEN gets the optional CTA to
+            articulate it themselves. Component silently no-ops if no
+            elaboration exists for this concept (404 from the GET), so we
+            don't gate it on any availability check here.
+          */}
+          {isOptimal && (
+            <ElaborationPanel
+              conceptId={question.conceptId}
+              questionId={question.id}
+              sessionId={sessionId}
+            />
           )}
         </div>
       )}

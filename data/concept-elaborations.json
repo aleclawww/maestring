@@ -1,0 +1,58 @@
+{
+  "$schema": "./concept-elaborations.schema.md",
+  "_README": [
+    "Elaboration content shown POST-CORRECT, after a user has answered a",
+    "concept's question correctly and opted into 'Explain it in your own words'.",
+    "Run `npm run seed:elaborations` to upsert this into the concept_elaborations",
+    "table. Set --reset to delete-and-reinsert; default is upsert by concept_slug.",
+    "",
+    "Each entry:",
+    "  concept_slug         : must exist in concepts table (lib/knowledge-graph/aws-saa.ts)",
+    "  model_explanation_md : 50-4000 chars, markdown. Shown side-by-side with the",
+    "                         user's own text after they submit. Tone: how a senior",
+    "                         AWS engineer would explain this on a whiteboard — direct,",
+    "                         no marketing copy. Same voice as the existing concept",
+    "                         briefs and the post-incorrect Bjork prompt; you don't",
+    "                         want the user to feel like a different feature wrote",
+    "                         the model. Use markdown sparingly: bold for terms,",
+    "                         backticks for service/API names. Avoid headings.",
+    "  key_points           : 2-6 short strings, each one 'a thing a good explanation",
+    "                         covers'. The user checks off which they covered (honor",
+    "                         system, not graded). Keep each <= 70 chars and start",
+    "                         with a verb when natural ('Uses', 'Differentiates',",
+    "                         'Mentions'). These are the spine of the self-assessment.",
+    "  metacognitive_prompt : OPTIONAL. A single sentence shown as a 'para pensar",
+    "                         (no requires respuesta)' seed AFTER submit. Pure cognitive",
+    "                         nudge, no input field. 10-500 chars. Skip the field",
+    "                         entirely if you don't have a good one — better than a",
+    "                         lame one.",
+    "",
+    "The two examples below are FORMAT SAMPLES, not pedagogically vetted content.",
+    "Rewrite both (or delete and replace) before shipping. The seed script enforces",
+    "Zod validation on every entry, so format mistakes fail loudly."
+  ],
+  "elaborations": [
+    {
+      "concept_slug": "s3-storage-classes",
+      "model_explanation_md": "S3 storage classes are a **cost-vs-access-time** trade-off, not a feature tier. The defaults to know cold:\n\n- **Standard** — frequent access, millisecond latency, highest per-GB cost. Default for anything you actively serve.\n- **Standard-IA** / **One Zone-IA** — infrequent access (think >30 days between reads), cheaper storage but a per-GB **retrieval fee**. One Zone-IA halves storage cost by giving up multi-AZ redundancy — only safe for re-creatable data.\n- **Glacier Instant Retrieval** — ms latency like Standard-IA, but storage is ~3x cheaper. The catch is a 90-day minimum storage commitment.\n- **Glacier Flexible Retrieval / Deep Archive** — archive tiers. Retrieval measured in minutes to hours. Storage is cheapest per GB on AWS. Use when you legally must keep data but expect to never read it.\n\nThe trap in exam questions: lifecycle policies move objects between classes automatically based on age, but transitioning OUT of Glacier requires a restore request — not a free read. And One Zone-IA is NOT cheaper than Standard-IA at retrieval time, only at rest.",
+      "key_points": [
+        "Differentiates cost-at-rest from retrieval cost (not the same)",
+        "Mentions the minimum storage duration commitment on IA / Glacier classes",
+        "Calls out that One Zone-IA trades durability for cost (use only for re-creatable data)",
+        "Distinguishes Instant Retrieval (ms) from Flexible / Deep Archive (minutes to hours)"
+      ],
+      "metacognitive_prompt": "If you had a compliance requirement to keep logs for 7 years but expected to query them maybe twice ever, which class would you pick — and what's the second-order cost most people miss?"
+    },
+    {
+      "concept_slug": "iam-roles-vs-policies",
+      "model_explanation_md": "A **policy** is a document (JSON) that says *what is allowed or denied*. A **role** is an *identity* that an entity can assume to inherit those policies. They are not interchangeable; they sit at different layers.\n\n- Policies attach to identities (users, groups, roles) or to resources (S3 bucket policies, KMS key policies). The same policy can be attached to many identities.\n- Roles are how you give **temporary, assumed-by-someone-else** permissions: an EC2 instance assumes a role to talk to S3, a Lambda assumes a role to write to DynamoDB, a user from another account assumes a role to access yours.\n- The exam pattern: if the question involves **'instance / service / cross-account needs access to X'**, the answer almost always involves a role, not a user with long-lived credentials. AWS treats long-lived access keys as an antipattern by default.\n\nThe distinction that catches people: a role has **two** policies that matter — the trust policy (who can assume it) and the permission policy (what the assumer can then do). Confusing those is the most common iam-roles question failure.",
+      "key_points": [
+        "Distinguishes policy (the rules) from role (the identity that wears the rules)",
+        "Uses the 'service / cross-account needs access' heuristic to recognize a role question",
+        "Mentions that roles avoid long-lived access keys",
+        "Calls out the trust policy vs permission policy split"
+      ],
+      "metacognitive_prompt": "Why does AWS encourage an EC2 instance to assume a role instead of just embedding an access key into the AMI? Name two failure modes that the role approach prevents."
+    }
+  ]
+}

@@ -18,6 +18,15 @@ export type AnalyticsEvent =
   | { name: "concept_brief_viewed"; properties: { concept_id: string } }
   | { name: "concept_brief_dismissed"; properties: { concept_id: string; brief_loaded: boolean } }
   | { name: "question_reported"; properties: { question_id: string; concept_id?: string; category: "wrong_answer" | "multiple_correct" | "unclear" | "outdated" | "other" } }
+  // Elaboration Mode (post-correct, no-LLM elaboration introduced 2026-05-23).
+  // Funnel: offered → started → submitted → self_assessed. The primary
+  // product metric is "% of sessions with ≥1 elaboration_submitted",
+  // computed in PostHog as distinct session_id with the event / total
+  // study_session_completed in the same period.
+  | { name: "elaboration_offered"; properties: { concept_id: string; question_id: string; session_id?: string } }
+  | { name: "elaboration_started"; properties: { concept_id: string; question_id: string } }
+  | { name: "elaboration_submitted"; properties: { concept_id: string; question_id: string; session_id?: string; text_length: number } }
+  | { name: "elaboration_self_assessed"; properties: { concept_id: string; points_covered_count: number; points_total: number } }
   // Readiness & milestones
   | { name: "readiness_milestone_hit"; properties: { score: number; band: "50" | "70" | "85" } }
   | { name: "streak_bumped"; properties: { length: number } }
