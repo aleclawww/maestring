@@ -21,23 +21,21 @@ interface Tier {
   highlight?: boolean
 }
 
+// NOTE: A "Lifetime" tier ($119 one-time) used to be the first card here.
+// It was removed 2026-05-23 — pre-launch — because the checkout for it was
+// never wired end-to-end (no LemonSqueezy variant, no order_created webhook
+// handler, no entitlement on the lifetime plan). Keeping the card visible
+// with a 'Buy lifetime access' button that doesn't process payment would
+// have been a credibility tax we couldn't afford at the moment of seeking
+// the first real beta users.
+//
+// To restore Lifetime later: re-add the tier object to this array, AND
+// implement the missing checkout chain (LemonSqueezy variant + order_created
+// handler + plan='lifetime' branch in getEntitlement). Do not re-add it
+// here without the other half — it's the exact failure mode this comment
+// is meant to prevent.
+
 const TIERS: Tier[] = [
-  {
-    name: 'Lifetime',
-    price: '$119',
-    cadence: 'one-time',
-    description: 'Pay once for SAA-C03. Forever.',
-    features: [
-      'Lifetime access to SAA-C03',
-      'Full syllabus · 142 concepts',
-      '2,000+ exam-pattern questions',
-      'FSRS-4.5 spaced repetition',
-      'Mock exam simulator',
-      'No subscription, no renewals',
-    ],
-    cta: 'Buy lifetime access',
-    href: '/signup?plan=lifetime',
-  },
   {
     name: 'Pro',
     price: '$29',
@@ -85,13 +83,25 @@ export function Pricing() {
             One honest price.{' '}
             <span className="v2-text-gradient">No tricks.</span>
           </h2>
+          {/*
+            Placeholder copy. Founder is rewriting this together with the
+            Hero subhead during the landing rewrite (paso 2) so the
+            pricing-section voice and the hero thesis tell the same story.
+            Do not edit in isolation.
+          */}
           <p className="mt-5 text-[17px] leading-[1.7] text-v2-foreground-muted">
-            Pay once for a single certification — lifetime access. Or
-            subscribe and unlock every cert plus mentorship.
+            Pass the AWS Solutions Architect Associate. Cancel anytime.
           </p>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 items-stretch gap-6 md:grid-cols-3 md:gap-5 lg:gap-6">
+        {/*
+          Was md:grid-cols-3 when Lifetime existed as a tier. With only
+          Pro + Teams, 2 columns centered reads more deliberate than two
+          cards floating in a 3-column grid with an empty third column.
+          md:max-w-[820px] + mx-auto centers the pair within the parent
+          1200px container without altering spacing math elsewhere.
+        */}
+        <div className="mt-16 grid grid-cols-1 items-stretch gap-6 md:mx-auto md:max-w-[820px] md:grid-cols-2 md:gap-5 lg:gap-6">
           {TIERS.map((t) => (
             <Card
               key={t.name}
