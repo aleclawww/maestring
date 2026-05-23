@@ -16,9 +16,18 @@ import { z } from 'zod'
 // having its own admin UI.
 //
 // CLI:
-//   tsx scripts/seed-elaborations.ts                  # upsert (default)
-//   tsx scripts/seed-elaborations.ts --reset          # delete all + reinsert
-//   tsx scripts/seed-elaborations.ts --dry-run        # validate only
+//   tsx scripts/seed-elaborations.ts                            # upsert all (default)
+//   tsx scripts/seed-elaborations.ts --reset                    # delete all + reinsert all
+//   tsx scripts/seed-elaborations.ts --dry-run                  # validate only
+//   tsx scripts/seed-elaborations.ts --only=<slug>              # upsert ONE entry by concept_slug
+//   tsx scripts/seed-elaborations.ts --only=slug-a,slug-b       # upsert a subset
+//
+// --only is the escape valve for the dogfooding period: while the JSON still
+// contains FORMAT SAMPLE entries (s3-storage-classes, iam-roles-vs-policies)
+// alongside real authored ones, you may want to seed only the real ones to
+// avoid polluting the DB with placeholder content even in local. It does NOT
+// delete other entries from the DB — it just filters which JSON entries get
+// upserted in this run.
 //
 // Zod validates every entry BEFORE touching the DB. A single malformed entry
 // blocks the whole batch — better to fail loudly than half-write.
@@ -31,6 +40,10 @@ const args = Object.fromEntries(
 )
 const RESET = args['reset'] === 'true'
 const DRY_RUN = args['dry-run'] === 'true'
+const ONLY_SLUGS: Set<string> | null =
+  typeof args['only'] === 'string' && args['only'] !== 'true'
+    ? new Set(args['only'].split(',').map(s => s.trim()).filter(Boolean))
+    : null
 
 const SUPABASE_URL = process.env['NEXT_PUBLIC_SUPABASE_URL']
 const SERVICE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY']
@@ -77,6 +90,23 @@ async function main() {
   const fileData = FileSchema.parse({ elaborations: parsedJson['elaborations'] })
 
   console.log(`[seed-elaborations] loaded ${fileData.elaborations.length} entries from ${filePath}`)
+
+  // Apply --only filter, if any. Validates first that every requested slug
+  // exists in the JSON — typo'd slug names fail loud here instead of
+  // silently no-op'ing.
+  if (ONLY_SLUGS) {
+    const jsonSlugs = new Set(fileData.elaborations.map(e => e.concept_slug))
+    const unknown = [...ONLY_SLUGS].filter(s => !jsonSlugs.has(s))
+    if (unknown.length > 0) {
+      console.error('[seed-elaborations] --only includes slug(s) not present in the JSON:')
+      unknown.forEach(s => console.error(`  - ${s}`))
+      console.error('  Available slugs in JSON:', [...jsonSlugs].join(', '))
+      process.exit(1)
+    }
+    const before = fileData.elaborations.length
+    fileData.elaborations = fileData.elaborations.filter(e => ONLY_SLUGS.has(e.concept_slug))
+    console.log(`[seed-elaborations] --only filter: ${fileData.elaborations.length} of ${before} entries will be processed`)
+  }
 
   // Resolve concept_slug → concept_id in one round trip. The concepts table
   // is keyed by (certification_id, slug); we filter by aws-saa-c03 because
