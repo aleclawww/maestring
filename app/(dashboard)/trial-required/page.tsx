@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Start your free trial' }
 
 export default async function TrialRequiredPage() {
   const user = await requireAuthenticatedUser()
-  const ent = await getEntitlement(user.id)
+  const ent = await getEntitlement(user.id, user.email)
   // If they're not gated, they don't need this page — back to the app.
   if (
     ent.kind === 'trialing' ||

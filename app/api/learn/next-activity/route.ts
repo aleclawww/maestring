@@ -10,7 +10,7 @@ export async function GET() {
 
   // Same engagement gate as /api/study/generate. Lets the user complete
   // calibration + a few activities before being asked for the card.
-  const ent = await getEntitlement(user.id)
+  const ent = await getEntitlement(user.id, user.email)
   if (ent.kind === 'gated') {
     return NextResponse.json(
       { error: 'preview_exhausted', message: 'Free preview used. Start your 7-day trial to keep going.', paywall: true },
