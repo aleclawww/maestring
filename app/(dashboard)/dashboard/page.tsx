@@ -68,13 +68,18 @@ export default async function DashboardPage() {
     { data: domainStates },
     { data: readinessRows },
   ] = await Promise.all([
+    // .maybeSingle() instead of .single(): if the profiles row is missing
+    // (handle_new_user trigger or ensure_user_bootstrapped RPC failed on
+    // first signup), do NOT 500 the entire dashboard. Render with null
+    // profile and let downstream optional chains kick in. Bug is logged
+    // for triage; user sees a usable (if empty) dashboard.
     supabase
       .from('profiles')
       .select(
         'full_name, current_streak, total_xp, exam_target_date, onboarding_completed, exam_outcome, streak_freezes_available',
       )
       .eq('id', user.id)
-      .single(),
+      .maybeSingle(),
     supabase.rpc('get_user_stats', { p_user_id: user.id }),
     supabase
       .from('study_sessions')
@@ -103,6 +108,16 @@ export default async function DashboardPage() {
     logger.warn(
       { err: freezesErr, userId: user.id },
       'dashboard: failed to read recent streak freezes — toast suppressed',
+    )
+  }
+
+  if (!profile) {
+    // The auth user exists but the profiles row doesn't — this should
+    // only happen if the post-signup bootstrap failed. Page still
+    // renders (degraded), but loud-log for triage.
+    logger.error(
+      { userId: user.id },
+      'dashboard: profiles row missing for authenticated user — handle_new_user trigger or ensure_user_bootstrapped RPC likely failed',
     )
   }
 
@@ -339,8 +354,11 @@ export default async function DashboardPage() {
             )}
           </Card>
 
-          {/* Readiness — mini */}
-          {readiness ? (
+          {/* Readiness — mini. get_exam_readiness_v2 always returns 1
+              row (even for brand-new users → score=0, studied=0). Gate
+              on studied_concepts > 0 so the friendly calibration copy
+              actually shows on day one, instead of a misleading "0".  */}
+          {readiness && readiness.studied_concepts > 0 ? (
             <Card padding="lg">
               <Eyebrow>Readiness</Eyebrow>
               <div className="mt-3 flex items-baseline gap-2">

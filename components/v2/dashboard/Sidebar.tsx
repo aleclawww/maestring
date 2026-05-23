@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Logo } from '@/components/v2'
+import { SignOutButton } from './SignOutButton'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -145,7 +146,7 @@ export function Sidebar({
         </Link>
       </div>
 
-      {/* Bottom: settings + avatar */}
+      {/* Bottom: settings + sign-out + avatar */}
       <div className="border-t border-v2-border-subtle p-3">
         <Link
           href="/settings"
@@ -154,6 +155,8 @@ export function Sidebar({
           <Settings className="h-4 w-4" strokeWidth={2} />
           <span>Settings</span>
         </Link>
+
+        <SignOutButton />
 
         <div className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2">
           {userAvatar ? (

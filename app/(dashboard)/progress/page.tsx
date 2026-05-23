@@ -160,8 +160,12 @@ export default async function ProgressPage() {
         </p>
       </header>
 
-      {/* Readiness — full card with gauge + sparkline + at-risk drawer */}
-      {readiness ? (
+      {/* Readiness — full card with gauge + sparkline + at-risk drawer.
+          get_exam_readiness_v2 always returns 1 row (even for brand-new
+          users → score=0, studied=0). Gate on studied_concepts > 0 so
+          the friendly calibration copy actually shows on day one,
+          instead of a "0% Building base" gauge that contradicts it. */}
+      {readiness && readiness.studied_concepts > 0 ? (
         <ReadinessCard data={readiness} />
       ) : (
         <Card padding="lg">

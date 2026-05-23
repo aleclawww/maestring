@@ -16,6 +16,13 @@ const PUBLIC_PREFIXES = [
   // Public liveness/uptime probe — external monitors hit this unauthenticated.
   // The handler pings Supabase + Redis and returns 200/503.
   '/api/health',
+  // Auth endpoints (send-otp, callback, etc.) MUST be public because they are
+  // the path by which an unauthenticated user becomes authenticated. Without
+  // this prefix, the middleware below redirects POST /api/auth/send-otp to
+  // /login with 307, the email never gets sent, and signup/login is broken
+  // end-to-end. The endpoints themselves rate-limit by IP + email to prevent
+  // abuse, so making the prefix public is safe. (Found in prod 2026-05-23.)
+  '/api/auth/',
   '/r/',
   '/_next/',
   '/favicon',
