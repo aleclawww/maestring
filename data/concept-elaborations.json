@@ -33,6 +33,17 @@
   ],
   "elaborations": [
     {
+      "concept_slug": "security-groups-vs-nacls",
+      "model_explanation_md": "Las dos filtran tráfico, pero operan en capas distintas y esa es la clave.\n\n**Security Group** va pegado a la instancia (a la ENI, técnicamente) y es **stateful**: si dejas entrar una conexión, la respuesta sale automáticamente — no tienes que abrir nada de vuelta. Solo tiene reglas de *permitir*; todo lo demás se deniega por defecto.\n\n**NACL** va pegada a la subred, es **stateless** (tienes que permitir explícitamente el tráfico de ida Y el de vuelta — puertos efímeros incluidos) y tiene reglas de permitir *y* de denegar.\n\n¿Cuándo tocas cada una? El 90% del tiempo trabajas con security groups: \"esta instancia acepta SSH desde mi IP\", \"estos servidores hablan con la base de datos en el 5432\". Es tu herramienta del día a día. La NACL la tocas cuando quieres una regla a nivel de subred entera, normalmente para bloquear: banear una IP maliciosa para toda la subred, o poner una barrera defensiva amplia que no dependa de que cada instancia tenga bien su SG.\n\nPiénsalo como el **portero del edificio** (NACL: controla quién entra al edificio) frente a la **cerradura de cada piso** (SG: controla quién entra a tu apartamento).\n\nRegla mental: si te preguntas \"¿qué puede tocar esta máquina?\", es security group. Si es \"¿qué entra o sale de toda esta subred?\", es NACL.\n\nTip de debugging: si algo no conecta y juras que el SG está bien, mira la NACL — al ser stateless, el tráfico de vuelta por puertos efímeros es donde más gente se pega el tortazo.",
+      "key_points": [
+        "Distingue stateful (SG) de stateless (NACL)",
+        "Sitúa el SG en la instancia/ENI y la NACL en la subred",
+        "SG solo permite; NACL permite y deniega",
+        "SG es el día a día; NACL para bloqueo a nivel de subred"
+      ],
+      "metacognitive_prompt": "Te llega un ticket: \"la app no conecta a la base de datos\" y el SG parece correcto. ¿Dónde miras y por qué?"
+    },
+    {
       "concept_slug": "s3-storage-classes",
       "model_explanation_md": "S3 storage classes are a **cost-vs-access-time** trade-off, not a feature tier. The defaults to know cold:\n\n- **Standard** — frequent access, millisecond latency, highest per-GB cost. Default for anything you actively serve.\n- **Standard-IA** / **One Zone-IA** — infrequent access (think >30 days between reads), cheaper storage but a per-GB **retrieval fee**. One Zone-IA halves storage cost by giving up multi-AZ redundancy — only safe for re-creatable data.\n- **Glacier Instant Retrieval** — ms latency like Standard-IA, but storage is ~3x cheaper. The catch is a 90-day minimum storage commitment.\n- **Glacier Flexible Retrieval / Deep Archive** — archive tiers. Retrieval measured in minutes to hours. Storage is cheapest per GB on AWS. Use when you legally must keep data but expect to never read it.\n\nThe trap in exam questions: lifecycle policies move objects between classes automatically based on age, but transitioning OUT of Glacier requires a restore request — not a free read. And One Zone-IA is NOT cheaper than Standard-IA at retrieval time, only at rest.",
       "key_points": [
