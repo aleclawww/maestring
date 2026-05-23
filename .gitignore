@@ -14,6 +14,12 @@ dist/
 .env.local
 .env.production
 .env.*.local
+# Vercel-CLI-pulled production env files (e.g. .env.prod, .env.local.prod).
+# These are produced by `vercel env pull` and contain real prod values,
+# so they must never be staged. The two patterns below cover both
+# .env.prod / .env.<anything>.prod and .env.prod.<anything>.
+.env*.prod
+.env.prod*
 
 # Logs
 *.log
