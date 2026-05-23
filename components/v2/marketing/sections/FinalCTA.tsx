@@ -5,6 +5,7 @@
  * is the dramatic contrast moment — Corporate Trust signature for closing
  * sections.
  */
+import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/v2'
 
@@ -61,13 +62,15 @@ export function FinalCTA() {
         </p>
 
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button
-            size="xl"
-            className="rounded-full bg-white text-v2-foreground shadow-v2-elevated hover:-translate-y-0.5 hover:bg-white/95 hover:shadow-v2-elevated"
-          >
-            Create free account
-            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-          </Button>
+          <Link href="/signup">
+            <Button
+              size="xl"
+              className="rounded-full bg-white text-v2-foreground shadow-v2-elevated hover:-translate-y-0.5 hover:bg-white/95 hover:shadow-v2-elevated"
+            >
+              Create free account
+              <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+            </Button>
+          </Link>
           <Button
             variant="ghost"
             size="xl"

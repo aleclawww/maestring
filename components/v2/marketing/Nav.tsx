@@ -88,10 +88,12 @@ export function Nav() {
             >
               Sign in
             </Link>
-            <Button size="md" className="rounded-full">
-              Get started free
-              <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-            </Button>
+            <Link href="/signup">
+              <Button size="md" className="rounded-full">
+                Get started free
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile trigger */}
@@ -131,10 +133,12 @@ export function Nav() {
             >
               Sign in
             </Link>
-            <Button size="lg" className="mt-2 w-full rounded-full">
-              Get started free
-              <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-            </Button>
+            <Link href="/signup" className="mt-2 block">
+              <Button size="lg" className="w-full rounded-full">
+                Get started free
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+              </Button>
+            </Link>
           </div>
         </div>
       )}

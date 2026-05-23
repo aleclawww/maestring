@@ -54,13 +54,17 @@ export function Hero() {
             </p>
 
             <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <Button size="xl" className="rounded-full">
-                Start free trial
-                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-              </Button>
-              <Button variant="secondary" size="xl" className="rounded-full">
-                See a sample exam
-              </Button>
+              <Link href="/signup">
+                <Button size="xl" className="rounded-full">
+                  Start free trial
+                  <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button variant="secondary" size="xl" className="rounded-full">
+                  See a sample exam
+                </Button>
+              </Link>
             </div>
 
             {/* Social proof row */}

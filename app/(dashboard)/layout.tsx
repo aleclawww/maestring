@@ -47,17 +47,21 @@ export default async function DashboardLayout({
     if (ent.kind === 'exploring') previewUsage = ent.usage
   }
 
+  // Both queries use .maybeSingle() so a missing row does NOT throw —
+  // a brand-new user without a Stripe subscription row, or a user whose
+  // profile bootstrap failed, should still reach the dashboard. The
+  // Shell component already handles null userName / avatar gracefully.
   const [{ data: profile }, { data: subscription }] = await Promise.all([
     supabase
       .from('profiles')
       .select('full_name, avatar_url')
       .eq('id', user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('subscriptions')
       .select('plan')
       .eq('user_id', user.id)
-      .single(),
+      .maybeSingle(),
   ])
 
   const plan = (subscription?.plan ?? 'free') as SubscriptionPlan
