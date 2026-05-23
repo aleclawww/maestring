@@ -24,7 +24,6 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isAdminEmail } from '@/lib/auth/admin'
 
 // Engagement budget for the exploring state. Tuned so the user completes
 // calibration → ambient + first retrieval cycle and just begins to feel the
@@ -61,63 +60,7 @@ export function overCap(usage: UsageSnapshot): boolean {
   )
 }
 
-/**
- * Number of days the admin bypass entitlement reports as "trial remaining".
- * 30 days is long enough that the trial countdown never visibly approaches
- * zero during a dogfooding session (would make banners look alarming and
- * skew the founder's perception of the trial UX), but short enough that
- * it doesn't masquerade as a fully paid plan. The clock is recomputed on
- * every call so the value is always "30 days from now", never stale.
- */
-const ADMIN_BYPASS_TRIAL_DAYS = 30
-
-export async function getEntitlement(
-  userId: string,
-  /**
-   * Caller's email, used ONLY to apply the ADMIN_EMAILS bypass below.
-   * Optional so existing callers that don't have it handy still compile;
-   * if omitted the bypass simply doesn't fire and the user goes through
-   * the normal subscriptions path. The four current callers all have a
-   * `user` object from requireAuthenticatedUser() that already carries
-   * the email, so they pass it.
-   */
-  email?: string | null,
-): Promise<Entitlement> {
-  // ── ADMIN BYPASS ────────────────────────────────────────────────────────
-  // If the caller's email is in ADMIN_EMAILS, return a synthetic "trialing"
-  // entitlement and skip the subscriptions query entirely. This exists so
-  // the founder (and any other admin) can dogfood the authenticated
-  // experience without keeping a real Stripe/Lemon Squeezy subscription
-  // active in production.
-  //
-  // CRITICAL CHOICE — we return `kind: 'trialing'`, NOT `kind: 'active'`,
-  // even though 'active' would also unblock all routes. The reason is
-  // product, not technical: the vast majority of real users live in the
-  // 'trialing' state (7-day trial gated by trial-required page, TrialBanner
-  // visible in the dashboard layout, conversion nudges, etc.). Returning
-  // 'active' would render an admin a pristine "paid" UI with none of those
-  // surfaces — meaning the admin would dogfood an experience that
-  // essentially no real user has. By emulating 'trialing' the admin sees
-  // the SAME chrome a top-of-funnel user sees, which is where almost all
-  // copy and UX iteration will happen. Do not "upgrade" this to 'active'
-  // for convenience without weighing the same trade-off.
-  //
-  // The 30-day trial_end is intentionally well beyond the real 7-day trial
-  // so the TrialBanner never looks panicked (~3 days left) during long
-  // dogfooding sessions. We're emulating the trial CHROME, not the trial
-  // COUNTDOWN. If we wanted the countdown experience too, set 7 days here.
-  if (email && isAdminEmail(email)) {
-    const trialEnd = new Date(
-      Date.now() + ADMIN_BYPASS_TRIAL_DAYS * 24 * 60 * 60 * 1000,
-    ).toISOString()
-    return {
-      kind: 'trialing',
-      trialEnd,
-      cancelAtPeriodEnd: false,
-      planLabel: 'pro',
-    }
-  }
-
+export async function getEntitlement(userId: string): Promise<Entitlement> {
   const supabase = createAdminClient()
 
   // 1) Stripe-side subscription state.

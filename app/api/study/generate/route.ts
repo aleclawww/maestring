@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   // Engagement-gated trial: block question generation when the free preview
   // is exhausted and the user hasn't started a trial yet. Returns 402 with
   // a paywall hint the client surfaces as a "Start trial" overlay.
-  const ent = await getEntitlement(user.id, user.email);
+  const ent = await getEntitlement(user.id);
   if (ent.kind === 'gated') {
     return NextResponse.json(
       { error: 'preview_exhausted', message: 'Free preview used. Start your 7-day trial to keep going.', paywall: true },

@@ -38,7 +38,7 @@ export default async function DashboardLayout({
   let trialCancelAtEnd = false
   let previewUsage: { questions: number; ambient: number; anchoring: number } | null = null
   if (!isExempt) {
-    const ent = await getEntitlement(user.id, user.email)
+    const ent = await getEntitlement(user.id)
     if (ent.kind === 'gated') redirect('/trial-required')
     if (ent.kind === 'trialing') {
       trialEnd = ent.trialEnd
