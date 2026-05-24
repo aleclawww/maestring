@@ -1,22 +1,39 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
+/**
+ * Legal pages layout (Terms, Privacy).
+ *
+ * Rewritten 2026-05-24. Previously hardcoded `bg-[#0f1117] text-white` +
+ * `prose-invert` — the dark theme from before the v2 redesign. A reader
+ * who clicked "Terms" from the rewriteado footer landed on a page that
+ * looked like a different product, which leaks "they didn't finish the
+ * rewrite" — the exact signal we worked all day to scrub everywhere
+ * else.
+ *
+ * Now wraps with the shared v2 marketing chrome:
+ *   - `theme-v2` class so v2 design tokens (--v2-foreground, surfaces,
+ *     etc.) apply throughout
+ *   - `<Nav />` from `@/components/v2/marketing` — same nav as landing
+ *     and /pricing
+ *   - `<Footer />` from `@/components/v2/marketing` — inherits the
+ *     SAME cleaned footer just shipped (5 links, mailto contact,
+ *     "AWS SAA-C03 prep, covered properly." tagline). Single source of
+ *     truth, so legal pages can't drift back to an old footer state.
+ *
+ * Typography: switched from `prose-invert prose-zinc` to `prose
+ * prose-zinc` (light theme equivalent) so the legal pages' raw <h1>/
+ * <h2>/<p> markup renders cleanly without each page needing per-element
+ * className changes.
+ */
+import type { ReactNode } from 'react'
+import { Nav, Footer } from '@/components/v2/marketing'
 
 export default function LegalLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0f1117] text-white">
-      <nav className="border-b border-white/5 sticky top-0 z-50 bg-[#0f1117]/80 backdrop-blur-xl">
-        <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold gradient-text">Maestring</Link>
-          <div className="flex items-center gap-4 text-sm text-zinc-400">
-            <Link href="/legal/terms" className="hover:text-white">Terms</Link>
-            <Link href="/legal/privacy" className="hover:text-white">Privacy</Link>
-            <Link href="/login" className="hover:text-white">Sign in</Link>
-          </div>
-        </div>
-      </nav>
-      <main className="max-w-3xl mx-auto px-6 py-16 prose prose-invert prose-zinc">
+    <div className="theme-v2 min-h-screen bg-v2-background text-v2-foreground">
+      <Nav />
+      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-zinc">
         {children}
       </main>
+      <Footer />
     </div>
-  );
+  )
 }
