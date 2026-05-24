@@ -7,6 +7,7 @@ import { Card, BlurBlob, Pill } from '@/components/v2'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
 import { buttonVariants } from '@/components/v2/button-variants'
 import { cn } from '@/lib/utils'
+import { QUESTION_COUNT_PROD } from '@/lib/constants/marketing'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -86,7 +87,7 @@ export default async function TrialRequiredPage() {
                 {[
                   'Full 142-concept SAA-C03 syllabus',
                   '9-phase Coach (Calibration → Mastery)',
-                  '2,000+ pre-generated exam-pattern questions',
+                  `${QUESTION_COUNT_PROD.toLocaleString()} pre-generated exam-pattern questions`,
                   'FSRS-4.5 spaced repetition',
                   'Knowledge Map + flashcards',
                   '65-question mock exam',
