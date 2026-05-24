@@ -12,38 +12,79 @@ interface FAQItem {
   a: string
 }
 
+/*
+ * Rewritten 2026-05-24 after a truth audit. Cuts and rewrites by entry:
+ *
+ *   #1 Cloud experience → REWRITTEN: removed "Most of our students are
+ *      mid-to-senior engineers" — fabricated population claim. With ~2
+ *      real users, there is no "most." Substance about adaptive
+ *      scheduling kept.
+ *
+ *   #2 Practice exams → REWRITTEN: dropped "written by AWS-certified
+ *      engineerS" plural. Solo author. The honest version leans on
+ *      process ("written and reviewed against the official exam
+ *      guide") rather than credentials, which skeptical engineers
+ *      trust more anyway. If founder wants singular-credential ("an
+ *      AWS-certified engineer") instead, swap the second sentence.
+ *
+ *   #3 How long → REWRITTEN: "Most engineers land in 4-8 weeks" was
+ *      a fabricated outcome statistic. Reframed as industry estimate
+ *      (~80h) which is true today, with the calibration step described
+ *      as what Maestring does to sharpen that estimate per user.
+ *
+ *   #4 AWS labs → CUT. Labs do not exist in the product. The original
+ *      FAQ entry promised IAM scaffolding, cost caps, "under $5 total"
+ *      — fiction. Same landmine cut from Features and StatsBand.
+ *
+ *   #5 Fail official exam → TRIMMED. First half ("Pro is monthly, you
+ *      keep access") is true; second half ("platform highlights domains
+ *      that didn't land and reschedules them at the top of the queue")
+ *      is product fiction — /api/profile/exam-outcome only persists the
+ *      outcome, no weak-domain reorganization exists.
+ *
+ *   #6 Student discount → CUT. students@maestring.com appeared in this
+ *      file only — no handler, no policy, no verification flow. A
+ *      discount to a dead address breaks the moment someone uses it.
+ *      If a real manual process is set up later, restore as:
+ *      "Email me .edu proof and I'll set it up manually."
+ *
+ *   #7 Language → CUT date commitment. No i18n framework exists.
+ *      "Spanish on the way (Q3 2026)" was aspiration with a calendar
+ *      attached. English-only honest version.
+ *
+ *   #8 Pause subscription → CUT. Webhook event `subscription_paused`
+ *      is in the type union of lib/lemonsqueezy/webhooks.ts but no
+ *      handler exists for it — meaning the FAQ's promises ("we keep
+ *      your progress, FSRS state, and streak intact") are unimplemented
+ *      behaviors. The only honest version was hedged enough to not
+ *      belong in a confidence-building FAQ. If users need to pause,
+ *      they can email — the "Something else on your mind?" line below
+ *      catches it.
+ *
+ * Rule going forward: every answer here describes something true today.
+ * Adding entries requires the same audit. Anything aspirational gets
+ * its own roadmap mention, not a FAQ answer.
+ */
 const FAQS: FAQItem[] = [
   {
     q: 'Will it help if I already have cloud experience?',
-    a: 'Yes. Most of our students are mid-to-senior engineers who already use AWS daily but need to formalize the knowledge. The adaptive scheduler skips what you already know — you will not waste time on EC2 basics if you have run EC2 in production.',
+    a: "Yes — likely more than if you didn't. Maestring calibrates to your starting point on day one and skips what you already know, so the time you spend is on what you'd actually fail in the exam. If you've run EC2 in production, you won't be drilling EC2 basics.",
   },
   {
     q: 'Are the practice exams the official AWS ones?',
-    a: 'No. The official exams are not redistributable — anyone selling them is breaking AWS terms. Ours are written by AWS-certified engineers and calibrated against the official exam guide. Format is identical: 65 questions, 130 minutes, same scoring scale.',
+    a: "No — the official exams aren't redistributable, and anyone selling them is breaking AWS terms. Maestring's pool is written and reviewed against the official SAA-C03 exam guide. Format is identical to the real exam: 65 questions, 130 minutes, same scoring scale.",
   },
   {
     q: 'How long until I can pass SAA-C03?',
-    a: 'Depends on your starting point. The first week gives you a calibrated estimate based on a placement test. Most engineers with prior cloud experience land between 4 and 8 weeks at a few hours per week.',
-  },
-  {
-    q: 'Do I get an AWS account for the labs?',
-    a: 'You bring your own. We provide IAM policy templates that scope each lab to the bare minimum, and a cost cap that auto-stops the lab before it bites. Total lab cost across the whole SAA course is typically under $5.',
+    a: 'For someone with prior cloud experience, the common estimate is around 80 hours of focused study — roughly 4–8 weeks at a few hours per week, or a couple of months at a slower pace. Maestring calibrates to your starting point on day one and schedules from there, so the estimate sharpens as you go.',
   },
   {
     q: 'What happens if I fail the official exam?',
-    a: "You keep your access — Pro is monthly so you can re-prep without buying anything new. The platform highlights the domains that didn't land and reschedules them at the top of the queue.",
-  },
-  {
-    q: 'Is there a student discount?',
-    a: 'Yes — 50% off Pro for verified .edu / academic emails. Email students@maestring.com from your university address.',
+    a: 'You keep your access — Pro is monthly, so you can re-prep without buying anything new.',
   },
   {
     q: 'What language is the content in?',
-    a: 'English primary, Spanish on the way (Q3 2026). The official AWS exams in Europe are taken in English regardless, so we focus on that as the primary surface.',
-  },
-  {
-    q: 'Can I pause my subscription?',
-    a: 'Yes. Pause for up to 90 days from the billing portal — we keep your progress, FSRS state, and streak intact. No fee, no questions.',
+    a: "English only for now. The official AWS exams in Europe are taken in English regardless, so that's the primary surface.",
   },
 ]
 
@@ -53,9 +94,19 @@ export function FAQ() {
       <div className="mx-auto max-w-[820px] px-6">
         <div className="max-w-[680px]">
           <Eyebrow>Questions</Eyebrow>
+          {/*
+            H2 rewritten 2026-05-24 — previous "What almost everyone
+            asks" implied volume of askers (population claim, same
+            family as "most of our students" / "3,200+ engineers"
+            cut elsewhere). Replaced with a minimal frame that lets
+            the questions themselves carry the section. The "honestly"
+            close earns its place because the entries below are
+            actually honest — no announcement that isn't demonstrated
+            by the next 5 answers.
+          */}
           <h2 className="v2-display mt-3 text-[36px] sm:text-[44px] lg:text-[52px]">
-            What almost everyone asks{' '}
-            <span className="v2-text-gradient">before signing up.</span>
+            Before you sign up,{' '}
+            <span className="v2-text-gradient">answered honestly.</span>
           </h2>
         </div>
 

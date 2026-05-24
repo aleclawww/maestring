@@ -6,26 +6,53 @@
  * the feature in question.
  */
 import { Eyebrow } from '@/components/v2'
-import { BookOpen, Target, Award, type LucideIcon } from 'lucide-react'
+import {
+  Compass,
+  MessageSquareText,
+  Timer,
+  type LucideIcon,
+} from 'lucide-react'
 
+/*
+ * Phases rewritten 2026-05-24 — previously generic Learn / Practice /
+ * Certify with copy that hid the wedge: "Learn" promised "real
+ * diagrams" (fiction — concept pages render keyFacts text, zero
+ * diagrams), "Practice" described adaptive scheduling in language any
+ * competitor could sign, "Certify" promised "above 800 means you are
+ * ready" as if it were Maestring calibration (it's industry rule of
+ * thumb) and closed on "with confidence" (outcome-promise family the
+ * Hero rejected). And — the deepest fix — the three-step structure
+ * was protecting a fiction: "Learn" needed puffy copy because the
+ * box itself described a product not built.
+ *
+ * The new structure is the actual user journey, audited end-to-end:
+ *   01 Calibrate — placement test (real, /learn/calibration)
+ *   02 Study with Elaboration — the wedge, named (real, post-correct
+ *      panel verified in dogfood 2026-05-24)
+ *   03 Sit mocks — mock exam validation (real, wired E2E)
+ * Calibrate alone and Mocks alone are category-standard, but the
+ * SEQUENCE — and especially Phase 02 named explicitly — is what only
+ * Maestring can sign. Icons for 02 + 03 mirror Features for the same
+ * product moments (MessageSquareText, Timer); 01 uses Compass.
+ */
 const PHASES = [
   {
     n: '01',
-    title: 'Learn',
-    desc: 'Bite-sized lessons aligned with the official AWS exam guide. Real diagrams, real services, no filler.',
-    Icon: BookOpen,
+    title: 'Calibrate',
+    desc: "A short placement maps where you actually stand — which AWS concepts you know cold, which you half-remember, which you've never touched. Nothing else starts until that's clear.",
+    Icon: Compass,
   },
   {
     n: '02',
-    title: 'Practice',
-    desc: 'Adaptive question generator surfaces what you almost know. FSRS spaced repetition cements it.',
-    Icon: Target,
+    title: 'Study with Elaboration',
+    desc: "Questions in the official exam format. When you answer correctly, you explain it back in your own words — then the model appears side-by-side. Recognizing isn't understanding; the gap is where the work happens.",
+    Icon: MessageSquareText,
   },
   {
     n: '03',
-    title: 'Certify',
-    desc: 'Mock exam grade above 800 out of 1000 means you are ready. Book the official exam with confidence.',
-    Icon: Award,
+    title: 'Sit mocks',
+    desc: 'Full-format mock exams under real conditions: 65 questions, 130 minutes, same scoring scale. The widely-used readiness benchmark is consistently scoring above 800 of 1000. When you’re there, you book the official exam.',
+    Icon: Timer,
   },
 ]
 
@@ -39,10 +66,18 @@ export function HowItWorks() {
             Three phases.{' '}
             <span className="v2-text-gradient">Zero filler.</span>
           </h2>
+          {/*
+            Subhead — "and labs" cut (4th and final labs surface today;
+            after this, labs is dead on every page). Rest left intact:
+            FSRS-4.5 / retrieval practice / interleaving are concrete,
+            verifiable methods and naming them earns credibility with
+            technical readers who recognize them. Question pool count
+            is verified separately on the StatsBand.
+          */}
           <p className="mt-5 max-w-[560px] text-[17px] leading-[1.7] text-v2-foreground-muted">
             We borrow the best ideas from cognitive science — FSRS-4.5,
-            retrieval practice, interleaving — and pair them with AWS-specific
-            question pools and labs.
+            retrieval practice, interleaving — and pair them with an
+            AWS-specific question pool.
           </p>
         </div>
 

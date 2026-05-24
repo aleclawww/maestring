@@ -41,8 +41,16 @@ export function FinalCTA() {
           <span aria-hidden className="h-px w-8 bg-white/40" />
         </div>
 
+        {/*
+          H2 rewritten 2026-05-24 — previous "Your next certification is
+          six weeks away" was the same fabricated outcome statistic cut
+          from FAQ #3 earlier today, resurrected at the most-exposed
+          sentence on the page. The new H2 invites an ACTION (the real
+          first step in the product) instead of promising a result we
+          can't back. Echoes HowItWorks Phase 01.
+        */}
         <h2 className="v2-display mt-5 text-[36px] leading-[1.1] text-white sm:text-[44px] lg:text-[56px]">
-          Your next certification is{' '}
+          Start with the{' '}
           <span
             style={{
               background:
@@ -52,16 +60,33 @@ export function FinalCTA() {
               backgroundClip: 'text',
             }}
           >
-            six weeks away.
+            calibration.
           </span>
         </h2>
 
-        <p className="mx-auto mt-5 max-w-[520px] text-[17px] leading-[1.6] text-white/70 sm:text-[18px]">
-          Free for seven days. No credit card. Cancel any time and keep your
-          progress.
+        {/*
+          Subhead — "No credit card" was FALSE (Pro trial requires
+          card on file per CLAUDE.md). Same lie was in Hero proof row;
+          fixed both in synchronized pass. The new wording tells the
+          anxious user exactly how NOT to be charged — counterintuitively
+          converts BETTER than the false frictionless promise because
+          the anxiety isn't "do I get charged?" but "WILL I forget to
+          cancel?" Naming the day-7 deadline addresses the real fear.
+          "Keep your progress" ambiguity removed (cancel revokes
+          access — only re-sub keeps data).
+        */}
+        <p className="mx-auto mt-5 max-w-[560px] text-[17px] leading-[1.6] text-white/70 sm:text-[18px]">
+          7-day free trial &mdash; card required, cancel before day 7
+          and you&rsquo;re never charged.
         </p>
 
-        <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        {/*
+          Single CTA — "Compare plans" cut: dead button (no handler,
+          {code}-bug family) + single CTA closes harder than two +
+          "compare plans" sent the reader price-shopping when the
+          conversion is them committing to try.
+        */}
+        <div className="mt-9 flex justify-center">
           <Link href="/signup">
             <Button
               size="xl"
@@ -71,18 +96,18 @@ export function FinalCTA() {
               <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
             </Button>
           </Link>
-          <Button
-            variant="ghost"
-            size="xl"
-            className="rounded-full text-white hover:bg-white/10 hover:text-white"
-          >
-            Compare plans
-          </Button>
         </div>
 
-        <p className="mt-8 font-v2-mono text-[12px] uppercase tracking-v2-wide text-white/50">
-          Built by AWS-certified engineers · Updated weekly
-        </p>
+        {/*
+          Footer line CUT 2026-05-24. Previously: "Built by AWS-certified
+          engineers · Updated weekly" — plural engineers (solo founder,
+          same lie cut from FAQ #2) + "Updated weekly" (cadence not
+          verified; a specific cadence is falsifiable — if a user notices
+          no pool change in a month, "weekly" is a caught lie). Two
+          unverified claims under the final CTA = trust damage at the
+          moment of conversion. Cut entirely; can be restored as a
+          single verifiable fact if founder wants something here.
+        */}
       </div>
     </section>
   )

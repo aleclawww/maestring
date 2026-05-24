@@ -9,13 +9,22 @@
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { Card, Button, Pill, Eyebrow } from '@/components/v2'
+import { QUESTION_COUNT_PROD } from '@/lib/constants/marketing'
 
 interface Tier {
   name: string
   price: string
   cadence: string
   description: string
-  features: string[]
+  /**
+   * Optional features list. When absent, the card renders without a
+   * features section — used for tiers that are intentionally
+   * conversation-led (Teams) rather than spec-led (Pro). Don't infer
+   * "no features means no value" — the Teams card body copy carries
+   * the value, the features list would have implied capabilities that
+   * don't ship yet.
+   */
+  features?: string[]
   cta: string
   href: string
   highlight?: boolean
@@ -35,16 +44,43 @@ interface Tier {
 // here without the other half — it's the exact failure mode this comment
 // is meant to prevent.
 
+/*
+ * Tiers audited 2026-05-24, same disciplined cuts applied here as in
+ * app/pricing/page.tsx so the two surfaces tell the same story:
+ *
+ *   Pro:
+ *     - description: dropped "every future cert as we ship them" —
+ *       forward-promise about non-shipped product. Now reads as scope
+ *       statement, matches the "depth-over-breadth" thesis.
+ *     - features[1] 'Every future cert at no extra cost' → CUT.
+ *     - features[2] '2,000+ exam-pattern questions per cert' →
+ *       '{QUESTION_COUNT_PROD} exam-pattern questions' — single source
+ *       of truth in lib/constants/marketing, specific number reads
+ *       more honest to skeptical buyers than the rounded marketing
+ *       cliché "2,000+".
+ *
+ *   Teams:
+ *     - features list removed entirely — the listed capabilities
+ *       (Org-level analytics, Invoiced billing + PO, Dedicated success
+ *       manager) are all fabricated enterprise infra that doesn't
+ *       exist. Same fiction family as labs.
+ *     - description: dropped "Reporting, SSO, invoiced billing" —
+ *       SSO especially is the same lie. New description is path-only
+ *       (B2B conversation exists, capabilities negotiated case-by-case).
+ *     - CTA mailto subject for clean inbox routing.
+ *
+ *   When real enterprise capabilities ship (and not before), restore
+ *   the Teams features list — but only the ones actually built.
+ */
 const TIERS: Tier[] = [
   {
     name: 'Pro',
     price: '$29',
     cadence: 'per month',
-    description: 'SAA-C03 today, every future cert as we ship them.',
+    description: 'SAA-C03, end to end.',
     features: [
       'Full SAA-C03 access today',
-      'Every future cert at no extra cost',
-      '2,000+ exam-pattern questions per cert',
+      `${QUESTION_COUNT_PROD.toLocaleString()} exam-pattern questions`,
       'FSRS-4.5 spaced repetition',
       '9-phase Coach (Calibration → Mastery)',
       '65-question mock exam simulator',
@@ -58,15 +94,10 @@ const TIERS: Tier[] = [
     name: 'Teams',
     price: 'Custom',
     cadence: 'volume pricing',
-    description: 'For engineering teams of 5+. Reporting, SSO, invoiced billing.',
-    features: [
-      'Everything in Pro, per seat',
-      'Org-level analytics',
-      'Invoiced billing + PO',
-      'Dedicated success manager',
-    ],
+    description:
+      'For 5+ engineers. Tell us about your team and we’ll come back with a quote.',
     cta: 'Contact sales',
-    href: 'mailto:hello@maestring.com',
+    href: 'mailto:hello@maestring.com?subject=Teams%20enquiry',
   },
 ]
 
@@ -156,20 +187,28 @@ export function Pricing() {
                   </Link>
                 </div>
 
-                {/* Features */}
-                <ul className="mt-7 flex-1 space-y-3 border-t border-v2-border-subtle pt-7">
-                  {t.features.map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-3 text-[14px] leading-[1.55] text-v2-foreground"
-                    >
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-v2-success-soft text-v2-success">
-                        <Check className="h-3 w-3" strokeWidth={2.75} />
-                      </span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+                {/* Features — only rendered when the tier has any.
+                    Teams renders feature-less (per audit decision β)
+                    to keep the B2B path visible without promising
+                    capabilities that don't ship. The empty flex-1
+                    div in that case absorbs the height difference. */}
+                {t.features ? (
+                  <ul className="mt-7 flex-1 space-y-3 border-t border-v2-border-subtle pt-7">
+                    {t.features.map((f) => (
+                      <li
+                        key={f}
+                        className="flex items-start gap-3 text-[14px] leading-[1.55] text-v2-foreground"
+                      >
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-v2-success-soft text-v2-success">
+                          <Check className="h-3 w-3" strokeWidth={2.75} />
+                        </span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="mt-7 flex-1" />
+                )}
               </div>
             </Card>
           ))}
