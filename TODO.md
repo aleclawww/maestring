@@ -149,3 +149,49 @@ Add `tests/unit/subscription/check.test.ts` covering at minimum:
 
 The three single-dimension overCap cases are the ones PR 2.B will rely on
 (threshold-driven toasts per dimension), so coverage there is load-bearing.
+
+## 📌 PHASE 1 — STATIC-GENERATOR QUALITY (post-launch)
+
+Audited 2026-05-24, deferred deliberately as Phase 1 formal work. Full report
+at `docs/static-generator-quality-audit.md`.
+
+**Finding:** 71% of 863 `keyFacts` in `lib/knowledge-graph/aws-saa.ts` are
+fragments (no finite verb / colon-prefix / comma-ellipsis), and
+`generateFalseFact` + `generateTrueFact` in `lib/question-engine/static-generator.ts`
+pass them through as MCQ options verbatim. Result: option B/C/D often read as
+cheat-sheet labels while only the correct answer is a real sentence — making
+the question trivially solvable by structural pattern-match (founder hit a
+QuickSight example during dogfood 2026-05-24).
+
+**Sticky pollution:** `app/api/study/generate/route.ts:275-276` persists
+static-generated questions with `source='static'` AND
+`review_status='approved'`, so defective generations re-serve pool-first to
+subsequent users for the same concept.
+
+**Blast radius (estimated):** 30-40% of questions in a brand-new user's
+10-question session locally, ~15-20% in prod. 44% of concepts (63/142) have
+zero curated questions and ALWAYS fall back to the static-generator.
+
+**Why deferred and not fixed pre-launch:** The right fix is β from the audit
+— gate the generators at emit-time so ungrammatical options can't be created
+— but β is 1-2h that grows to 3 with edge cases, and the day's discipline
+was no build-instead-of-launch detours. With ~2 users in prod, defect
+accumulation is linear in volume; ~20 users over 2 weeks doesn't catastrophize
+before Phase 1 lands. Half-measure α (flush `is_active=false` without gate)
+was rejected as "empty a bucket with a hole" — the persist path immediately
+re-pollutes.
+
+**Phase 1 plan (one coherent project, post-launch, prioritized by whether
+real-user signal shows up):**
+1. Gate `generateFalseFact` + `generateTrueFact` to reject non-sentence
+   options at emit (1-2h, blocks new defects).
+2. Flush `UPDATE questions SET is_active=false WHERE source='static'`
+   (clears accumulated pollution; only sustained because of step 1).
+3. Rewrite `keyFacts` in `lib/knowledge-graph/aws-saa.ts` as full sentences
+   (6-10h, removes the root cause).
+4. Resume pool-first work per `CLAUDE.md`'s Phase 1 spec — seed more curated
+   questions to shrink the static-gen fallback surface.
+
+DO NOT do (1) or (2) without (3) in the same project — gating without
+rewriting keyFacts will cause many emit-failures (the keyFacts are what
+generators read from), which need a fallback story.

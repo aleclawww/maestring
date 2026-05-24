@@ -41,16 +41,28 @@ export function Hero() {
               </span>
             </Pill>
 
+            {/*
+              H1 + subhead chosen 2026-05-24 from a 3x2 spec session.
+              See git history for the alternative variants and the trade-off
+              notes — they're worth re-reading before any future copy edit.
+              Wedge: "fake-understand" is a phrase only Maestring can sign
+              because every question-bank competitor's product IS
+              fake-understand by construction. Subhead lands on "recombines",
+              a verb a SAA-C03 candidate verifies against their own memory
+              of the exam — that recognition IS the conversion, not
+              persuasion. Do not soften.
+            */}
             <h1 className="v2-display mt-6 text-[44px] leading-[1.05] sm:text-[56px] lg:text-[68px]">
-              Pass your AWS exam.{' '}
-              <span className="v2-text-gradient">First try.</span>
+              AWS prep that doesn&rsquo;t let you{' '}
+              <span className="v2-text-gradient">fake-understand.</span>
             </h1>
 
             <p className="mt-6 max-w-[540px] text-[17px] leading-[1.6] text-v2-foreground-muted sm:text-[18px]">
-              Adaptive AI questions, exam-grade simulators, and FSRS
-              spaced repetition built end-to-end for the AWS Solutions
-              Architect Associate (SAA-C03). The rest of the AWS catalog
-              ships next.
+              Question banks teach you to recognize the right answer.
+              Maestring makes you recall and explain it in your own
+              words &mdash; so when the real exam recombines the
+              patterns, you&rsquo;re solving instead of guessing.
+              SAA-C03 today.
             </p>
 
             <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
@@ -67,12 +79,20 @@ export function Hero() {
               </Link>
             </div>
 
-            {/* Social proof row */}
+            {/*
+              "No credit card required" was FALSE — Pro trial requires
+              card on file per CLAUDE.md. Same lie was in the FinalCTA
+              subhead; synchronized fix 2026-05-24. The replacement
+              ("Card required — cancel before day 7") is intentionally
+              the longest item: draws the eye to the transparency
+              claim, which converts better with skeptical buyers than
+              a frictionless lie they'll discover at checkout.
+            */}
             <ul className="mt-7 flex flex-col gap-3 text-[14px] text-v2-foreground-muted sm:flex-row sm:items-center sm:gap-6">
               {[
                 'Aligned with 2026 exam guides',
-                'No credit card required',
                 '7-day free trial',
+                'Card required — cancel before day 7',
               ].map((t) => (
                 <li key={t} className="inline-flex items-center gap-2">
                   <Check

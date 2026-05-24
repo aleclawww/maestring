@@ -12,6 +12,7 @@ import { Card, Eyebrow, BlurBlob, Pill, Button } from '@/components/v2'
 import { UpgradeButton } from '@/components/billing/UpgradeButton'
 import { buttonVariants } from '@/components/v2/button-variants'
 import { cn } from '@/lib/utils'
+import { QUESTION_COUNT_PROD } from '@/lib/constants/marketing'
 
 /*
  * Lifetime tier removed 2026-05-24 — was live on this route long after the
@@ -43,10 +44,31 @@ export const metadata: Metadata = {
   },
 }
 
+/*
+ * PRO_FEATURES audited 2026-05-24, cuts per founder call:
+ *
+ *   CUT 'Every future certification at no extra cost' — forward-promise
+ *   about non-shipped certs. Same family as "earned them" / "Spanish
+ *   Q3 2026" cut from FAQ. Nobody buys Pro for inexistent certs; they
+ *   buy it for SAA-C03 today. The future promise added zero present
+ *   value and a humo smell. Restore as a real news beat when the 2nd
+ *   cert actually ships.
+ *
+ *   REWRITE '2,000+ exam-pattern questions per cert' →
+ *           '{QUESTION_COUNT_PROD} exam-pattern questions'. The "per
+ *   cert" phrasing implied multiple certs (only one ships). The
+ *   specific count (2,146) reads more honest to skeptical buyers than
+ *   the rounded "2,000+" — precision is a signal of operational
+ *   honesty. Source is the shared constant in lib/constants/marketing
+ *   so /pricing, the landing Pricing section, and StatsBand all stay
+ *   synchronized — the "same claim, three copies" failure mode bit
+ *   us earlier today.
+ *
+ * Other 6 claims verified TRUE against code 2026-05-24 — kept as-is.
+ */
 const PRO_FEATURES = [
   'Full SAA-C03 access today',
-  'Every future certification at no extra cost',
-  '2,000+ exam-pattern questions per cert',
+  `${QUESTION_COUNT_PROD.toLocaleString()} exam-pattern questions`,
   'FSRS-4.5 spaced repetition scheduler',
   '9-phase Coach (Calibration → Mastery)',
   '65-question mock exam simulator',
@@ -54,11 +76,22 @@ const PRO_FEATURES = [
   'Knowledge map + flashcards',
 ]
 
-const TEAMS_FEATURES = [
-  'Everything in Pro, per seat',
-  'Org-level analytics dashboard',
-  'Invoiced billing + PO support',
-]
+/*
+ * TEAMS_FEATURES removed entirely 2026-05-24.
+ *
+ * Decision β from the audit: the B2B *path* is real (founder has
+ * institutional outreach in motion) — what was fiction were the
+ * *capabilities* on the card (SAML SSO, SCIM provisioning, org-level
+ * analytics dashboard, invoiced billing + PO support, dedicated
+ * success manager). Cutting the path would throw away a real signal;
+ * cutting the features is honest about what's been built.
+ *
+ * The Teams card below now renders as a contact-only card: scope,
+ * who-it's-for, and a single "Contact sales" CTA. No features list.
+ * When a real customer engagement produces actual capabilities (org
+ * analytics dashboard, SSO, etc.), restore them as a list — but only
+ * after the infra ships, not before.
+ */
 
 export default function PricingPage() {
   return (
@@ -204,14 +237,9 @@ export default function PricingPage() {
                 <h2 className="mt-5 text-[18px] font-bold text-v2-foreground">
                   For 5+ engineers
                 </h2>
-                {/*
-                  Was "Org analytics, SSO, invoiced billing." SSO removed
-                  2026-05-24 — no SAML SSO / SCIM provisioning actually
-                  exists. Same fiction family as labs. Honest version
-                  promises only what TEAMS_FEATURES below actually lists.
-                */}
                 <p className="mt-1.5 text-[13px] leading-[1.55] text-v2-foreground-muted">
-                  Org analytics, invoiced billing. Volume pricing per seat.
+                  Volume pricing for teams. Tell us about your team and
+                  we&rsquo;ll come back with a quote.
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
@@ -220,28 +248,26 @@ export default function PricingPage() {
                   </span>
                 </div>
                 <p className="mt-1 text-[12px] text-v2-foreground-muted">
-                  Volume pricing · invoiced billing
+                  Case-by-case · negotiated terms
                 </p>
 
-                <a href="mailto:hello@maestring.com" className="mt-6 block">
+                <a href="mailto:hello@maestring.com?subject=Teams%20enquiry" className="mt-6 block">
                   <Button variant="secondary" size="lg" className="w-full">
                     Contact sales
                   </Button>
                 </a>
 
-                <ul className="mt-7 flex-1 space-y-3 border-t border-v2-border-subtle pt-7">
-                  {TEAMS_FEATURES.map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-3 text-[14px] leading-[1.55] text-v2-foreground"
-                    >
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-v2-success-soft text-v2-success">
-                        <Check className="h-3 w-3" strokeWidth={2.75} />
-                      </span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+                {/*
+                  Features list intentionally absent. Decision β from
+                  2026-05-24 audit: keep the B2B path visible, kill the
+                  fabricated enterprise capabilities (SSO, SCIM, org
+                  analytics, invoiced billing, dedicated success
+                  manager). The flex-1 on the parent absorbs the
+                  height difference vs. the Pro card next to it — the
+                  shorter Teams card communicates "lighter offer,
+                  conversation-led" rather than "Pro minus features."
+                */}
+                <div className="mt-7 flex-1" />
               </Card>
             </div>
 

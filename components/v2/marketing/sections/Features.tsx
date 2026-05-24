@@ -1,11 +1,19 @@
 /**
  * Feature deep-dives — alternating image/text rows.
  *
- * Four features. Direction alternates. Each features a stylized product
- * mock on one side (built from divs, no real screenshots yet) and copy +
- * 3 bullet points on the other.
+ * TWO features, intentionally. Decided 2026-05-24 after a truth audit cut
+ * a third pillar that was either fiction (hands-on labs) or invisible
+ * plumbing (FSRS / Coach / concept briefs — real under the hood, not yet
+ * feelable in the UI). The arc is two beats: "understand it" via
+ * Elaboration Mode, "then prove it" via Mock Exams. A third pillar
+ * dilutes the arc. If we later make Coach or briefs feelable end-to-end,
+ * they can earn back a spot — same rule as Lifetime.
+ *
+ * Do NOT re-add aspirational features here. The Hero says the page
+ * doesn't let the reader fake-understand; promising a feature that
+ * doesn't exist two screens down is the page calling itself a liar.
  */
-import { Check, Clock, Server, Brain } from 'lucide-react'
+import { Check, MessageSquareText, Timer } from 'lucide-react'
 import { Eyebrow } from '@/components/v2'
 
 interface Feature {
@@ -18,66 +26,70 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    eyebrow: 'Mock exams',
-    title: 'Identical to the real AWS exam.',
+    eyebrow: 'Elaboration Mode',
+    title: 'The moment you find out if you really got it.',
     description:
-      "Same question structure, same timer, same flag-for-review flow. When you sit the official exam, it's the third or fourth time you've seen this UI.",
+      "A correct multiple-choice answer tells you whether you recognized — not whether you understood. So Maestring asks you to explain each correct answer back, in your own words, then shows the model side-by-side. No grading, just the truth of what you could and couldn't say. The gap between the two is the work you actually need to do.",
     bullets: [
-      '65 questions in 130 minutes — official format',
-      'Domain-by-domain breakdown after each attempt',
-      'Question navigator with flag/skip/answered states',
+      'Triggered after every correct answer — opt-in, never forced',
+      'Side-by-side: your text vs. the model explanation',
+      'Self-assessed checklist of the key points — honor system',
+    ],
+    Mock: ElaborationMock,
+  },
+  {
+    eyebrow: 'Mock exams',
+    title: 'Then sit it under real conditions.',
+    description:
+      "65 questions, 130 minutes, the exact format you'll see on exam day. After you submit, Maestring shows the domain-by-domain breakdown so you know which concepts to go back and re-explain. Mocks aren't your study tool — they're how you confirm the study worked.",
+    bullets: [
+      '65 questions in 130 minutes — official AWS format',
+      'Flag-for-review and question navigator like the real UI',
+      'Domain breakdown points you back to what to re-explain',
     ],
     Mock: ExamMock,
   },
-  {
-    eyebrow: 'Hands-on labs',
-    title: 'Real labs in your own AWS account.',
-    description:
-      'Scoped IAM policies provision exactly what each lab needs and tear it down at the end. No surprise bills, no shared sandbox quirks.',
-    bullets: [
-      'Auto-graded by inspecting your real account state',
-      'Cost cap per lab — labs auto-stop before they bite',
-      '40+ guided labs covering every exam domain',
-    ],
-    Mock: LabMock,
-  },
-  {
-    eyebrow: 'Spaced repetition',
-    title: 'A schedule that respects your memory.',
-    description:
-      'FSRS-4.5 surfaces what you almost know just before you would forget it. The same algorithm Anki power-users converged on, tuned for AWS facts.',
-    bullets: [
-      'Identifies your weak domains automatically',
-      'Daily review window adapts to your retention curve',
-      'Streak protection if life happens — no shame loops',
-    ],
-    Mock: ReviewMock,
-  },
 ]
 
-const FEATURE_ICONS = [Clock, Server, Brain]
+const FEATURE_ICONS = [MessageSquareText, Timer]
 
 export function Features() {
   return (
     <section className="border-t border-v2-border-subtle py-20 sm:py-24 lg:py-28">
       <div className="mx-auto max-w-[1200px] px-6">
+        {/*
+          Eyebrow + H2 chosen 2026-05-24 to mirror the Hero cadence
+          ("recall, not recognize" → "understand, then prove"). The
+          previous subhead ("notes, flashcards, study plans are the
+          floor") reinforced a "better question bank with extras" frame
+          which the Hero now explicitly rejects — cut, not replaced.
+          The H2 carries the entire frame; the two feature cards do
+          the demonstrating.
+        */}
         <div className="max-w-[680px]">
-          <Eyebrow>Features</Eyebrow>
+          <Eyebrow>How it works</Eyebrow>
+          {/*
+            Two nbsps bind the WHOLE second beat together:
+              - nbsp between "Then" and "prove" → keeps "Then" with
+                the gradient phrase instead of orphaning at line-1 end
+              - nbsp between "prove" and "it." → keeps "it." from
+                widowing on its own line
+            Result at narrow widths: the wrap happens cleanly between
+            "Understand it." (line 1) and "Then prove it." (line 2),
+            preserving the two-beat read symmetrically.
+          */}
           <h2 className="v2-display mt-3 text-[36px] sm:text-[44px] lg:text-[52px]">
-            Three things we{' '}
-            <span className="v2-text-gradient">obsessed over.</span>
+            Understand it.{' '}
+            <span className="whitespace-nowrap">
+              Then <span className="v2-text-gradient">prove it.</span>
+            </span>
           </h2>
-          <p className="mt-5 max-w-[560px] text-[17px] leading-[1.7] text-v2-foreground-muted">
-            Everything else (notes, flashcards, study plans) is the floor. The
-            three below are why you'd pay for Maestring instead of stitching
-            something together yourself.
-          </p>
         </div>
 
         <div className="mt-16 space-y-24 lg:space-y-32">
           {FEATURES.map((f, i) => {
             const reversed = i % 2 === 1
-            const Icon = FEATURE_ICONS[i] as typeof Clock
+            const Icon = FEATURE_ICONS[i] as typeof MessageSquareText
             return (
               <div
                 key={f.title}
@@ -178,106 +190,72 @@ function ExamMock() {
   )
 }
 
-function LabMock() {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="rounded-md bg-v2-success-soft px-2 py-0.5 font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-success">
-          Lab · Active
-        </span>
-        <span className="font-v2-mono text-[10px] text-v2-foreground-subtle">
-          Cost so far · $0.04
-        </span>
-      </div>
-      <p className="text-[13px] font-bold text-v2-foreground">
-        Build a multi-AZ ALB with HTTPS termination
-      </p>
-      {[
-        { label: 'Provision VPC + 2 subnets', done: true },
-        { label: 'Create security group for ALB', done: true },
-        { label: 'Launch 2× EC2 in different AZs', done: true },
-        { label: 'Attach ACM cert + redirect HTTP→HTTPS', done: false },
-        { label: 'Verify with curl from your machine', done: false },
-      ].map((s) => (
-        <div
-          key={s.label}
-          className="flex items-center gap-3 rounded-lg border border-v2-border bg-v2-surface px-3 py-2"
-        >
-          <span
-            className={
-              s.done
-                ? 'flex h-5 w-5 items-center justify-center rounded-full bg-v2-success text-white'
-                : 'h-5 w-5 rounded-full border border-v2-border-strong'
-            }
-          >
-            {s.done && <Check className="h-3 w-3" strokeWidth={3} />}
-          </span>
-          <span
-            className={
-              s.done
-                ? 'text-[12px] text-v2-foreground-subtle line-through'
-                : 'text-[12px] font-medium text-v2-foreground'
-            }
-          >
-            {s.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function ReviewMock() {
-  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+// Visual mock for Elaboration Mode. Renders the actual moment of value:
+// the side-by-side reveal after the user clicks "Reveal model". Content
+// is taken verbatim from the seeded `security-groups-vs-nacls`
+// elaboration so the mock is true to what a paying user actually sees.
+// If the seeded elaboration content changes, update here too — the
+// landing should never show a model explanation we wouldn't ship.
+function ElaborationMock() {
   return (
     <div className="space-y-4">
-      <div>
-        <span className="font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
-          Today's review · 18 cards
+      <div className="flex items-center justify-between border-b border-v2-border-subtle pb-3">
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-v2-success-soft px-2 py-0.5 font-v2-mono text-[10px] font-semibold uppercase tracking-v2-wide text-v2-success">
+          <Check className="h-3 w-3" strokeWidth={3} /> Correct
         </span>
-        <p className="mt-1 text-[13px] font-bold text-v2-foreground">
-          Memory schedule
-        </p>
+        <span className="font-v2-mono text-[10px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+          Security Groups vs NACLs
+        </span>
       </div>
-      <div className="grid grid-cols-7 gap-1.5">
-        {days.map((d, i) => (
-          <div key={i} className="text-center">
-            <div className="font-v2-mono text-[9px] uppercase text-v2-foreground-subtle">
-              {d}
-            </div>
-            <div
-              className={`mt-1 h-10 rounded-md ${
-                i < 4
-                  ? 'bg-v2-gradient-brand'
-                  : i === 4
-                  ? 'bg-v2-brand-soft border-2 border-v2-brand'
-                  : 'bg-v2-surface-sunken'
-              }`}
-            />
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-v2-border bg-v2-surface-sunken/40 p-3">
+          <div className="font-v2-mono text-[9px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+            Your words
           </div>
-        ))}
+          <p className="mt-2 text-[11px] leading-[1.5] text-v2-foreground">
+            SG is on the instance, NACL is on the subnet. SG only allows;
+            NACL allows and denies.
+          </p>
+        </div>
+        <div className="rounded-lg border border-v2-brand/30 bg-v2-brand-soft/50 p-3">
+          <div className="font-v2-mono text-[9px] uppercase tracking-v2-wide text-v2-brand">
+            Model
+          </div>
+          <p className="mt-2 text-[11px] leading-[1.5] text-v2-foreground">
+            Both filter traffic, but at different layers. <span className="font-semibold">Security Group</span> attaches to the ENI and is <span className="font-semibold">stateful</span> — if you let a connection in, the response goes out automatically…
+          </p>
+        </div>
       </div>
-      <div className="space-y-2 pt-2">
+
+      <div className="space-y-1.5 pt-1">
+        <div className="font-v2-mono text-[9px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+          Did your explanation cover…
+        </div>
         {[
-          { domain: 'IAM & Identity', strength: 92 },
-          { domain: 'Networking', strength: 71 },
-          { domain: 'Storage', strength: 54 },
-        ].map((d) => (
-          <div key={d.domain}>
-            <div className="flex justify-between text-[11px]">
-              <span className="font-medium text-v2-foreground">
-                {d.domain}
-              </span>
-              <span className="font-v2-mono text-v2-foreground-muted">
-                {d.strength}%
-              </span>
-            </div>
-            <div className="mt-1 h-1.5 w-full rounded-full bg-v2-surface-sunken">
-              <div
-                className="h-full rounded-full bg-v2-gradient-brand"
-                style={{ width: `${d.strength}%` }}
-              />
-            </div>
+          { label: 'Distinguishes stateful (SG) from stateless (NACL)', done: true },
+          { label: 'Places the SG on the instance/ENI and the NACL on the subnet', done: true },
+          { label: 'Mentions the return-traffic / ephemeral-ports trap', done: false },
+        ].map((s) => (
+          <div key={s.label} className="flex items-start gap-2.5">
+            <span
+              className={
+                s.done
+                  ? 'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded bg-v2-success text-white'
+                  : 'mt-0.5 h-4 w-4 shrink-0 rounded border border-v2-border-strong'
+              }
+            >
+              {s.done && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+            </span>
+            <span
+              className={
+                s.done
+                  ? 'text-[11px] leading-[1.4] text-v2-foreground'
+                  : 'text-[11px] leading-[1.4] text-v2-foreground-muted'
+              }
+            >
+              {s.label}
+            </span>
           </div>
         ))}
       </div>

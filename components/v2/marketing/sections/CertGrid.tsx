@@ -184,43 +184,93 @@ function CertCardInner({ cert }: { cert: Cert }) {
 }
 
 export function CertGrid() {
+  const live = CERTS.filter((c) => c.available)
+  const roadmap = CERTS.filter((c) => !c.available)
+
   return (
     <section className="border-t border-v2-border-subtle py-20 sm:py-24 lg:py-28">
       <div className="mx-auto max-w-[1200px] px-6">
+        {/*
+          H2 + subhead rewritten 2026-05-24. Previous "The certifications
+          that move your career" was the same vague outcome-promise the
+          Hero rejected — cut. The new H2 mirrors the Hero/Features/
+          StatsBand cadence ("recall not recognize" / "understand then
+          prove" / "covered properly") and the subhead carries the
+          depth-over-breadth discipline explicitly: nothing ships as
+          "beta" — a signal EU-technical buyers actively scan for.
+        */}
         <div className="max-w-[680px]">
           <Eyebrow>Catalog</Eyebrow>
           <h2 className="v2-display mt-3 text-[36px] sm:text-[44px] lg:text-[52px]">
-            The certifications that{' '}
-            <span className="v2-text-gradient">move your career.</span>
+            One certification, shipped.{' '}
+            <span className="v2-text-gradient">Five more on the way.</span>
           </h2>
           <p className="mt-5 max-w-[560px] text-[17px] leading-[1.7] text-v2-foreground-muted">
-            We launch with SAA-C03 — the most popular AWS certification —
-            polished end to end. The rest of the catalog is on the roadmap
-            and will land cert by cert.
+            SAA-C03, end to end. The rest ship cert by cert &mdash; none of
+            them as &ldquo;beta&rdquo;.
           </p>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {CERTS.map((c) =>
-            c.available ? (
-              <Link
-                key={c.code}
-                href="/signup"
-                className="group block focus-visible:outline-none"
-              >
-                <CertCardInner cert={c} />
-              </Link>
-            ) : (
-              <a
-                key={c.code}
-                href="mailto:hello@maestring.com?subject=Notify%20me%20when%20{code}%20is%20ready"
-                className="group block focus-visible:outline-none"
-              >
-                <CertCardInner cert={c} />
-              </a>
-            ),
-          )}
+        {/*
+          Structural separation — chosen over the "fade five cards in a
+          uniform grid" approach because six equal-sized cards count as
+          six things to a skimming eye no matter how muted. Hierarchy
+          communicates, opacity doesn't. One large card for the live
+          cert + a sub-strip below for the roadmap is unmissable at a
+          2-second skim AND keeps the roadmap visible as an asset, not
+          buried.
+        */}
+        <div className="mt-12 max-w-[640px]">
+          {live.map((c) => (
+            <Link
+              key={c.code}
+              href="/signup"
+              className="group block focus-visible:outline-none"
+            >
+              <CertCardInner cert={c} />
+            </Link>
+          ))}
         </div>
+
+        {roadmap.length > 0 && (
+          <div className="mt-12 border-t border-v2-border-subtle pt-10">
+            <div className="flex items-baseline justify-between">
+              <span className="font-v2-mono text-[11px] font-semibold uppercase tracking-v2-wide text-v2-foreground-subtle">
+                On the roadmap
+              </span>
+              <span className="font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle">
+                {roadmap.length} certifications
+              </span>
+            </div>
+
+            <ul className="mt-5 divide-y divide-v2-border-subtle">
+              {roadmap.map((c) => (
+                <li key={c.code}>
+                  <a
+                    href={`mailto:hello@maestring.com?subject=${encodeURIComponent(`Notify me when ${c.code} is ready`)}`}
+                    className="group flex flex-wrap items-center gap-3 py-4 transition-colors hover:bg-v2-surface-sunken/30 sm:gap-5"
+                  >
+                    <span className="w-[88px] shrink-0 font-v2-mono text-[12px] font-semibold uppercase tracking-v2-wide text-v2-foreground-subtle">
+                      {c.code}
+                    </span>
+                    <span className="min-w-0 flex-1 text-[15px] font-semibold text-v2-foreground-muted">
+                      {c.name}
+                    </span>
+                    <span className="hidden font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle sm:inline">
+                      {c.level}
+                    </span>
+                    <span className="hidden font-v2-mono text-[11px] text-v2-foreground-subtle md:inline">
+                      {c.hours}
+                    </span>
+                    <span className="font-v2-mono text-[11px] uppercase tracking-v2-wide text-v2-foreground-subtle transition-colors group-hover:text-v2-brand">
+                      Notify me &rarr;
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </section>
   )

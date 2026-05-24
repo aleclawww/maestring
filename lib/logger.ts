@@ -22,8 +22,13 @@ const logger = pino({
     paths: redactedPaths,
     censor: '[REDACTED]',
   },
+  // pino-pretty runs via thread-stream worker, which crashes on Windows
+  // under Next.js dev (uncaughtException: "the worker has exited") and
+  // takes down the whole request. Disable the transport entirely — plain
+  // JSON lines in the terminal are fine for local dev. Set USE_PINO_PRETTY=1
+  // to opt back in on macOS/Linux if you want the colorized output.
   transport:
-    process.env.NODE_ENV !== 'production'
+    process.env.NODE_ENV !== 'production' && process.env['USE_PINO_PRETTY'] === '1'
       ? {
           target: 'pino-pretty',
           options: {
