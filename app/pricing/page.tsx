@@ -3,7 +3,6 @@ import Link from 'next/link'
 import {
   ArrowRight,
   Check,
-  Infinity as InfinityIcon,
   Sparkles,
   Users,
 } from 'lucide-react'
@@ -14,26 +13,35 @@ import { UpgradeButton } from '@/components/billing/UpgradeButton'
 import { buttonVariants } from '@/components/v2/button-variants'
 import { cn } from '@/lib/utils'
 
+/*
+ * Lifetime tier removed 2026-05-24 — was live on this route long after the
+ * landing-page Pricing.tsx component had it cut (commit c075016 missed
+ * this file). The `Buy lifetime access` CTA hit /api/lemonsqueezy/checkout
+ * which silently downgrades to Pro Monthly regardless of plan param —
+ * meaning a user paying for $119 lifetime got a $29/mo recurring sub
+ * instead. Payment-integrity bug, not just a copy issue. Cut entirely
+ * along with the SEO metadata, the H1 frame ("Pay once for life"),
+ * subhead, and the `Infinity` icon import that was Lifetime-only.
+ *
+ * Also cut from TEAMS_FEATURES in the same pass: "SAML SSO + SCIM
+ * provisioning" and "Dedicated success manager" — solo founder, no
+ * enterprise infrastructure exists. Same fiction family as labs.
+ *
+ * To restore Lifetime later: re-add the tier card AND the SEO line AND
+ * the H1 narrative AND wire the checkout chain (LS variant +
+ * order_created handler + plan='lifetime' branch in getEntitlement).
+ * Do not partial-restore; the partial state IS the bug.
+ */
 export const metadata: Metadata = {
   title: 'Pricing — Maestring',
   description:
-    "Pay $119 once for lifetime access to one cert, or $29/month for every cert. Free 7-day trial of Pro. Cancel anytime. FSRS spaced repetition, 2,000+ exam-pattern questions.",
+    '$29/month with a 7-day free trial. Card on file required — cancel before day 7 and you’re never charged. 2,146 exam-pattern questions and FSRS spaced repetition for the AWS SAA-C03 exam.',
   alternates: { canonical: '/pricing' },
   openGraph: {
     title: 'Pricing — Maestring',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
 }
-
-const LIFETIME_FEATURES = [
-  'Lifetime access to SAA-C03',
-  'Full syllabus · 142 concepts',
-  '2,000+ exam-pattern questions',
-  'FSRS-4.5 spaced repetition scheduler',
-  '65-question mock exam simulator',
-  'Knowledge map + flashcards',
-  'No subscription, no renewals',
-]
 
 const PRO_FEATURES = [
   'Full SAA-C03 access today',
@@ -49,9 +57,7 @@ const PRO_FEATURES = [
 const TEAMS_FEATURES = [
   'Everything in Pro, per seat',
   'Org-level analytics dashboard',
-  'SAML SSO + SCIM provisioning',
   'Invoiced billing + PO support',
-  'Dedicated success manager',
 ]
 
 export default function PricingPage() {
@@ -72,14 +78,24 @@ export default function PricingPage() {
           <div className="relative z-10 mx-auto max-w-[1080px] px-6 py-20 sm:py-24 lg:py-28">
             <div className="mx-auto max-w-[680px] text-center">
               <Eyebrow align="center">Pricing</Eyebrow>
+              {/*
+                H1 + subhead rewritten 2026-05-24 after Lifetime cut.
+                Previous "Pay once for life, or unlock every cert" leaned
+                on a tier that didn't ship and a future-cert promise that
+                isn't real today. Replaced with the same card-required
+                transparency that locks Hero proof row + FinalCTA subhead
+                — telling the anxious user exactly how not to be charged
+                converts better than a frictionless promise they'll
+                discover is false at checkout.
+              */}
               <h1 className="v2-display mt-3 text-[40px] sm:text-[52px] lg:text-[60px]">
-                Pay once for life,{' '}
-                <span className="v2-text-gradient">or unlock every cert.</span>
+                One product.{' '}
+                <span className="v2-text-gradient">Two ways to pay.</span>
               </h1>
               <p className="mt-5 text-[17px] leading-[1.7] text-v2-foreground-muted sm:text-[18px]">
-                $119 once for lifetime SAA-C03, or $29/month for SAA today
-                and every future AWS cert as we ship them. 7-day free trial,
-                cancel anytime.
+                $29/month with a 7-day free trial &mdash; card required,
+                cancel before day 7 and you&rsquo;re never charged. Teams
+                pricing on request.
               </p>
             </div>
           </div>
@@ -88,63 +104,15 @@ export default function PricingPage() {
         {/* Three-tier pricing */}
         <section className="relative pb-12">
           <div className="mx-auto max-w-[1200px] px-6">
-            {/* Add top room so the floating "Most popular" pill on Pro isn't
-                clipped by Card overflow nor by the section padding. */}
-            <div className="grid grid-cols-1 items-stretch gap-6 pt-6 md:grid-cols-3 md:gap-5 lg:gap-6">
-              {/* Lifetime — left */}
-              <Card padding="lg" className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-v2-brand-soft text-v2-brand">
-                    <InfinityIcon className="h-5 w-5" strokeWidth={2.25} />
-                  </div>
-                  <Pill tone="neutral" size="md">
-                    <span className="font-v2-mono text-[10px] uppercase tracking-v2-wide">
-                      One-time
-                    </span>
-                  </Pill>
-                </div>
-
-                <h2 className="mt-5 text-[18px] font-bold text-v2-foreground">
-                  Lifetime SAA-C03
-                </h2>
-                <p className="mt-1.5 text-[13px] leading-[1.55] text-v2-foreground-muted">
-                  Pay once. Keep access forever. No renewals.
-                </p>
-
-                <div className="mt-6 flex items-baseline gap-2">
-                  <span className="v2-display text-[44px] leading-none text-v2-foreground sm:text-[48px]">
-                    $119
-                  </span>
-                  <span className="text-[14px] text-v2-foreground-muted">
-                    once
-                  </span>
-                </div>
-                <p className="mt-1 text-[12px] text-v2-foreground-muted">
-                  One-time payment · lifetime updates
-                </p>
-
-                <Link href="/signup?plan=lifetime" className="mt-6 block">
-                  <Button variant="secondary" size="lg" className="w-full">
-                    Buy lifetime access
-                  </Button>
-                </Link>
-
-                <ul className="mt-7 flex-1 space-y-3 border-t border-v2-border-subtle pt-7">
-                  {LIFETIME_FEATURES.map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-3 text-[14px] leading-[1.55] text-v2-foreground"
-                    >
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-v2-success-soft text-v2-success">
-                        <Check className="h-3 w-3" strokeWidth={2.75} />
-                      </span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-
-              {/* Pro — middle, highlighted, scaled up on desktop */}
+            {/*
+              Was md:grid-cols-3 with Lifetime first. With Lifetime cut,
+              centered 2-up at md:max-w-[820px] matches the marketing
+              Pricing.tsx component pattern and avoids two cards floating
+              in an empty 3-column grid. Top padding kept so the floating
+              "Most popular" pill on Pro isn't clipped.
+            */}
+            <div className="grid grid-cols-1 items-stretch gap-6 pt-6 md:mx-auto md:max-w-[820px] md:grid-cols-2 md:gap-5 lg:gap-6">
+              {/* Pro — left, highlighted, scaled up on desktop */}
               <Card
                 tone="emphasized"
                 padding="lg"
@@ -236,8 +204,14 @@ export default function PricingPage() {
                 <h2 className="mt-5 text-[18px] font-bold text-v2-foreground">
                   For 5+ engineers
                 </h2>
+                {/*
+                  Was "Org analytics, SSO, invoiced billing." SSO removed
+                  2026-05-24 — no SAML SSO / SCIM provisioning actually
+                  exists. Same fiction family as labs. Honest version
+                  promises only what TEAMS_FEATURES below actually lists.
+                */}
                 <p className="mt-1.5 text-[13px] leading-[1.55] text-v2-foreground-muted">
-                  Org analytics, SSO, invoiced billing. Volume pricing per seat.
+                  Org analytics, invoiced billing. Volume pricing per seat.
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
