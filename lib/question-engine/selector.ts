@@ -358,6 +358,12 @@ export async function ensureConceptStatesExist(
   userId: string,
   certificationId: string = DEFAULT_CERT_ID
 ): Promise<void> {
+  // DEV ESCAPE HATCH — set DEV_SKIP_ENSURE_STATES=1 to bypass the bulk
+  // seed of 142 concept_states on session start. Used when force-focusing
+  // a single concept for dogfooding the Elaboration Mode UX; without this,
+  // the seed re-creates all peer rows we just deleted and the selector
+  // picks a random one. Strictly local-only.
+  if (process.env['DEV_SKIP_ENSURE_STATES'] === '1') return
   const admin = createAdminClient()
 
   // Silent failure on the concepts read masked as "no concepts for this cert
