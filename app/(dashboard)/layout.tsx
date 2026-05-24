@@ -30,6 +30,15 @@ export default async function DashboardLayout({
     pathname === '/onboarding' || pathname.startsWith('/onboarding/')
   if (isOnboardingFlow) return <div className="theme-v2">{children}</div>
 
+  // /trial-required is a focused lockout screen — it designs its own
+  // full-screen background and CTA card. Wrapping it in the dashboard
+  // Shell painted sidebar + topnav on top of the lockout, so the user
+  // who just hit the paywall saw a broken-looking dashboard instead
+  // of a clean conversion moment. Same escape-hatch pattern as
+  // onboarding: return children without Shell.
+  const isTrialRequired = pathname === '/trial-required'
+  if (isTrialRequired) return <div className="theme-v2">{children}</div>
+
   // Subscription gate: every user needs an active 7-day trial or paid sub.
   const isExempt = PAYWALL_EXEMPT_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + '/'),

@@ -9,38 +9,47 @@
  * gradient is allowed only on the wordmark dot and the social-icon hover.
  */
 import Link from 'next/link'
-import { Github, Linkedin, Twitter, Youtube } from 'lucide-react'
 import { Logo } from '@/components/v2'
 
+/*
+ * Footer trimmed 2026-05-24 from 16 link entries + 4 social icons + 1
+ * status pill down to what actually resolves today. 11 of the 16 links
+ * pointed at pages that don't exist (Certifications, For teams,
+ * Changelog, Practice exams, Community, About, Customers, Careers,
+ * Cookies, Security, plus /contact which is now mailto). Same rule as
+ * everywhere else today: a link to a missing page is a missing feature
+ * with a different costume. Footer with 5 honest entries beats footer
+ * with 16 where 11 reveal "template not finished" to a curious clicker.
+ *
+ * Social icons pointed at github.com / linkedin.com / twitter.com /
+ * youtube.com root URLs — generic homepages, not real Maestring
+ * profiles. Cut. When real profiles exist, restore individually.
+ *
+ * Status pill pointed at https://status.maestring.com and rendered a
+ * hardcoded "All systems operational" pulse with zero monitoring
+ * backend. Same family as the TopBar's phantom unread-notifications
+ * dot — a visual claim about system state with no source of truth.
+ * Cut.
+ *
+ * Contact link converted to mailto (was /contact 404). Matches the
+ * pattern used by CertGrid's roadmap rows.
+ */
 const COLUMNS: Array<{
   heading: string
   links: Array<{ label: string; href: string }>
 }> = [
   {
     heading: 'Product',
-    links: [
-      { label: 'Certifications', href: '/certifications' },
-      { label: 'Pricing', href: '/pricing' },
-      { label: 'For teams', href: '/teams' },
-      { label: 'Changelog', href: '/changelog' },
-    ],
+    links: [{ label: 'Pricing', href: '/pricing' }],
   },
   {
     heading: 'Resources',
-    links: [
-      { label: 'Blog', href: '/blog' },
-      { label: 'Study guides', href: '/blog' },
-      { label: 'Practice exams', href: '/exams' },
-      { label: 'Community', href: '/community' },
-    ],
+    links: [{ label: 'Blog', href: '/blog' }],
   },
   {
     heading: 'Company',
     links: [
-      { label: 'About', href: '/about' },
-      { label: 'Customers', href: '/customers' },
-      { label: 'Careers', href: '/careers' },
-      { label: 'Contact', href: '/contact' },
+      { label: 'Contact', href: 'mailto:hello@maestring.com' },
     ],
   },
   {
@@ -48,21 +57,8 @@ const COLUMNS: Array<{
     links: [
       { label: 'Terms', href: '/legal/terms' },
       { label: 'Privacy', href: '/legal/privacy' },
-      { label: 'Cookies', href: '/legal/cookies' },
-      { label: 'Security', href: '/legal/security' },
     ],
   },
-]
-
-const SOCIAL: Array<{
-  Icon: typeof Github
-  href: string
-  label: string
-}> = [
-  { Icon: Github, href: 'https://github.com', label: 'GitHub' },
-  { Icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
-  { Icon: Twitter, href: 'https://twitter.com', label: 'X / Twitter' },
-  { Icon: Youtube, href: 'https://youtube.com', label: 'YouTube' },
 ]
 
 export function Footer() {
@@ -70,25 +66,25 @@ export function Footer() {
     <footer className="border-t border-v2-border bg-v2-surface-subtle">
       <div className="mx-auto max-w-[1200px] px-6 py-16 sm:py-20">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-6">
-          {/* Brand column — spans 2 cols on md+ */}
+          {/* Brand column — spans 2 cols on md+.
+              Status pill removed 2026-05-24 — was a hardcoded "All
+              systems operational" pulse with no monitoring backend.
+              Brand tagline rewritten the same day. Previous read
+              "Adaptive AI, real exam simulators, spaced repetition
+              that actually works" — three buzzwords the Hero
+              explicitly rejected (commodity "Adaptive AI", plural
+              simulators when one exists, FSRS-feels-invisible).
+              Replaced with the signature phrase already used in
+              StatsBand ("...covered properly") so footer + band
+              repeat the same line and make it the recognizable
+              product lema across surfaces. The footer is closer
+              (lowest-attention slot), not pitch — mechanism is
+              upstream, this just signs off in the voice. */}
           <div className="col-span-2 md:col-span-2">
             <Logo size={22} />
             <p className="mt-5 max-w-[280px] text-[14px] leading-[1.6] text-v2-foreground-muted">
-              The serious AWS prep platform. Adaptive AI, real exam simulators,
-              spaced repetition that actually works.
+              AWS SAA-C03 prep, covered properly.
             </p>
-
-            {/* Status pill */}
-            <Link
-              href="https://status.maestring.com"
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-v2-border bg-v2-surface px-3 py-1.5 text-[12px] font-medium text-v2-foreground-muted transition-colors hover:text-v2-foreground"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-v2-success/60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-v2-success" />
-              </span>
-              All systems operational
-            </Link>
           </div>
 
           {/* Link columns */}
@@ -113,27 +109,15 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Bottom row */}
-        <div className="mt-16 flex flex-col items-start justify-between gap-6 border-t border-v2-border pt-8 sm:flex-row sm:items-center">
+        {/* Bottom row — social icon strip removed 2026-05-24 (generic
+            github.com / linkedin.com / twitter.com / youtube.com roots,
+            no real Maestring profiles existed). Restore individually
+            when accounts are live. */}
+        <div className="mt-16 border-t border-v2-border pt-8">
           <p className="text-[13px] text-v2-foreground-subtle">
             © {new Date().getFullYear()} Maestring. Independent of and not endorsed
             by Amazon Web Services.
           </p>
-
-          <div className="flex items-center gap-1">
-            {SOCIAL.map(({ Icon, href, label }) => (
-              <a
-                key={href}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={label}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-v2-foreground-subtle transition-colors hover:bg-v2-surface hover:text-v2-brand"
-              >
-                <Icon className="h-4 w-4" strokeWidth={2} />
-              </a>
-            ))}
-          </div>
         </div>
       </div>
     </footer>
