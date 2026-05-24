@@ -69,16 +69,21 @@ export function Footer() {
           {/* Brand column — spans 2 cols on md+.
               Status pill removed 2026-05-24 — was a hardcoded "All
               systems operational" pulse with no monitoring backend.
-              Brand tagline kept as-is for now; it predates the
-              landing rewrite and uses the older "Adaptive AI / real
-              exam simulators / spaced repetition that actually works"
-              pitch. Worth syncing with the new Hero voice in a
-              follow-up but not bundled into the launch-blocker cut. */}
+              Brand tagline rewritten the same day. Previous read
+              "Adaptive AI, real exam simulators, spaced repetition
+              that actually works" — three buzzwords the Hero
+              explicitly rejected (commodity "Adaptive AI", plural
+              simulators when one exists, FSRS-feels-invisible).
+              Replaced with the signature phrase already used in
+              StatsBand ("...covered properly") so footer + band
+              repeat the same line and make it the recognizable
+              product lema across surfaces. The footer is closer
+              (lowest-attention slot), not pitch — mechanism is
+              upstream, this just signs off in the voice. */}
           <div className="col-span-2 md:col-span-2">
             <Logo size={22} />
             <p className="mt-5 max-w-[280px] text-[14px] leading-[1.6] text-v2-foreground-muted">
-              The serious AWS prep platform. Adaptive AI, real exam simulators,
-              spaced repetition that actually works.
+              AWS SAA-C03 prep, covered properly.
             </p>
           </div>
 
