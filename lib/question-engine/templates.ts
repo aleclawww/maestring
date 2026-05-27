@@ -450,7 +450,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       protocol: ['HTTP/2 with host-based routing', 'TCP at millions of pps with static IPs', 'gRPC with path-based routing'],
     },
-    stem: 'Choose the load balancer for {{protocol}}.',
+    stem: 'Which load balancer should the team use for {{protocol}}?',
     options: [
       { text: 'Classic Load Balancer.', correct: false, distractor: { type: 'wrong-load-balancer-type', explanation: 'Legacy; lacks the features needed.' } },
       { text: 'Application Load Balancer (ALB) for HTTP/HTTPS/gRPC; Network Load Balancer (NLB) for TCP/UDP at scale with static IPs.', correct: true },
@@ -553,7 +553,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       strategy: ['backup & restore', 'pilot light', 'warm standby', 'multi-site active-active'],
     },
-    stem: 'Pick the AWS service mix for an RDS-based DR strategy of type "{{strategy}}".',
+    stem: 'Which AWS service mix supports an RDS-based DR strategy of type "{{strategy}}"?',
     options: [
       { text: 'Automated daily snapshots only; no DR plan defined for the workload.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Single-Region only; not a DR strategy.' } },
       { text: 'Map strategy → service mix: snapshots+copy for backup, read replica for pilot light, scaled-down active for warm standby, Aurora Global Database for multi-site.', correct: true },
@@ -636,7 +636,7 @@ export const TEMPLATES: Template[] = [
       iops: ['16,000', '64,000', '128,000', '256,000'],
       latency: ['millisecond', 'sub-millisecond'],
     },
-    stem: 'Choose the EBS volume type for sustained {{iops}} IOPS at {{latency}} latency.',
+    stem: 'Which EBS volume type supports sustained {{iops}} IOPS at {{latency}} latency?',
     options: [
       { text: 'gp3 General Purpose SSD.', correct: false, distractor: { type: 'misses-durability-tier', explanation: 'gp3 caps at 16,000 IOPS.' } },
       { text: 'io2 Block Express SSD with provisioned IOPS.', correct: true },
@@ -656,7 +656,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       workload: ['HPC genomics with parallel I/O at 100s GB/s', 'Windows applications needing SMB shares', 'Linux containers needing shared POSIX storage that scales elastically'],
     },
-    stem: 'Pick the AWS-managed shared file system for: {{workload}}.',
+    stem: 'Which AWS-managed shared file system fits {{workload}}?',
     options: [
       { text: 'Amazon EFS Standard.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'EFS is NFS for Linux; not HPC parallel.' } },
       { text: 'FSx for Lustre for HPC; FSx for Windows for SMB; EFS for elastic POSIX shared storage.', correct: true },
@@ -676,7 +676,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       access: ['accessed daily', 'accessed monthly with millisecond retrieval', 'archived for compliance, retrieved annually'],
     },
-    stem: 'Pick the S3 storage class for data {{access}}.',
+    stem: 'Which S3 storage class is the best fit for data {{access}}?',
     options: [
       { text: 'S3 Standard for daily access; S3 Standard-IA for monthly with ms retrieval; Glacier Deep Archive for annual compliance.', correct: true },
       { text: 'S3 Standard for everything.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Standard for cold data wastes money.' } },
@@ -698,7 +698,7 @@ export const TEMPLATES: Template[] = [
       asset: ['static images and JS bundles', 'a global REST API', 'video on demand'],
       audience: ['globally distributed users', 'users across three continents', 'a regional EU audience with EU-only data residency'],
     },
-    stem: 'Reduce latency for {{asset}} served to {{audience}} with origin offload.',
+    stem: 'Which AWS approach reduces latency for {{asset}} served to {{audience}} with origin offload?',
     options: [
       { text: 'Serve directly from S3 in us-east-1.', correct: false, distractor: { type: 'wrong-region-scope', explanation: 'No edge cache; far-region users suffer.' } },
       { text: 'CloudFront in front of the origin with appropriate cache behaviors and origin shield.', correct: true },
@@ -717,7 +717,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['session storage with sub-ms reads', 'a leaderboard with sorted-set semantics', 'a write-through cache in front of RDS'],
     },
-    stem: 'Implement {{pattern}} with the lowest latency.',
+    stem: 'Which approach implements {{pattern}} with the lowest latency?',
     options: [
       { text: 'DAX in front of DynamoDB.', correct: false, distractor: { type: 'misuses-caching', explanation: 'DAX is a DynamoDB cache, not generic.' } },
       { text: 'ElastiCache for Redis with the appropriate data structures.', correct: true },
@@ -737,7 +737,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['route users to the closest healthy Region', 'fail over from primary to DR Region', 'split traffic 90/10 for canary'],
     },
-    stem: 'Use Route 53 to {{goal}}.',
+    stem: 'Which Route 53 configuration should the team use to {{goal}}?',
     options: [
       { text: 'Simple routing with one A record per Region.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Simple is round-robin without health.' } },
       { text: 'The right Route 53 routing policy: latency for closest healthy, failover for primary/DR, weighted for canary, all with health checks.', correct: true },
@@ -758,7 +758,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['fan-out one event to many subscribers', 'reliable point-to-point work queue', 'route events by content from many SaaS sources to many targets'],
     },
-    stem: 'Pick the messaging service for: {{pattern}}.',
+    stem: 'Which AWS messaging service fits {{pattern}}?',
     options: [
       { text: 'SQS for fan-out, SNS for queues, EventBridge for everything else.', correct: false, distractor: { type: 'sync-when-decoupled-needed', explanation: 'Mixes the roles up.' } },
       { text: 'SNS for fan-out pub/sub; SQS for point-to-point queues; EventBridge for content-based routing across SaaS and AWS sources.', correct: true },
@@ -778,7 +778,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       workflow: ['a 5-step ETL with retry logic', 'a human-approval workflow with a 7-day wait', 'a parallel fan-out / fan-in batch job'],
     },
-    stem: 'Implement {{workflow}} with the lowest operational overhead.',
+    stem: 'Which approach implements {{workflow}} with the lowest operational overhead?',
     options: [
       { text: 'Chain Lambdas via SNS topics with custom retry code in each.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reinvents Step Functions error handling.' } },
       { text: 'AWS Step Functions with the appropriate state types (Task, Wait, Parallel, Choice).', correct: true },
@@ -799,7 +799,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       workload: ['short HTTP request handlers', 'long-running ML training jobs', 'persistent WebSocket connections at high scale'],
     },
-    stem: 'Choose the AWS compute primitive for {{workload}}.',
+    stem: 'Which AWS compute primitive fits {{workload}}?',
     options: [
       { text: 'Lambda for short handlers; ECS/EKS for long-running; API Gateway WebSocket + Lambda or AppSync for WebSockets.', correct: true },
       { text: 'Lambda for everything.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: '15-minute timeout breaks long jobs; persistent connections cost more than a Fargate fleet.' } },
@@ -921,7 +921,7 @@ export const TEMPLATES: Template[] = [
       target: ['idle Elastic IPs', 'unattached EBS volumes', 'underutilised Reserved Instances'],
       org: ['a single account', 'an Organization with 50 accounts'],
     },
-    stem: 'Surface {{target}} across {{org}} for cleanup with minimal effort.',
+    stem: 'Which AWS approach surfaces {{target}} across {{org}} for cleanup with minimal effort?',
     options: [
       { text: 'Build a Lambda that loops every account and writes findings to S3.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reinvents Trusted Advisor org view.' } },
       { text: 'Use AWS Trusted Advisor cost-optimisation checks at the Organization level.', correct: true },
@@ -962,7 +962,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['unknown access patterns over time', 'always hot for the first 30 days then rarely accessed for 1 year', 'objects under 128 KB accessed daily'],
     },
-    stem: 'Optimise S3 cost for: {{pattern}}.',
+    stem: 'Which S3 cost-optimization approach fits {{pattern}}?',
     options: [
       { text: 'Match: Intelligent-Tiering for unknown; lifecycle Standard→Standard-IA→Glacier for known cooling pattern; Standard for small hot objects.', correct: true },
       { text: 'Intelligent-Tiering for everything.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Monitoring fee dominates on small objects.' } },
@@ -983,7 +983,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       mix: ['EC2 + Fargate + Lambda across multiple Regions and OSes', 'a single EC2 family in one Region', 'EC2 with frequent family changes within one Region'],
     },
-    stem: 'Maximum-discount commitment for: {{mix}}.',
+    stem: 'Which commitment delivers the maximum discount for {{mix}}?',
     options: [
       { text: 'Compute Savings Plans for cross-service flexibility; EC2 Standard RIs for fixed family/Region; Convertible RIs for changing families.', correct: true },
       { text: 'On-Demand pricing across all workloads with no commitment.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Leaves discounts on the table.' } },
@@ -1024,7 +1024,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       profile: ['unpredictable bursty traffic with long idle periods', 'steady 4 vCPU all day every day', 'dev/test environments used 9-5 weekdays'],
     },
-    stem: 'Cheapest Aurora deployment for: {{profile}}.',
+    stem: 'Which is the cheapest Aurora deployment for {{profile}}?',
     options: [
       { text: 'Aurora Serverless v2 for bursty/idle and dev/test; provisioned Aurora with reserved capacity for steady all-day load.', correct: true },
       { text: 'Aurora Serverless for everything.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'Steady load is cheaper provisioned + RIs.' } },
@@ -1045,7 +1045,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['alert when monthly EC2 spend exceeds $5,000', 'forecast next-quarter spend by tag', 'identify idle EBS volumes and old snapshots'],
     },
-    stem: 'Pick the AWS-native tool for: {{goal}}.',
+    stem: 'Which AWS-native tool fits {{goal}}?',
     options: [
       { text: 'AWS Budgets for thresholds/alerts; Cost Explorer for forecasting and tag-based grouping; Trusted Advisor for idle-resource recommendations.', correct: true },
       { text: 'A custom CloudWatch dashboard polling Cost & Usage Report manually.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Budgets/Explorer/TA exist for these jobs.' } },
@@ -1065,7 +1065,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       situation: ['gp2 volumes provisioned 5 years ago', 'high IOPS volumes that are over-provisioned', 'EBS snapshots that are no longer needed but kept for years'],
     },
-    stem: 'Cut EBS storage spend caused by: {{situation}}.',
+    stem: 'Which action cuts EBS storage spend caused by {{situation}}?',
     options: [
       { text: 'Migrate to gp3 (cheaper, configurable IOPS/throughput); right-size with Compute Optimizer; lifecycle old snapshots via Data Lifecycle Manager.', correct: true },
       { text: 'Switch every volume to io2 Block Express for performance.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Premium tier; raises cost.' } },
@@ -1086,7 +1086,7 @@ export const TEMPLATES: Template[] = [
       workload: ['nightly batch jobs in containers', 'CI/CD build runners on ECS', 'a stateless API tier behind ALB'],
       cluster: ['ECS', 'EKS'],
     },
-    stem: 'Cost-optimise {{workload}} running on {{cluster}}.',
+    stem: 'Which approach cost-optimises {{workload}} running on {{cluster}}?',
     options: [
       { text: 'Run On-Demand Fargate at 100% capacity uniformly across all clusters.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'No discount applied; misses cheaper tiers.' } },
       { text: 'For ECS use Fargate Spot via Capacity Providers (mix On-Demand + Spot); for EKS use EC2 Spot in managed node groups (Fargate Spot is not supported on EKS).', correct: true },
@@ -1106,7 +1106,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       profile: ['a development environment used 9-5 weekdays', 'a steady production workload running 24/7', 'a data pipeline that runs 4 hours a night'],
     },
-    stem: 'Pick the cheapest compute pricing strategy for: {{profile}}.',
+    stem: 'Which is the cheapest compute pricing strategy for {{profile}}?',
     options: [
       { text: 'Match: Instance Scheduler + On-Demand for dev; Compute Savings Plans for steady prod; Spot or Fargate Spot for fault-tolerant nightly jobs.', correct: true },
       { text: 'Spot only for every workload to chase the deepest discount.', correct: false, distractor: { type: 'wrong-rpo-rto-match', explanation: 'Interruption breaks dev IDE sessions and SLA-bound prod.' } },
@@ -1126,7 +1126,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['unpredictable bursty load with long idle gaps', 'predictable 24/7 read-heavy workload', 'a dev/test database used during business hours'],
     },
-    stem: 'Most cost-effective Aurora topology for: {{pattern}}.',
+    stem: 'Which is the most cost-effective Aurora topology for {{pattern}}?',
     options: [
       { text: 'Match: Aurora Serverless v2 for bursty/idle and dev/test (auto-scales by ACU); provisioned Aurora with read replicas plus reserved capacity for steady 24/7 reads.', correct: true },
       { text: 'Use Aurora Serverless v2 uniformly for every Aurora deployment in the account.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'Serverless on always-busy is more expensive than reserved.' } },
@@ -1146,7 +1146,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['ingest 10 GB/s with custom consumers and replay', 'land streaming data in S3/Redshift with format conversion', 'stream and process with sub-second latency'],
     },
-    stem: 'Pick the streaming primitive for: {{need}}.',
+    stem: 'Which streaming primitive fits {{need}}?',
     options: [
       { text: 'Kinesis Data Streams for custom consumers and replay; Kinesis Data Firehose for managed delivery to S3/Redshift with format conversion.', correct: true },
       { text: 'SQS standard queue used as the high-throughput streaming pipeline.', correct: false, distractor: { type: 'sync-when-decoupled-needed', explanation: 'SQS is a queue, not an ordered stream.' } },
@@ -1166,7 +1166,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['hot partition causing throttling', 'read-heavy workload at 100k RPS', 'occasional bursts on otherwise low traffic'],
     },
-    stem: 'Solve a DynamoDB performance issue: {{pattern}}.',
+    stem: 'Which approach resolves a DynamoDB performance issue caused by {{pattern}}?',
     options: [
       { text: 'Hot partition: re-design partition key for high-cardinality plus DAX; read-heavy: DAX cache and/or eventually-consistent reads; bursty: On-Demand capacity.', correct: true },
       { text: 'Switch every DynamoDB workload to provisioned capacity with low limits.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Bursty needs adaptive capacity.' } },
@@ -1189,7 +1189,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['rotate keys yearly without re-encrypting data', 'centralize keys across 5 accounts', 'meet FIPS 140-2 Level 3 with single-tenant HSM', 'envelope-encrypt 1 GB objects with sub-ms overhead', 'enforce key usage to a specific Region only'],
     },
-    stem: 'Pick the KMS key strategy to {{need}}.',
+    stem: 'Which KMS key strategy should the team use to {{need}}?',
     options: [
       { text: 'Use AWS KMS customer-managed keys with automatic annual rotation, share key policies cross-account via grants, and CloudHSM for FIPS 140-2 Level 3 single-tenant.', correct: true },
       { text: 'Use AWS-owned keys for everything because they require zero management overhead.', correct: false, distractor: { type: 'wrong-encryption-scope', explanation: 'AWS-owned keys cannot be audited or shared cross-account.' } },
@@ -1229,7 +1229,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       mandate: ['SEC 17a-4 financial records WORM for 7 years', 'HIPAA audit logs immutable for 6 years', 'GDPR consent records that cannot be deleted before retention'],
     },
-    stem: 'Achieve {{mandate}} on S3 objects.',
+    stem: 'Which S3 feature achieves {{mandate}}?',
     options: [
       { text: 'S3 Object Lock in Compliance mode with retention period set per object, enabled at bucket creation.', correct: true },
       { text: 'A bucket policy denying s3:DeleteObject for IAM users.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'Bucket policies are mutable; root can override.' } },
@@ -1249,7 +1249,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['discover PII across hundreds of S3 buckets', 'detect publicly exposed sensitive data automatically', 'classify documents by sensitivity for compliance reporting'],
     },
-    stem: 'Best service to {{goal}}.',
+    stem: 'Which AWS service is the best fit to {{goal}}?',
     options: [
       { text: 'Amazon Macie with managed data identifiers for PII, automatic discovery jobs, and EventBridge alerts on findings.', correct: true },
       { text: 'A custom Lambda that downloads each object and runs regex on the body.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Macie scales managed; custom code does not maintain identifiers.' } },
@@ -1269,7 +1269,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       use: ['public website on CloudFront', 'internal ALB serving private workloads', 'API Gateway custom domain with WAF'],
     },
-    stem: 'TLS strategy for: {{use}}.',
+    stem: 'Which TLS strategy fits {{use}}?',
     options: [
       { text: 'ACM public certificate (free, auto-renewing) for CloudFront/ALB/API Gateway; ACM Private CA for internal hostnames.', correct: true },
       { text: 'Buy commercial certificates and rotate them manually every year via SSH on each host.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'ACM auto-renews; manual rotation invites outage.' } },
@@ -1290,7 +1290,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['cache hot DB rows with replication and sub-ms reads', 'session store with persistence and pub/sub', 'pure ephemeral cache with multi-threaded scale-out', 'leaderboard with sorted sets and atomic ops', 'rate-limiter counters with TTL'],
     },
-    stem: 'Pick the ElastiCache engine for: {{need}}.',
+    stem: 'Which ElastiCache engine fits {{need}}?',
     options: [
       { text: 'ElastiCache for Redis when persistence/replication/pub-sub are needed; Memcached when pure horizontal in-memory cache without replication is enough.', correct: true },
       { text: 'Always Memcached because it is simpler and faster for every workload.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'No replication, no persistence; loses session state on node failure.' } },
@@ -1310,7 +1310,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       problem: ['Lambda functions exhausting RDS connections', 'spiky workloads triggering RDS connection-limit errors', 'failover latency causing application timeouts'],
     },
-    stem: '{{problem}} — best fix?',
+    stem: 'Which AWS approach best fixes the issue: {{problem}}?',
     options: [
       { text: 'Place RDS Proxy in front of the database — it pools and shares connections, drains gracefully on failover, and cuts failover time.', correct: true },
       { text: 'Increase the RDS instance size repeatedly to raise the max-connections setting.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Treats symptom; cost climbs without fixing connection storms.' } },
@@ -1330,7 +1330,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       symptom: ['p99 cold-start latency spikes for user-facing API', 'unpredictable burst concurrency hitting account limits', 'memory-bound function running slower than expected'],
     },
-    stem: 'Mitigate {{symptom}}.',
+    stem: 'Which action mitigates {{symptom}}?',
     options: [
       { text: 'Provisioned Concurrency for predictable cold-start; Reserved Concurrency for limit isolation; right-size memory (CPU scales with memory).', correct: true },
       { text: 'Move the workload to EC2 Auto Scaling because Lambda cannot meet latency.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'Provisioned Concurrency closes the cold-start gap.' } },
@@ -1350,7 +1350,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       flow: ['multi-step ETL with retries and human approval', 'long-running saga across 6 microservices', 'parallel fan-out to 50 Lambdas with aggregation', 'video transcoding pipeline with 8 stages', 'order-fulfillment workflow with rollback compensation'],
     },
-    stem: 'Best orchestration primitive for {{flow}}.',
+    stem: 'Which AWS orchestration primitive fits {{flow}}?',
     options: [
       { text: 'AWS Step Functions Standard for human approvals/long-running, Express for high-volume short flows, with built-in retry/catch and Map state for parallel fan-out.', correct: true },
       { text: 'A single monster Lambda with nested try/catch and inline waits.', correct: false, distractor: { type: 'over-engineers-solution', explanation: '15-min Lambda limit; brittle error handling.' } },
@@ -1370,7 +1370,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['point-to-point integration from SQS to Step Functions with filtering', 'cron job that fans out to 1000 schedules with one-time invocations', 'transform Kinesis records and route to multiple targets'],
     },
-    stem: 'Best EventBridge feature for: {{need}}.',
+    stem: 'Which EventBridge feature fits {{need}}?',
     options: [
       { text: 'EventBridge Pipes for source-to-target with filter+enrich+transform; EventBridge Scheduler for one-time and cron at 1M+ schedules.', correct: true },
       { text: 'A custom Lambda + DynamoDB schedule table polled every minute by another Lambda.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Re-implements Scheduler poorly; no SLAs.' } },
@@ -1390,7 +1390,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['real-time mobile app with subscriptions on data changes', 'GraphQL API aggregating DynamoDB plus a REST backend', 'offline-first mobile sync with conflict resolution'],
     },
-    stem: 'Pick the API layer for: {{need}}.',
+    stem: 'Which API layer fits {{need}}?',
     options: [
       { text: 'AWS AppSync (GraphQL) with managed subscriptions over WebSockets, multiple data sources, and DataStore for offline sync.', correct: true },
       { text: 'API Gateway REST with long-poll endpoints and a custom WebSocket Lambda.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'Reinvents AppSync subscriptions and DataStore.' } },
@@ -1410,7 +1410,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['route users to nearest healthy Region', 'gradual blue/green migration with traffic split', 'failover from primary to DR Region on health check failure', 'comply with data-residency rules per country', 'DNS-level load balancing across many endpoints'],
     },
-    stem: 'Route 53 routing policy for: {{goal}}.',
+    stem: 'Which Route 53 routing policy fits {{goal}}?',
     options: [
       { text: 'Latency-based for nearest Region, Weighted for traffic split, Failover for primary/DR — all paired with health checks.', correct: true },
       { text: 'Simple routing with a single record and DNS TTL of 60 seconds.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'No multi-Region, no health checks.' } },
@@ -1430,7 +1430,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       target: ['RPO under 1 second cross-Region with sub-minute RTO', 'low-latency reads in 5 Regions globally', 'compliance-mandated cross-Region failover under 60 seconds'],
     },
-    stem: 'Database for: {{target}}.',
+    stem: 'Which AWS database fits {{target}}?',
     options: [
       { text: 'Aurora Global Database — typical sub-second cross-Region replication, managed unplanned failover, up to 5 secondary Regions for low-latency reads.', correct: true },
       { text: 'RDS Multi-AZ alone (Single Region).', correct: false, distractor: { type: 'wrong-region-scope', explanation: 'Multi-AZ is intra-Region only.' } },
@@ -1450,7 +1450,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['active-active across 3 Regions with eventual consistency', 'point-in-time recovery for accidental writes', 'continuous backups with on-demand restore'],
     },
-    stem: 'DynamoDB resilience feature for: {{need}}.',
+    stem: 'Which DynamoDB resilience feature fits {{need}}?',
     options: [
       { text: 'Global Tables for active-active multi-Region, PITR for last 35 days, On-Demand Backup for long-term archive — all native managed features.', correct: true },
       { text: 'Self-managed snapshot scripts pushing dumps to S3 hourly.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'PITR/Backup are native.' } },
@@ -1470,7 +1470,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       scope: ['EC2, RDS, EFS, DynamoDB centrally with one policy', 'cross-account vaulting for ransomware isolation', 'cross-Region copy of backups for DR'],
     },
-    stem: 'Centralized backup approach for: {{scope}}.',
+    stem: 'Which centralized backup approach fits {{scope}}?',
     options: [
       { text: 'AWS Backup with backup plans, cross-account/cross-Region vault copies, and Vault Lock to harden against ransomware.', correct: true },
       { text: 'Per-service snapshot scripts in each account with no central policy.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Hard to govern; no compliance reporting.' } },
@@ -1491,7 +1491,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       profile: ['logs accessed for 30 days then archived 7 years', 'media files unused after 90 days but occasionally retrieved', 'temp data deleted after 7 days'],
     },
-    stem: 'Define an S3 lifecycle policy for: {{profile}}.',
+    stem: 'Which S3 lifecycle policy fits {{profile}}?',
     options: [
       { text: 'Lifecycle rule: transition to Standard-IA after 30 days, Glacier after 90, Glacier Deep Archive after 365, Expire on retention end.', correct: true },
       { text: 'Keep everything in S3 Standard forever to avoid retrieval costs.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Cold data in Standard wastes 90%+ of the bill.' } },
@@ -1511,7 +1511,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['extend on-prem NFS to S3 transparently', 'replace LTO tape backups with cloud-backed VTL', 'cache frequently-accessed files locally with cloud as source of truth'],
     },
-    stem: 'Storage Gateway flavor for: {{need}}.',
+    stem: 'Which Storage Gateway flavor fits {{need}}?',
     options: [
       { text: 'File Gateway for NFS/SMB to S3, Tape Gateway as VTL replacing LTO, Volume/File-Cached for local cache backed by cloud.', correct: true },
       { text: 'Snowball Edge cluster as a permanent on-prem NFS appliance.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Snow is bulk transfer, not steady-state gateway.' } },
@@ -1531,7 +1531,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       job: ['fault-tolerant batch render farm', 'CI workers with flexible deadlines', 'big-data ETL with checkpoints'],
     },
-    stem: 'Spot strategy for: {{job}}.',
+    stem: 'Which Spot strategy fits {{job}}?',
     options: [
       { text: 'EC2 Spot Fleet with capacity-optimized allocation across many instance families and AZs, with checkpointing for interruptions.', correct: true },
       { text: 'Pure On-Demand instances for everything to guarantee capacity.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: '4–9× more expensive than Spot for fault-tolerant batch.' } },
@@ -1551,7 +1551,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['static anycast IPs with multi-Region failover under 30 seconds', 'gaming workload needing UDP at low jitter globally', 'IoT fleet needing fixed entry IPs through corporate firewalls'],
     },
-    stem: 'Best edge fronting for: {{goal}}.',
+    stem: 'Which AWS edge-fronting service fits {{goal}}?',
     options: [
       { text: 'AWS Global Accelerator — two anycast IPs, AWS backbone for low jitter, sub-30s health-driven failover, supports TCP/UDP.', correct: true },
       { text: 'CloudFront for everything because edge caching equals lower latency.', correct: false, distractor: { type: 'misuses-caching', explanation: 'CloudFront is HTTP/S CDN; no UDP, no static IPs.' } },
@@ -1571,7 +1571,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['serve private S3 content only via the CDN', 'rate-limit and block OWASP top-10 attacks at the edge', 'enforce TLS 1.2 minimum and modern ciphers globally'],
     },
-    stem: 'CloudFront security feature for: {{need}}.',
+    stem: 'Which CloudFront security feature fits {{need}}?',
     options: [
       { text: 'Origin Access Control to lock S3 to CloudFront, AWS WAF on the distribution for OWASP/rate-limit, security policy enforcing TLSv1.2_2021.', correct: true },
       { text: 'Public S3 bucket with signed URLs generated by every client.', correct: false, distractor: { type: 'public-when-private-needed', explanation: 'Public bucket leaks the origin; OAC fixes this.' } },
@@ -1591,7 +1591,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       logic: ['header rewrite on every viewer request at sub-millisecond latency', 'dynamic content fetch from a third-party API at the edge', 'A/B test cookie-based variant selection at viewer-request'],
     },
-    stem: 'Edge compute for: {{logic}}.',
+    stem: 'Which AWS edge-compute option fits {{logic}}?',
     options: [
       { text: 'CloudFront Functions for ultra-low-latency viewer-request/response (header rewrite, A/B); Lambda@Edge for richer logic with network/IO calls.', correct: true },
       { text: 'Lambda@Edge for every edge function regardless of latency budget.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'CloudFront Functions is faster and cheaper for simple JS.' } },
@@ -1611,7 +1611,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['petabyte data warehouse with concurrent BI users', 'federated query into S3 data lake without copying', 'auto-scale during month-end report runs', 'separate compute from storage for cost flexibility', 'serverless analytics with no capacity management'],
     },
-    stem: 'Redshift feature for: {{need}}.',
+    stem: 'Which Redshift feature fits {{need}}?',
     options: [
       { text: 'RA3 nodes (managed storage), Redshift Spectrum for federated S3 query, Concurrency Scaling and Serverless for spikes.', correct: true },
       { text: 'A self-managed PostgreSQL cluster on EC2 with manual sharding.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Redshift is the managed columnar warehouse.' } },
@@ -1631,7 +1631,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       job: ['serverless ETL of 1 TB/day from S3 to S3 in Parquet', 'crawl multiple S3 buckets to populate an Athena catalog', 'streaming ETL of Kinesis records with schema evolution'],
     },
-    stem: 'Best Glue feature for: {{job}}.',
+    stem: 'Which AWS Glue feature fits {{job}}?',
     options: [
       { text: 'Glue Jobs (Spark) for batch ETL, Crawlers for catalog auto-discovery, Streaming Jobs for Kinesis with schema-registry support.', correct: true },
       { text: 'EMR cluster of 50 nodes provisioned 24/7 for nightly ETL.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Glue is serverless; pay per DPU-hour.' } },
@@ -1651,7 +1651,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['ad-hoc SQL on S3 logs without provisioning', 'query CloudTrail/VPC Flow Logs at petabyte scale', 'BI dashboards reading partitioned Parquet'],
     },
-    stem: 'Best fit for: {{goal}}.',
+    stem: 'Which AWS service is the best fit for {{goal}}?',
     options: [
       { text: 'Amazon Athena (serverless presto) on partitioned Parquet, with workgroups for cost control and CTAS for materialized results.', correct: true },
       { text: 'A Redshift cluster running 24/7 for occasional ad-hoc queries.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Pay-per-cluster-hour wastes money for ad-hoc.' } },
@@ -1671,7 +1671,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['column-level access control on a shared data lake', 'cross-account data sharing with central governance', 'tag-based access policies across many catalog tables'],
     },
-    stem: 'Lake Formation feature for: {{goal}}.',
+    stem: 'Which Lake Formation feature fits {{goal}}?',
     options: [
       { text: 'Lake Formation fine-grained permissions (database/table/column/row), LF-Tags for tag-based control, and cross-account grants on the shared catalog.', correct: true },
       { text: 'Hand-crafted bucket policies on every S3 prefix per user.', correct: false, distractor: { type: 'over-permissive-iam', explanation: 'Does not scale; no row/column control.' } },
@@ -1692,7 +1692,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       access: ['unknown access pattern with frequent and infrequent objects mixed', 'predictable warm tier accessed monthly', 'long-term archive retrieved once a year'],
     },
-    stem: 'Cheapest correct S3 tier for: {{access}}.',
+    stem: 'Which is the cheapest correct S3 tier for {{access}}?',
     options: [
       { text: 'Intelligent-Tiering for unknown patterns; Standard-IA for predictable warm; Glacier Deep Archive for cold archive — match tier to access shape.', correct: true },
       { text: 'S3 Standard for everything to keep things simple.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Most expensive tier; wastes money on cold data.' } },
@@ -1732,7 +1732,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       profile: ['steady EC2 baseline with mix of families and Regions', 'Fargate and Lambda baseline alongside EC2', 'short-term commit with high flexibility', 'high-utilization stable production fleet', 'gradual ramp-up of new workloads over 12 months'],
     },
-    stem: 'Best Savings Plan for: {{profile}}.',
+    stem: 'Which Savings Plan fits {{profile}}?',
     options: [
       { text: 'Compute Savings Plans for cross-family/Region/Fargate/Lambda flexibility; EC2 Instance Savings Plans when committed to a family in a Region for deeper discount.', correct: true },
       { text: 'Standard 3-year all-upfront EC2 RIs locking each instance type/AZ.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'No flexibility across families/Regions.' } },
@@ -1752,7 +1752,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['identify over-provisioned EC2 instances', 'right-size Lambda memory based on real usage', 'find idle EBS volumes consuming cost'],
     },
-    stem: 'Service to: {{goal}}.',
+    stem: 'Which AWS service can be used to {{goal}}?',
     options: [
       { text: 'AWS Compute Optimizer — ML-driven recommendations for EC2/EBS/Lambda/ASG using CloudWatch metrics history.', correct: true },
       { text: 'Manual review of CloudWatch graphs every quarter.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Compute Optimizer automates this.' } },
@@ -1772,7 +1772,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       profile: ['unpredictable spiky workload with idle periods', 'dev/test environments running ad-hoc', 'steady-state OLTP with predictable peak'],
     },
-    stem: 'Cheapest correct Aurora option for: {{profile}}.',
+    stem: 'Which is the cheapest correct Aurora option for {{profile}}?',
     options: [
       { text: 'Aurora Serverless v2 for spiky/unpredictable; Aurora provisioned with stop/start for dev/test; provisioned + RIs for steady-state.', correct: true },
       { text: 'Always provisioned db.r6g.16xlarge regardless of load shape.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Massive overprovisioning for spiky workloads.' } },
@@ -1792,7 +1792,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       traffic: ['large S3 traffic from private subnets crossing NAT Gateway', 'DynamoDB traffic from private subnets', 'API calls to many AWS services from private subnets'],
     },
-    stem: 'Cut NAT Gateway cost for: {{traffic}}.',
+    stem: 'Which action cuts NAT Gateway cost for {{traffic}}?',
     options: [
       { text: 'Gateway Endpoints (free) for S3 and DynamoDB; Interface Endpoints (PrivateLink, hourly+per-GB) for other AWS services to bypass NAT.', correct: true },
       { text: 'Add more NAT Gateways across AZs to scale throughput.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Increases cost; does not avoid the per-GB charge.' } },
@@ -1812,7 +1812,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['alert when monthly spend exceeds threshold per team', 'identify the top cost drivers across services', 'forecast next-quarter spend by linked account'],
     },
-    stem: 'Best AWS-native tool for: {{goal}}.',
+    stem: 'Which AWS-native tool fits {{goal}}?',
     options: [
       { text: 'AWS Budgets for thresholds and alerts; Cost Explorer for breakdowns and forecasting; CUR with Athena for deep custom analysis.', correct: true },
       { text: 'A custom Lambda hitting the Cost API every hour and emailing reports.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Budgets/Cost Explorer cover this natively.' } },
@@ -1833,7 +1833,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       scenario: ['delegate IAM admin to a team without privilege escalation', 'cap a service-linked role to a maximum permission set', 'enforce that developers can create roles only within an allowlist'],
     },
-    stem: 'Best IAM control for: {{scenario}}.',
+    stem: 'Which IAM control fits {{scenario}}?',
     options: [
       { text: 'Permissions Boundaries — set the maximum effective permissions a user/role can have, regardless of attached policies.', correct: true },
       { text: 'Service Control Policies attached at the OU level for individual user permissions.', correct: false, distractor: { type: 'wrong-region-scope', explanation: 'SCPs apply to accounts, not individual identities.' } },
@@ -1853,7 +1853,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['detect cross-account or public exposure of S3/IAM/SQS', 'validate IAM policies before deploying', 'continuously monitor for unintended external access'],
     },
-    stem: 'Best AWS-native tool for: {{goal}}.',
+    stem: 'Which AWS-native tool fits {{goal}}?',
     options: [
       { text: 'IAM Access Analyzer — continuous external-access analysis, policy validation, and unused-access findings across resource types.', correct: true },
       { text: 'CloudTrail dashboard alone with manual log review.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'CloudTrail records events; Access Analyzer reasons about policy reachability.' } },
@@ -1873,7 +1873,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['centralize security findings across all accounts', 'continuously check CIS/NIST/PCI controls', 'aggregate GuardDuty/Inspector/Macie findings in one place'],
     },
-    stem: 'Best AWS service for: {{goal}}.',
+    stem: 'Which AWS service fits {{goal}}?',
     options: [
       { text: 'AWS Security Hub — multi-account aggregator with automated CIS/NIST/PCI standards checks and integrated findings from GuardDuty/Inspector/Macie.', correct: true },
       { text: 'A custom dashboard built on raw CloudTrail events.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Reinvents Security Hub poorly.' } },
@@ -1893,7 +1893,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       threat: ['unusual API calls indicating compromised credentials', 'EC2 instance communicating with known C2 servers', 'cryptomining behavior on EKS workloads'],
     },
-    stem: 'Detect {{threat}} — best service?',
+    stem: 'Which AWS service detects {{threat}}?',
     options: [
       { text: 'Amazon GuardDuty with EKS Protection and S3 Protection enabled — managed threat detection on CloudTrail/VPC Flow/DNS/EKS audit logs.', correct: true },
       { text: 'AWS Config rules with custom Lambda evaluators.', correct: false, distractor: { type: 'wrong-encryption-scope', explanation: 'Config evaluates configuration drift, not behavior.' } },
@@ -1913,7 +1913,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['burst-capacity hybrid for occasional 100 Mbps traffic', 'dedicated 10 Gbps with predictable latency for 5 years', 'remote workforce VPN for 500 engineers'],
     },
-    stem: 'Cheapest correct connectivity for: {{need}}.',
+    stem: 'Which is the cheapest correct connectivity option for {{need}}?',
     options: [
       { text: 'Site-to-Site VPN for occasional bursts (no port fees), Direct Connect 10 Gbps + DX Gateway for steady-state, AWS Client VPN for remote users.', correct: true },
       { text: 'Direct Connect 10 Gbps for every connectivity scenario regardless of usage.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Massive overspend for occasional bursts and remote users.' } },
@@ -1936,7 +1936,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['EC2 instance reading from S3', 'Lambda function writing to DynamoDB', 'cross-account application calling SQS', 'on-prem app needing temporary AWS credentials', 'CI/CD pipeline deploying CloudFormation stacks'],
     },
-    stem: 'Best identity primitive for: {{need}}.',
+    stem: 'Which identity primitive fits {{need}}?',
     options: [
       { text: 'IAM Roles assumed by the workload (instance profile, Lambda execution role, cross-account trust, IAM Roles Anywhere, OIDC for CI/CD) — temporary credentials, no static keys.', correct: true },
       { text: 'A long-lived IAM user with access keys baked into the application code.', correct: false, distractor: { type: 'iam-user-when-role-needed', explanation: 'Static keys leak; roles give rotated, scoped credentials.' } },
@@ -1956,7 +1956,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['prevent any account from disabling CloudTrail', 'block unapproved Regions for all accounts in an OU', 'forbid root user actions across the organization', 'cap the services every dev sandbox can use', 'enforce that S3 buckets cannot be made public'],
     },
-    stem: 'Best Organizations control to {{goal}}.',
+    stem: 'Which Organizations control should the team use to {{goal}}?',
     options: [
       { text: 'Service Control Policies (SCPs) attached at the OU/account level — guardrails that no IAM identity (including root) can override.', correct: true },
       { text: 'IAM permission policies attached to every user manually.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'IAM cannot stop root; SCPs can.' } },
@@ -1976,7 +1976,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['mobile app sign-in with social/OIDC providers', 'public web app needing temporary AWS credentials for S3', 'enterprise SSO via SAML for an AWS-hosted webapp', 'guest access to a small subset of AWS resources', 'MFA-enforced sign-in with managed user directory'],
     },
-    stem: 'Cognito feature for: {{need}}.',
+    stem: 'Which Cognito feature fits {{need}}?',
     options: [
       { text: 'User Pools for sign-up/sign-in (with social/SAML/OIDC + MFA), Identity Pools for temporary AWS credentials (authenticated and guest).', correct: true },
       { text: 'IAM users created per end-customer of the application.', correct: false, distractor: { type: 'iam-user-when-role-needed', explanation: 'IAM is for AWS humans/workloads; not end-user auth.' } },
@@ -1997,7 +1997,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       target: ['EC2 instances for OS CVEs', 'container images in ECR for vulnerabilities', 'Lambda functions for vulnerable dependencies', 'continuous scanning across an entire Organization'],
     },
-    stem: 'Vulnerability scanning of {{target}} — best AWS service?',
+    stem: 'Which AWS service performs vulnerability scanning of {{target}}?',
     options: [
       { text: 'Amazon Inspector — agentless EC2/ECR/Lambda CVE scanning with automated continuous re-evaluation and Security Hub integration.', correct: true },
       { text: 'GuardDuty findings filtered by severity.', correct: false, distractor: { type: 'wrong-encryption-scope', explanation: 'GuardDuty is threat detection on logs, not CVE scanning.' } },
@@ -2017,7 +2017,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['allow only port 443 to a web server from anywhere', 'block a specific malicious IP range at the subnet edge', 'restrict EC2-to-RDS traffic to specific security groups', 'audit subnet-level connection state'],
     },
-    stem: 'Best primitive for: {{need}}.',
+    stem: 'Which AWS primitive fits {{need}}?',
     options: [
       { text: 'Security Groups (stateful, instance-level, allow-only) for app-to-app rules; NACLs (stateless, subnet-level, allow + deny) for IP-range blocks.', correct: true },
       { text: 'Always NACLs for everything because they support deny rules.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'Stateless rules require explicit return-traffic rules — error-prone for app-level control.' } },
@@ -2038,7 +2038,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['per-application access policies on a shared bucket', 'restrict access points to a specific VPC', 'multi-Region active-active S3 access via a single endpoint', 'cross-account analyst access scoped to a prefix'],
     },
-    stem: 'S3 feature for: {{need}}.',
+    stem: 'Which S3 feature fits {{need}}?',
     options: [
       { text: 'S3 Access Points (per-app named endpoints with their own policies and VPC-only flag); Multi-Region Access Points for routing across replicated buckets.', correct: true },
       { text: 'A single bucket policy that hand-rolls every application path with one giant document.', correct: false, distractor: { type: 'over-permissive-iam', explanation: 'Bucket policies hit size limits and are hard to govern at scale.' } },
@@ -2058,7 +2058,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['cross-Region disaster recovery with KMS re-encryption', 'cross-account replication for ransomware isolation', 'replicate only objects matching a tag prefix', 'replicate within the same Region across accounts'],
     },
-    stem: 'S3 replication setup for: {{goal}}.',
+    stem: 'Which S3 replication setup fits {{goal}}?',
     options: [
       { text: 'S3 CRR/SRR with replica KMS key, destination-owner override, replication rules with prefix/tag filters, and replication time control (RTC) for SLA.', correct: true },
       { text: 'Manual nightly aws s3 sync from a cron on EC2.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Native replication is event-driven and SLA-backed.' } },
@@ -2079,7 +2079,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       use: ['decouple producer and slow consumer with retry and DLQ', 'fan-out one event to 10 different services', 'route events from many SaaS sources with content-based filtering', 'guaranteed FIFO ordering by customer ID'],
     },
-    stem: 'Best messaging primitive for: {{use}}.',
+    stem: 'Which AWS messaging primitive fits {{use}}?',
     options: [
       { text: 'SQS (Standard or FIFO) for queue/DLQ; SNS for fan-out pub-sub; EventBridge for SaaS sources, schemas, and content-based routing.', correct: true },
       { text: 'EventBridge for every messaging need including FIFO ordered queueing.', correct: false, distractor: { type: 'over-engineers-solution', explanation: 'EventBridge has no FIFO ordering or DLQ replay semantics.' } },
@@ -2099,7 +2099,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       profile: ['traffic spike during predictable business hours', 'unpredictable bursts requiring fast response', 'queue depth-driven scale-out', 'fleet of mixed Spot+On-Demand for cost'],
     },
-    stem: 'Auto Scaling configuration for: {{profile}}.',
+    stem: 'Which Auto Scaling configuration fits {{profile}}?',
     options: [
       { text: 'Mix of Scheduled actions (predictable), Target Tracking on CPU/ALB request count (steady), Step scaling on SQS depth (queue), and Mixed Instances Policy with Spot for cost.', correct: true },
       { text: 'A single static instance count and scale manually when paged.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Defeats the purpose of ASG.' } },
@@ -2120,7 +2120,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       workload: ['HTTP/HTTPS microservices with path-based routing', 'TCP/UDP gaming server with millions of connections', 'transparent inline firewall appliance fleet', 'static IPs required by clients with corporate firewalls'],
     },
-    stem: 'Best load balancer for: {{workload}}.',
+    stem: 'Which load balancer fits {{workload}}?',
     options: [
       { text: 'ALB for HTTP/path-based; NLB for TCP/UDP at extreme scale and static IPs; GWLB for inline firewall/IDS appliances; Global Accelerator for anycast IPs.', correct: true },
       { text: 'Always Classic Load Balancer because it is the simplest option.', correct: false, distractor: { type: 'wrong-load-balancer-type', explanation: 'CLB is legacy; lacks features and cost-efficiency of ALB/NLB.' } },
@@ -2140,7 +2140,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       transfer: ['100 TB from on-prem NFS to S3 over Direct Connect', 'EFS-to-EFS cross-Region copy', 'on-prem SMB to FSx for Windows scheduled nightly', 'cross-account S3 migration with verification'],
     },
-    stem: 'Best service for: {{transfer}}.',
+    stem: 'Which AWS service fits {{transfer}}?',
     options: [
       { text: 'AWS DataSync — managed online data transfer agent with parallel multi-threaded copy, integrity verification, and scheduling.', correct: true },
       { text: 'Snowball Edge for any online data transfer.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'Snow is offline; appropriate only above ~10 TB AND limited bandwidth.' } },
@@ -2160,7 +2160,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       situation: ['80 TB to migrate with no Direct Connect and slow internet', 'edge processing in a disconnected ship for 3 months', 'multi-PB data lake migration in one shipment', 'compute + storage in a remote site with intermittent connectivity'],
     },
-    stem: 'Best Snow Family device for: {{situation}}.',
+    stem: 'Which Snow Family device fits {{situation}}?',
     options: [
       { text: 'Snowcone for small edge, Snowball Edge for medium edge + 80 TB transfer, Snowmobile for petabyte-scale shipments — pick by capacity and need for compute.', correct: true },
       { text: 'DataSync for any multi-TB transfer regardless of bandwidth available.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'When bandwidth is the bottleneck Snow wins.' } },
@@ -2180,7 +2180,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['HPC workload requiring 100 Gbps low-latency between nodes', 'critical app needing fault tolerance across separate hardware in one AZ', 'large rack-aware Hadoop cluster spanning multiple racks'],
     },
-    stem: 'Best EC2 placement group for: {{need}}.',
+    stem: 'Which EC2 placement group fits {{need}}?',
     options: [
       { text: 'Cluster (low-latency, single-AZ) for HPC; Spread (separate hardware, max 7/AZ) for HA-critical small workloads; Partition (rack-aware) for large distributed data systems.', correct: true },
       { text: 'No placement group ever — defaults are always correct.', correct: false, distractor: { type: 'underestimates-availability', explanation: 'Default placement does not optimize for HPC or rack-fault tolerance.' } },
@@ -2201,7 +2201,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['DynamoDB read-heavy with sub-ms latency target', 'RDS read offload during peak', 'session store for stateless web fleet', 'leaderboard with sorted-set semantics'],
     },
-    stem: 'Caching strategy for: {{pattern}}.',
+    stem: 'Which caching strategy fits {{pattern}}?',
     options: [
       { text: 'DAX for DynamoDB, ElastiCache for Redis (lazy-loading or write-through) in front of RDS, Redis for sessions and sorted-set leaderboards.', correct: true },
       { text: 'Self-managed Redis on EC2 with manual failover for every workload.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'ElastiCache is managed; DAX is DynamoDB-specific.' } },
@@ -2221,7 +2221,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['offload reporting queries from primary', 'serve global low-latency reads from 5 Regions', 'promote a replica during planned maintenance', 'cross-engine reads (MySQL primary, MySQL replica)'],
     },
-    stem: 'RDS read-replica plan for: {{pattern}}.',
+    stem: 'Which RDS read-replica plan fits {{pattern}}?',
     options: [
       { text: 'Up to 15 read replicas (in-Region or cross-Region), promote during maintenance, route read traffic via app or RDS Proxy.', correct: true },
       { text: 'Multi-AZ standby used as a read replica (it is not).', correct: false, distractor: { type: 'underestimates-availability', explanation: 'RDS Multi-AZ standby is not readable.' } },
@@ -2241,7 +2241,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['scale to 128 vCPUs during business hours, idle off-hours', 'serverless tier that responds to sudden bursts', 'parallel query for analytical workloads on Aurora', 'low-latency reads from up to 15 readers'],
     },
-    stem: 'Aurora feature for: {{need}}.',
+    stem: 'Which Aurora feature fits {{need}}?',
     options: [
       { text: 'Aurora Provisioned with Auto Scaling readers, Aurora Serverless v2 for bursty, Parallel Query for analytics, and reader endpoint with up to 15 readers.', correct: true },
       { text: 'A single huge db.r6g.16xlarge running 24/7 forever.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'No elasticity; expensive.' } },
@@ -2262,7 +2262,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['private S3 access from VPC without internet', 'private API call to DynamoDB from a private subnet', 'private connectivity to KMS or Secrets Manager', 'private third-party SaaS via PrivateLink'],
     },
-    stem: 'VPC endpoint type for: {{need}}.',
+    stem: 'Which VPC endpoint type fits {{need}}?',
     options: [
       { text: 'Gateway Endpoints for S3 and DynamoDB (free, route-table based); Interface Endpoints (PrivateLink, ENI-based) for AWS services and third-party SaaS.', correct: true },
       { text: 'NAT Gateway as the privacy primitive for AWS service access.', correct: false, distractor: { type: 'public-when-private-needed', explanation: 'NAT still hits public AWS endpoints.' } },
@@ -2282,7 +2282,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       content: ['static assets with month-long TTL', 'dynamic API responses cacheable for 5 seconds', 'mixed origins with different cache requirements', 'live video streaming to global audience'],
     },
-    stem: 'CloudFront caching strategy for: {{content}}.',
+    stem: 'Which CloudFront caching strategy fits {{content}}?',
     options: [
       { text: 'Cache policies per behavior with appropriate TTLs, Origin Request Policy for forwarded headers, Origin Shield for cache hit ratio, and CMAF for live video.', correct: true },
       { text: 'A single global TTL of 0 to always go to origin.', correct: false, distractor: { type: 'misuses-caching', explanation: 'Defeats the CDN purpose.' } },
@@ -2303,7 +2303,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       transfer: ['frequent on-prem-to-S3 sync of changed files', 'one-time 50 TB migration over 1 Gbps link', 'cloud-to-cloud cross-Region copy of EFS', 'on-prem backup to S3 Glacier for archive'],
     },
-    stem: 'Cheapest correct transfer mechanism for: {{transfer}}.',
+    stem: 'Which is the cheapest correct transfer mechanism for {{transfer}}?',
     options: [
       { text: 'DataSync for online (cents per GB, parallel transfer, validation), Snowball when bandwidth is the bottleneck, S3 Replication for cloud-cloud bucket copies.', correct: true },
       { text: 'A custom rsync script on a Lambda function looping in 15-minute increments.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Lambda timeouts; no incremental tracking.' } },
@@ -2323,7 +2323,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       issue: ['gp2 volumes that could be downsized to gp3', 'unused volumes from terminated instances', 'snapshots accumulating without lifecycle', 'over-provisioned IOPS on io1'],
     },
-    stem: 'Cost optimization action for: {{issue}}.',
+    stem: 'Which cost-optimization action fits {{issue}}?',
     options: [
       { text: 'Migrate gp2 → gp3 (cheaper at same IOPS), delete orphaned volumes via Compute Optimizer, automate snapshot lifecycle with Data Lifecycle Manager, right-size io1 IOPS.', correct: true },
       { text: 'Keep all unused volumes for 1 year just in case.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Idle EBS still bills at full rate.' } },
@@ -2344,7 +2344,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       pattern: ['unpredictable workload with idle periods', 'predictable steady traffic at 5k RPS', 'spiky workload with predictable peaks twice a day', 'global table with very low traffic in some Regions'],
     },
-    stem: 'DynamoDB capacity mode for: {{pattern}}.',
+    stem: 'Which DynamoDB capacity mode fits {{pattern}}?',
     options: [
       { text: 'On-Demand for unpredictable/idle, Provisioned + Auto Scaling for predictable steady, Provisioned with Reserved Capacity for the deepest discount on stable workloads.', correct: true },
       { text: 'Provisioned with very high static RCU/WCU regardless of actual traffic.', correct: false, distractor: { type: 'static-when-dynamic-needed', explanation: 'Wastes money on idle capacity.' } },
@@ -2364,7 +2364,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['offload 80% of read traffic from RDS', 'reduce DynamoDB RCU consumption with caching', 'cache popular product detail pages globally'],
     },
-    stem: 'Cheapest correct caching for: {{need}}.',
+    stem: 'Which is the cheapest correct caching approach for {{need}}?',
     options: [
       { text: 'ElastiCache (Redis) in front of RDS, DAX in front of DynamoDB, CloudFront for HTTP-cacheable pages — caching cuts DB billable units dramatically.', correct: true },
       { text: 'Add more RDS read replicas indefinitely until reads keep up.', correct: false, distractor: { type: 'misuses-caching', explanation: 'Replicas help but cache cents-per-hit beats per-replica cost.' } },
@@ -2385,7 +2385,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['cut S3 egress cost on a high-traffic public site', 'reduce ALB request cost on a CDN-cacheable workload', 'minimize cross-Region data transfer for read-mostly content'],
     },
-    stem: 'Cheapest network architecture for: {{goal}}.',
+    stem: 'Which is the cheapest network architecture for {{goal}}?',
     options: [
       { text: 'CloudFront in front of origin (S3/ALB) — egress to internet is cheaper than direct S3, requests are absorbed at the edge, and cross-Region reads can be served from edge cache.', correct: true },
       { text: 'Direct origin access from clients with no CDN.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'S3/ALB egress + per-request cost is much higher than CloudFront-served.' } },
@@ -2406,7 +2406,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['SSO across 50 AWS accounts with corporate Active Directory', 'centralized permission sets for engineering vs finance', 'short-lived AWS credentials for the CLI', 'attribute-based access using AD group membership', 'one-time setup with periodic auditing of access'],
     },
-    stem: 'Best identity solution for: {{need}}.',
+    stem: 'Which identity solution fits {{need}}?',
     options: [
       { text: 'AWS IAM Identity Center (formerly AWS SSO) with permission sets, AD/Azure AD/Okta as IdP, AWS access portal for CLI credentials, and ABAC via session tags.', correct: true },
       { text: 'Per-account IAM users provisioned manually for every engineer.', correct: false, distractor: { type: 'iam-user-when-role-needed', explanation: 'Does not scale; no SSO; static credentials.' } },
@@ -2426,7 +2426,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       threat: ['SYN-flood DDoS on a public CloudFront distribution', 'OWASP top-10 attacks on a public ALB', 'rate-limit abuse from a small set of IPs', 'application-layer DDoS with cost-protection guarantees', 'bot scraping product pages aggressively'],
     },
-    stem: 'Defense against: {{threat}}.',
+    stem: 'Which control defends against {{threat}}?',
     options: [
       { text: 'AWS Shield Advanced (DDoS, cost-protection refunds), AWS WAF (managed rule groups for OWASP, rate-based rules), and AWS WAF Bot Control.', correct: true },
       { text: 'Security Groups configured to block specific countries.', correct: false, distractor: { type: 'wrong-network-topology', explanation: 'SGs are not Layer 7 and have no geo or attack-pattern matching.' } },
@@ -2446,7 +2446,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['enforce TLS-only access to all objects', 'block public access at the account level', 'encrypt all objects with SSE-KMS by default', 'audit every object-level API call', 'verify object integrity end-to-end'],
     },
-    stem: 'Best S3 security control for: {{need}}.',
+    stem: 'Which S3 security control fits {{need}}?',
     options: [
       { text: 'Account-level Block Public Access, default bucket SSE-KMS encryption, bucket policy aws:SecureTransport=true, S3 server access logs + CloudTrail data events, S3 Object Lambda or checksums for integrity.', correct: true },
       { text: 'Rely on individual user discretion for bucket-level encryption.', correct: false, distractor: { type: 'misses-compliance-requirement', explanation: 'No defaults means inconsistent posture.' } },
@@ -2467,7 +2467,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       workload: ['memory-bound in-memory database', 'CPU-bound encoding pipeline', 'GPU-accelerated ML inference', 'storage-IO-intensive analytics', 'network-intensive HPC node'],
     },
-    stem: 'Pick the EC2 family for: {{workload}}.',
+    stem: 'Which EC2 family fits {{workload}}?',
     options: [
       { text: 'R/X (memory), C (compute), G/P/Inf/Trn (GPU/ML), I/D (storage IO), Hpc (HPC) — match family to dominant resource.', correct: true },
       { text: 'Always M-family because it is general-purpose.', correct: false, distractor: { type: 'wrong-storage-tier', explanation: 'M is balanced; loses to specialized families on bottleneck workloads.' } },
@@ -2487,7 +2487,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       need: ['simple container workload with minimal Kubernetes complexity', 'existing Kubernetes investment with portable tooling', 'serverless containers without node management', 'long-running stateful services with EBS volumes', 'spot-friendly batch workers'],
     },
-    stem: 'Best container service for: {{need}}.',
+    stem: 'Which container service fits {{need}}?',
     options: [
       { text: 'ECS for simple AWS-native, EKS when Kubernetes is the standard, Fargate as the serverless launch type, EBS-backed tasks via ECS, Spot via capacity providers.', correct: true },
       { text: 'Self-managed Kubernetes on EC2 with no managed control plane.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'EKS is the managed option.' } },
@@ -2507,7 +2507,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       workload: ['HTTP API with sub-100ms cold-start tolerance', 'long-running batch job over 15 minutes', 'WebSocket service holding 10k connections', 'cron-triggered transient task', 'GPU workload for ML inference'],
     },
-    stem: 'Best serverless compute for: {{workload}}.',
+    stem: 'Which serverless compute option fits {{workload}}?',
     options: [
       { text: 'Lambda for short event-driven functions; Fargate for long-running, persistent connections, GPU, or workloads needing custom container runtime.', correct: true },
       { text: 'EC2 for any container workload regardless of management overhead.', correct: false, distractor: { type: 'compute-when-serverless-fits', explanation: 'Fargate removes node management.' } },
@@ -2527,7 +2527,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       trigger: ['S3 ObjectCreated for image processing', 'API Gateway HTTP request with auth', 'DynamoDB Stream for change-data-capture', 'SQS queue with retry and DLQ', 'EventBridge schedule for cron jobs'],
     },
-    stem: 'Lambda integration pattern for: {{trigger}}.',
+    stem: 'Which Lambda integration pattern fits {{trigger}}?',
     options: [
       { text: 'Native event-source mapping (S3, DDB Streams, SQS, EventBridge) or Lambda authorizer (API Gateway), each with appropriate concurrency, batch size, and DLQ configuration.', correct: true },
       { text: 'A single polling Lambda querying every source on a 1-minute timer.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Native event triggers are pushed by AWS — no polling needed.' } },
@@ -2547,7 +2547,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       profile: ['steady 24/7 production baseline', 'fault-tolerant batch with flexible deadlines', 'unpredictable spiky workload with idle periods', 'compliance-required dedicated tenancy', 'short experiments lasting hours'],
     },
-    stem: 'EC2 pricing model for: {{profile}}.',
+    stem: 'Which EC2 pricing model fits {{profile}}?',
     options: [
       { text: 'Savings Plans / RIs for steady, Spot for fault-tolerant batch, On-Demand for unpredictable, Dedicated Hosts/Instances for compliance, On-Demand for short experiments.', correct: true },
       { text: 'Pure On-Demand for every scenario regardless of cost profile.', correct: false, distractor: { type: 'ignores-cost-in-multi-region', explanation: 'Up to 72% savings missed by ignoring commitments and Spot.' } },
@@ -2567,7 +2567,7 @@ export const TEMPLATES: Template[] = [
     slots: {
       goal: ['allocate cost by team across 30 accounts', 'enforce a CostCenter tag on every resource', 'detect untagged resources for cleanup', 'group spend by environment (dev/staging/prod)'],
     },
-    stem: 'Best AWS-native tool for: {{goal}}.',
+    stem: 'Which AWS-native tool fits {{goal}}?',
     options: [
       { text: 'AWS Tag Policies (Organizations) to enforce key/value standards, plus Cost Allocation Tags activated in Billing for showback.', correct: true },
       { text: 'A spreadsheet maintained by ops listing each resource owner.', correct: false, distractor: { type: 'manual-when-managed-exists', explanation: 'Doesn\'t scale; drifts.' } },
