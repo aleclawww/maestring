@@ -166,7 +166,7 @@ jobs:
       - run: npm run build
       # Run only the @public tag — no auth, no DB, safe with placeholder env.
       - run: npm run test:e2e -- --grep "@public"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report-public
@@ -222,7 +222,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npm run test:e2e -- --grep "@smoke"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report-authenticated
